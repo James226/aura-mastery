@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Addon Author="Caedo" APIVersion="3" Name="AuraMastery" Description="" Version="0.1">
+    <Script Name="Icon.lua"/>
+    <Script Name="AuraMastery.lua"/>
+    <Form Name="AuraMastery.xml"/>
+</Addon>
