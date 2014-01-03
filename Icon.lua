@@ -54,6 +54,7 @@ function Icon:Load(saveData)
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
 		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
 		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + self.icon:GetWidth(),  saveData.iconPosition.top + self.icon:GetHeight())
+		self.icon:SetScale(saveData.iconScale or 1)
 	end
 	self:AddToBuffWatch()
 end
@@ -66,6 +67,7 @@ function Icon:GetSaveData()
 	saveData.iconTarget = self.iconTarget 
 	saveData.iconSound = self.iconSound 
 	saveData.iconBackground = self.iconBackground
+	saveData.iconScale = self.icon:GetScale()
 	
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
 	saveData.iconPosition = {
@@ -180,6 +182,7 @@ function Icon:SetIcon(configWnd)
 	self.iconTarget = configWnd:FindChild("BuffTarget"):GetText()
 	self.iconShown = configWnd:FindChild("BuffShown"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
+	self.icon:SetScale(configWnd:FindChild("BuffScale"):GetValue())
 	if configWnd:FindChild("SoundSelect"):FindChild("SelectedSound") ~= nil then
 		self.iconSound = tonumber(configWnd:FindChild("SoundSelect"):FindChild("SelectedSound"):GetText())
 	else
@@ -277,7 +280,6 @@ function Icon:ClearBuff()
 end
 
 function Icon:Unlock()
-	Print("Unlock")
 	self.icon:SetStyle("Moveable", true)
 end
 

@@ -148,7 +148,7 @@ function AuraMastery:OnLoad()
 end
 
 function AuraMastery:CreateControls()
-	local iconList = self.wndMain:FindChild("IconList"):FindChild("ListWindow")
+	local iconList = self.wndMain:FindChild("IconListHolder"):FindChild("IconList")
 	for i, icon in pairs(self.Icons) do
 		local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
 		iconItem:SetAnchorOffsets(0, (i-1) * 40, 500, (i-1) * 40 + 40)
@@ -162,14 +162,14 @@ function AuraMastery:CreateControls()
 end
 
 function AuraMastery:UpdateControls()
-	for _, iconItem in pairs(self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()) do
+	for _, iconItem in pairs(self.wndMain:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
 		local icon = self.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
 		iconItem:FindChild("Label"):SetText(icon:GetName())
 	end
 end
 
 function AuraMastery:SelectFirstIcon()
-	for _, icon in pairs(self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()) do
+	for _, icon in pairs(self.wndMain:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
 		if icon ~= nil then
 			self:SelectIcon(icon)
 			break
@@ -321,20 +321,18 @@ function AuraMastery:AddIcon()
 	local newIcon = Icon.new(self.buffWatch, self.iconForm, self.wndMain)
 	newIcon:SetScale(self.wndMain:FindChild("BarResize"):GetValue())
 	
-	local iconList = self.wndMain:FindChild("IconList"):FindChild("ListWindow")
+	local iconList = self.wndMain:FindChild("IconListHolder"):FindChild("IconList")
 	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
-	iconItem:SetAnchorOffsets(0, (self.nextIconId-1) * 40, 500, (self.nextIconId-1) * 40 + 40)
-	iconItem:FindChild("Id"):SetText(self.nextIconId)
+	iconItem:SetAnchorOffsets(0, (self.nextIconId-1) * 40, 0, (self.nextIconId-1) * 40 + 40)
+	iconItem:FindChild("Id"):SetText(tostring(self.nextIconId))
 	iconItem:FindChild("Label"):SetText(newIcon:GetName())
 	iconItem:FindChild("LockButton"):SetCheck(true)
-	local left, top, right, bottom = iconList:GetAnchorOffsets()
-	iconList:SetAnchorOffsets(left, top, right, bottom + 50)
 	newIcon:SetConfigElement(iconItem)
 	self.Icons[self.nextIconId] = newIcon
 	self.nextIconId = self.nextIconId + 1
 	
-	local windowHeight = self.wndMain:FindChild("IconList"):GetHeight()
-	self.wndMain:FindChild("IconList"):SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
+	local windowHeight = iconList:GetHeight()
+	iconList:SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
 	
 	return newIcon
 end
@@ -348,14 +346,14 @@ function AuraMastery:RemoveIcon(icon)
 	self:SelectFirstIcon()
 	
 	local currentPos = 0
-	for _, iconItem in pairs(self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()) do
+	for _, iconItem in pairs(self.wndMain:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
 		iconItem:SetAnchorOffsets(0, currentPos, 0, currentPos + iconItem:GetHeight())
 		currentPos = currentPos + iconItem:GetHeight()
 	end
 	
 
-	local windowHeight = self.wndMain:FindChild("IconList"):GetHeight()
-	self.wndMain:FindChild("IconList"):SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
+	local windowHeight = self.wndMain:FindChild("IconListHolder"):FindChild("IconList"):GetHeight()
+	self.wndMain:FindChild("IconListHolder"):FindChild("IconList"):SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
 end
 
 function AuraMastery:NumIcons()
@@ -366,6 +364,13 @@ function AuraMastery:NumIcons()
 		end
 	end
 	return numIcons
+end
+
+function AuraMastery:OnIconScale( wndHandler, wndControl, fNewValue, fOldValue )
+	local iconId = tonumber(self.wndMain:FindChild("BuffId"):GetText())
+	local icon = self.Icons[iconId]
+	
+	icon:SetScale(fNewValue)
 end
 
 --------------------------------------------------------------------------------------------
@@ -386,6 +391,7 @@ function AuraMastery:SelectIcon(iconItem)
 		self.wndMain:FindChild("BuffTarget"):SetText(icon.iconTarget)
 		self.wndMain:FindChild("BuffShown"):SetText(icon.iconShown)
 		self.wndMain:FindChild("SelectedSound"):SetText(icon.iconSound)
+		self.wndMain:FindChild("BuffScale"):SetValue(icon.icon:GetScale())
 		self.wndMain:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		
 		if self.selectedIcon ~= nil then
