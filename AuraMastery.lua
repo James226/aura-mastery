@@ -36,6 +36,7 @@ function AuraMastery:new(o)
 		Cooldown = {}
 	}
 	self.BarLocked = true
+	self.nextIconId = 1
     return o
 end
 
@@ -48,14 +49,12 @@ function AuraMastery:OnSave(eLevel)
         return nil
     end
 	local saveData = { }
-	saveData["BarPosition"] = { }
-	saveData["BarPosition"][1], saveData["BarPosition"][2], saveData["BarPosition"][3], saveData["BarPosition"][4] = self.iconForm:GetAnchorOffsets()
-	saveData["BarSize"] = self.iconForm:GetScale()
+	saveData["BarSize"] = self.wndMain:FindChild("BarResize"):GetValue()
 	
 	saveData["Icons"] = { }
 	Print("Saving Icons")
 	for idx, icon in pairs(self.Icons) do
-		saveData["Icons"][idx] = icon:GetSaveData()
+		saveData["Icons"][# saveData["Icons"] + 1] = icon:GetSaveData()
 	end
 	
 	return saveData
@@ -66,20 +65,18 @@ function AuraMastery:OnRestore(eLevel, tData)
 		return nil
 	end
 	
-	self.IconData = tData["Icons"]
-	for idx, icon in pairs(tData["Icons"]) do
-		self.Icons[idx]:Load(icon)
-	end
-	
-	if tData["BarPosition"] ~= nil then
-		self.iconForm:SetAnchorOffsets(tData["BarPosition"][1], tData["BarPosition"][2], tData["BarPosition"][3], tData["BarPosition"][4])
-	end
-	
+	Event_FireGenericEvent("AMLoadIcons", tData)
+end
+
+function AuraMastery:OnLoadIcons(tData)
 	if tData["BarSize"] then
-		self.iconForm:SetScale(tData["BarSize"])
 		self.wndMain:FindChild("BarResize"):SetValue(tData["BarSize"])
 	end
 	
+	for idx, icon in pairs(tData["Icons"]) do
+		local newIcon = self:AddIcon()
+		newIcon:Load(icon)
+	end
 	self:UpdateControls()
 	self:SelectFirstIcon()
 end
@@ -92,6 +89,7 @@ function AuraMastery:OnLoad()
     -- Register handlers for events, slash commands and timer, etc.
     -- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
     Apollo.RegisterSlashCommand("am", "OnAuraMasteryOn", self)
+	Apollo.RegisterEventHandler("AMLoadIcons", "OnLoadIcons", self)
     
     -- load our forms
     self.wndMain = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm", nil, self)
@@ -145,15 +143,6 @@ function AuraMastery:OnLoad()
 	
 	
 	self.Icons = {}
-	if self.IconData == nil then
-		self.IconData = { }
-	end
-	
-	for i = 1, 4 do
-		self.Icons[i] = Icon.new(self.buffWatch, self.iconForm, self.IconData[i], i)
-	end    
-		
-	self:CreateControls()
 	
 	self:SelectFirstIcon()
 end
@@ -165,21 +154,26 @@ function AuraMastery:CreateControls()
 		iconItem:SetAnchorOffsets(0, (i-1) * 40, 500, (i-1) * 40 + 40)
 		iconItem:FindChild("Id"):SetText(i)
 		iconItem:FindChild("Label"):SetText(icon:GetName())
+		iconItem:FindChild("LockButton"):SetCheck(true)
 		local left, top, right, bottom = iconList:GetAnchorOffsets()
 		iconList:SetAnchorOffsets(left, top, right, bottom + 50)
+		icon:SetConfigElement(iconItem)
 	end
 end
 
 function AuraMastery:UpdateControls()
 	for _, iconItem in pairs(self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()) do
-		iconItem:FindChild("Label"):SetText(self.Icons[tonumber(iconItem:FindChild("Id"):GetText())]:GetName())
+		local icon = self.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
+		iconItem:FindChild("Label"):SetText(icon:GetName())
 	end
 end
 
 function AuraMastery:SelectFirstIcon()
-	local firstIconItem = self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()[1]
-	if firstIconItem ~= nil then
-		self:SelectIcon(firstIconItem)
+	for _, icon in pairs(self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()) do
+		if icon ~= nil then
+			self:SelectIcon(icon)
+			break
+		end
 	end
 end
 
@@ -226,7 +220,7 @@ function AuraMastery:OnUpdate()
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 	end	
 	
-	local abilities = AbilityBook.GetAbilitiesList() -- scan ability book for spells on cooldown
+	local abilities = AbilityBook.GetAbilitiesList()
 	if abilities then
 		self:ProcessCooldowns(abilities)
 	end
@@ -272,18 +266,36 @@ end
 
 function AuraMastery:OnResize( wndHandler, wndControl, fNewValue, fOldValue )
 	self.iconForm:SetScale(fNewValue)
+	for _, icon in pairs(self.Icons) do
+		icon:SetScale(fNewValue)
+	end
+end
+
+function AuraMastery:OnLockIcon( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(wndHandler:GetParent():FindChild("Id"):GetText())
+	if self.Icons[iconId] ~= nil then
+		self.Icons[iconId]:Lock()
+	end
+end
+
+function AuraMastery:OnUnlockIcon( wndHandler, wndControl, eMouseButton )
+	self.BarLocked = false
+	local iconId = tonumber(wndHandler:GetParent():FindChild("Id"):GetText())
+	if self.Icons[iconId] ~= nil then
+		self.Icons[iconId]:Unlock()
+	end
 end
 
 function AuraMastery:OnToggleBarLock()
 	if not self.BarLocked then
 		self.iconForm:SetStyle("Moveable", false)
 		self.iconForm:SetBGColor(ApolloColor.new(0, 1, 1, 0))
-		self.wndMain:FindChild("UnlockBarButton"):SetText("Unlock Bar")
+		self.wndMain:FindChild("UnlockBarButton"):SetText("Unlock All")
 		self.BarLocked = true
 	else
 		self.iconForm:SetStyle("Moveable", true)
 		self.iconForm:SetBGColor(ApolloColor.new(1, 1, 0, 1))
-		self.wndMain:FindChild("UnlockBarButton"):SetText("Lock Bar")
+		self.wndMain:FindChild("UnlockBarButton"):SetText("Lock All")
 		self.BarLocked = false
 	end
 end
@@ -291,6 +303,69 @@ end
 function AuraMastery:OnSoundPlay( wndHandler, wndControl, eMouseButton )
 	local soundNo = tonumber(self.wndMain:FindChild("SoundNo"):GetText())
 	Sound.Play(soundNo)
+end
+
+function AuraMastery:OnAddIcon( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		self:AddIcon()
+	end
+end
+
+function AuraMastery:OnRemoveIcon( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		self:RemoveIcon(self.selectedIcon)
+	end
+end
+
+function AuraMastery:AddIcon()
+	local newIcon = Icon.new(self.buffWatch, self.iconForm, self.wndMain)
+	newIcon:SetScale(self.wndMain:FindChild("BarResize"):GetValue())
+	
+	local iconList = self.wndMain:FindChild("IconList"):FindChild("ListWindow")
+	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
+	iconItem:SetAnchorOffsets(0, (self.nextIconId-1) * 40, 500, (self.nextIconId-1) * 40 + 40)
+	iconItem:FindChild("Id"):SetText(self.nextIconId)
+	iconItem:FindChild("Label"):SetText(newIcon:GetName())
+	iconItem:FindChild("LockButton"):SetCheck(true)
+	local left, top, right, bottom = iconList:GetAnchorOffsets()
+	iconList:SetAnchorOffsets(left, top, right, bottom + 50)
+	newIcon:SetConfigElement(iconItem)
+	self.Icons[self.nextIconId] = newIcon
+	self.nextIconId = self.nextIconId + 1
+	
+	local windowHeight = self.wndMain:FindChild("IconList"):GetHeight()
+	self.wndMain:FindChild("IconList"):SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
+	
+	return newIcon
+end
+
+function AuraMastery:RemoveIcon(icon)
+	local iconId = tonumber(icon:FindChild("Id"):GetText())
+	icon:Destroy()
+	
+	self.Icons[iconId]:Delete()
+	self.Icons[iconId] = nil
+	self:SelectFirstIcon()
+	
+	local currentPos = 0
+	for _, iconItem in pairs(self.wndMain:FindChild("IconList"):FindChild("ListWindow"):GetChildren()) do
+		iconItem:SetAnchorOffsets(0, currentPos, 0, currentPos + iconItem:GetHeight())
+		currentPos = currentPos + iconItem:GetHeight()
+	end
+	
+
+	local windowHeight = self.wndMain:FindChild("IconList"):GetHeight()
+	self.wndMain:FindChild("IconList"):SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
+end
+
+function AuraMastery:NumIcons()
+	local numIcons = 0
+	for _, icon in pairs(self.Icons) do
+		if icon ~= nil then
+			numIcons = numIcons + 1
+		end
+	end
+	return numIcons
 end
 
 --------------------------------------------------------------------------------------------
@@ -332,16 +407,10 @@ function AuraMastery:SelectIcon(iconItem)
 				self.wndMain:FindChild("SoundSelect"):SetVScrollPos(top)
 				break
 			end
+		
 		end
 	end
 end
-
------------------------------------------------------------------------------------------------
--- AuraMastery Instance
------------------------------------------------------------------------------------------------
-AuraMasteryInst = AuraMastery:new()
-AuraMasteryInst:Init()
-
 
 ---------------------------------------------------------------------------------------------------
 -- SoundListItem Functions
@@ -358,4 +427,11 @@ function AuraMastery:OnSoundItemSelected( wndHandler, wndControl, eMouseButton, 
 		Sound.Play(soundId)
 	end
 end
+
+-----------------------------------------------------------------------------------------------
+-- AuraMastery Instance
+-----------------------------------------------------------------------------------------------
+AuraMasteryInst = AuraMastery:new()
+AuraMasteryInst:Init()
+
 

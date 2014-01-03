@@ -16,16 +16,14 @@ setmetatable(Icon, {
 
 local EmptyBuffIcon = "CRB_ActionBarFrameSprites:sprActionBarFrame_VehicleIconBG"
 
-function Icon.new(buffWatch, iconForm, saveData, position)
+function Icon.new(buffWatch, iconForm, configForm)
 	if position == nil then
 		position = 0
 	end
 	local self = setmetatable({}, Icon)
 	self.iconForm = iconForm
 	self.buffWatch = buffWatch
-	self.icon = Apollo.LoadForm("AuraMastery.xml", "Icon", self.iconForm, self)
-	self.icon:SetAnchorOffsets((position  - 1)*50, 0, ((position - 1)*50)+50, 50)
-	
+	self.icon = Apollo.LoadForm("AuraMastery.xml", "Icon", nil, self)
 	self.iconType = "Buff"
 	self.iconName = ""
 	self.iconTarget = "Player"
@@ -34,13 +32,15 @@ function Icon.new(buffWatch, iconForm, saveData, position)
 	self.iconBackground = true
 	self.buffStart = 0
 	
-	--self:Load(saveData)
-	
 	self.isActive = true
 	
 	self:AddToBuffWatch()
 	
 	return self
+end
+
+function Icon:SetConfigElement(configElement)
+	self.configElement = configElement
 end
 
 function Icon:Load(saveData)
@@ -52,6 +52,8 @@ function Icon:Load(saveData)
 		self.iconShown = saveData.iconShown
 		self.iconSound = saveData.iconSound
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
+		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
+		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + self.icon:GetWidth(),  saveData.iconPosition.top + self.icon:GetHeight())
 	end
 	self:AddToBuffWatch()
 end
@@ -64,7 +66,19 @@ function Icon:GetSaveData()
 	saveData.iconTarget = self.iconTarget 
 	saveData.iconSound = self.iconSound 
 	saveData.iconBackground = self.iconBackground
+	
+	local left, top, right, bottom = self.icon:GetAnchorOffsets()
+	saveData.iconPosition = {
+		left = left,
+		top = top
+	}
+	
 	return saveData
+end
+
+function Icon:Delete()
+	self:RemoveFromBuffWatch()
+	self.icon:Destroy()
 end
 
 function Icon:AddToBuffWatch()
@@ -134,7 +148,8 @@ end
 
 function Icon:ProcessSpell(spell)
 	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
-	if chargesRemaining > 0 or cdRemaining == 0 then
+
+	if (chargesRemaining > 0 or cdRemaining == 0) then
 		self.icon:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 		if self.iconShown == "Inactive" or self.iconShown == "Both" then
 			if self.isActive then
@@ -261,6 +276,18 @@ function Icon:ClearBuff()
 	end
 end
 
+function Icon:Unlock()
+	Print("Unlock")
+	self.icon:SetStyle("Moveable", true)
+end
+
+function Icon:Lock()
+	self.icon:SetStyle("Moveable", false)
+end
+
+function Icon:SetScale(scale)
+	self.icon:SetScale(scale)
+end
 
 if _G["AuraMasteryLibs"] == nil then
 	_G["AuraMasteryLibs"] = { }
