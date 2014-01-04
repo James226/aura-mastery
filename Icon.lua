@@ -16,7 +16,7 @@ setmetatable(Icon, {
 
 local EmptyBuffIcon = "CRB_ActionBarFrameSprites:sprActionBarFrame_VehicleIconBG"
 
-function Icon.new(buffWatch, iconForm, configForm)
+function Icon.new(buffWatch, configForm)
 	if position == nil then
 		position = 0
 	end
@@ -31,6 +31,9 @@ function Icon.new(buffWatch, iconForm, configForm)
 	self.iconSound = -1
 	self.iconBackground = true
 	self.buffStart = 0
+	self.iconBorder = true
+	self.iconColor = CColor.new(1, 1, 1, 1)
+	self.iconSprite = ""
 	
 	self.isActive = true
 	
@@ -55,6 +58,13 @@ function Icon:Load(saveData)
 		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
 		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + self.icon:GetWidth(),  saveData.iconPosition.top + self.icon:GetHeight())
 		self.icon:SetScale(saveData.iconScale or 1)
+		if saveData.iconColor ~= nil then
+			self.iconColor = CColor.new(saveData.iconColor[1], saveData.iconColor[2], saveData.iconColor[3], saveData.iconColor[4])
+		end
+
+		self.iconSprite = saveData.iconSprite or ""
+		self.iconBorder = saveData.iconBorder
+		self.icon:SetStyle("Border", self.iconBorder)
 	end
 	self:AddToBuffWatch()
 end
@@ -68,7 +78,10 @@ function Icon:GetSaveData()
 	saveData.iconSound = self.iconSound 
 	saveData.iconBackground = self.iconBackground
 	saveData.iconScale = self.icon:GetScale()
-	
+	saveData.iconBorder = self.iconBorder
+	saveData.iconColor = { self.iconColor.r, self.iconColor.g, self.iconColor.b, self.iconColor.a }
+	saveData.iconSprite = self.iconSprite
+
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
 	saveData.iconPosition = {
 		left = left,
@@ -152,7 +165,6 @@ function Icon:ProcessSpell(spell)
 	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
 
 	if (chargesRemaining > 0 or cdRemaining == 0) then
-		self.icon:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 		if self.iconShown == "Inactive" or self.iconShown == "Both" then
 			if self.isActive then
 				self.isActive = false
@@ -183,11 +195,16 @@ function Icon:SetIcon(configWnd)
 	self.iconShown = configWnd:FindChild("BuffShown"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
 	self.icon:SetScale(configWnd:FindChild("BuffScale"):GetValue())
+	
+	self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
+	self.icon:SetStyle("Border", self.iconBorder)
+	
 	if configWnd:FindChild("SoundSelect"):FindChild("SelectedSound") ~= nil then
 		self.iconSound = tonumber(configWnd:FindChild("SoundSelect"):FindChild("SelectedSound"):GetText())
 	else
 		self.iconSound = nil
 	end
+	self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
 	self:AddToBuffWatch()
 end
 
@@ -211,8 +228,17 @@ function Icon:PostUpdate()
 	end
 end
 
+function Icon:SetSprite(spriteIcon)
+	self.icon:SetBGColor(self.iconColor)
+	if self.iconSprite ~= "" and spriteIcon ~= EmptyBuffIcon then
+		self.icon:SetSprite(self.iconSprite)
+	else
+		self.icon:SetSprite(spriteIcon)
+	end
+end
+
 function Icon:SetSpell(spell, remaining, total, charges)
-	self.icon:SetSprite(spell:GetIcon())
+	self:SetSprite(spell:GetIcon())
 	self.icon:Show(true)
 	self.icon:FindChild("IconOverlay"):SetAnchorPoints(0, 1 - (remaining / total), 1, 1)
 	
@@ -232,12 +258,11 @@ function Icon:SetBuff(buff)
 	if not self.isActive or buff.fTimeRemaining > self.buffStart then
 		self.isActive = true
 		self.buffStart = buff.fTimeRemaining
-		self.icon:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 	end
 	self.lastSprite = buff.spell:GetIcon()
 	
 	if self.iconShown == "Active" or self.iconShown == "Both" then
-		self.icon:SetSprite(buff.spell:GetIcon())
+		self:SetSprite(buff.spell:GetIcon())
 		self.icon:Show(true)
 		self.icon:FindChild("IconOverlay"):SetAnchorPoints(0, 1 - (buff.fTimeRemaining / self.buffStart), 1, 1)
 		
@@ -258,22 +283,39 @@ function Icon:SetBuff(buff)
 	self.isSet = true
 end
 
+function Icon:GetSpellIconByName(spellName)
+	local abilities = AbilityBook.GetAbilitiesList()
+	if abilities ~= nil then
+		for _, ability in pairs() do
+			if ability.strName == spellName then
+				return ability.tTiers[1].splObject:GetIcon()
+			end
+		end
+	end
+	return ""
+end
+
 function Icon:ClearBuff()
 	if self.isActive then
 		if self.iconType ~= "Cooldown" then
 			Sound.Play(self.iconSound)
 		end
 		local spriteIcon = self.iconBackground and EmptyBuffIcon or ""
-		if self.lastSprite ~= nil and self.iconType ~= "Cooldown" and (self.iconShown == "Inactive" or self.iconShown == "Both") then
+		if self.iconType ~= "Cooldown" and (self.iconShown == "Inactive" or self.iconShown == "Both") then
+			if self.lastSprite == nil or self.lastSprite == "" then
+				self.lastSprite = self:GetSpellIconByName(self.iconName)
+			end
 			spriteIcon = self.lastSprite
 			self.icon:Show(true)
 		end
 		self.icon:FindChild("IconOverlay"):SetAnchorPoints(0, 0, 1, 0)
-		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
-		self.icon:SetSprite(spriteIcon)
+		
 		if spriteIcon == "" then
 			self.icon:Show(false)
+		else
+			self:SetSprite(spriteIcon)
 		end
+		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
 		self.icon:SetText("")
 		self.isActive = false
 	end

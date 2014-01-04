@@ -14,7 +14,16 @@ local Icon = _G["AuraMasteryLibs"]["Icon"]
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
--- e.g. local kiExampleVariableMax = 999
+local spriteIcons = {
+	Tick = "icon_Tick",
+	No = "icon_No",
+	Crosshair = "icon_Crosshair",
+	Flower = "icon_Flower",
+	Fluer = "icon_Fluer",
+	Heart = "icon_Heart",
+	Lightning = "icon_Lightning",
+	Paw = "icon_Paw"
+}
 
 -----------------------------------------------------------------------------------------------
 -- Initialization
@@ -37,8 +46,11 @@ function AuraMastery:new(o)
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
+	self.selectedColor = CColor.new(1,1,1,1)
+	
     return o
 end
+
 
 function AuraMastery:Init()
     Apollo.RegisterAddon(self)
@@ -49,7 +61,6 @@ function AuraMastery:OnSave(eLevel)
         return nil
     end
 	local saveData = { }
-	saveData["BarSize"] = self.wndMain:FindChild("BarResize"):GetValue()
 	
 	saveData["Icons"] = { }
 	Print("Saving Icons")
@@ -68,11 +79,7 @@ function AuraMastery:OnRestore(eLevel, tData)
 	Event_FireGenericEvent("AMLoadIcons", tData)
 end
 
-function AuraMastery:OnLoadIcons(tData)
-	if tData["BarSize"] then
-		self.wndMain:FindChild("BarResize"):SetValue(tData["BarSize"])
-	end
-	
+function AuraMastery:OnLoadIcons(tData)	
 	for idx, icon in pairs(tData["Icons"]) do
 		local newIcon = self:AddIcon()
 		newIcon:Load(icon)
@@ -90,10 +97,16 @@ function AuraMastery:OnLoad()
     -- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
     Apollo.RegisterSlashCommand("am", "OnAuraMasteryOn", self)
 	Apollo.RegisterEventHandler("AMLoadIcons", "OnLoadIcons", self)
+	Apollo.LoadSprites("Icons.xml")
     
     -- load our forms
     self.wndMain = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm", nil, self)
     self.wndMain:Show(false)
+	for _, tab in pairs(self.wndMain:FindChild("BuffEditor"):GetChildren()) do
+		tab:Show(false)
+	end
+	self.wndMain:FindChild("GeneralTabButton"):SetCheck(true)
+	self.wndMain:FindChild("BuffEditor"):FindChild("GeneralTab"):Show(true)
 	
 	self.wndMain:FindChild("BuffType"):AddItem("Buff", "", 1)
 	self.wndMain:FindChild("BuffType"):AddItem("Debuff", "", 2)
@@ -135,8 +148,8 @@ function AuraMastery:OnLoad()
 	
 	local soundSelectHeight = self.wndMain:FindChild("SoundSelect"):GetHeight()
 	self.wndMain:FindChild("SoundSelect"):SetVScrollInfo(nextItem - soundSelectHeight, soundSelectHeight, soundSelectHeight)
-
-	self.iconForm = Apollo.LoadForm("AuraMastery.xml", "IconForm", nil, self)
+	
+	self:LoadSpriteIcons()
 	
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
@@ -145,6 +158,40 @@ function AuraMastery:OnLoad()
 	self.Icons = {}
 	
 	self:SelectFirstIcon()
+end
+
+function AuraMastery:GetSpellIconByName(spellName)
+	local abilities = AbilityBook.GetAbilitiesList()
+	if abilities ~= nil then
+		for _, ability in pairs(abilities) do
+			if ability.strName == spellName then
+				return ability.tTiers[1].splObject:GetIcon()
+			end
+		end
+	end
+	return ""
+end
+
+function AuraMastery:LoadSpriteIcons()
+	local spriteList = self.wndMain:FindChild("BuffEditor"):FindChild("AppearanceTab"):FindChild("SpriteItemList")
+	
+	local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SpriteItem", spriteList, self)
+	spriteItem:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(self.wndMain:FindChild("BuffName"):GetText()))
+	spriteItem:FindChild("SpriteItemText"):SetText("Spell Icon")
+	spriteItem:SetAnchorOffsets(0, 0, spriteItem:GetWidth(), spriteItem:GetHeight())
+	
+	local iconsPerRow = math.floor(spriteList:GetWidth() / 110)
+	local currentPos = 1
+	
+	for spriteName, spriteIcon in pairs(spriteIcons) do
+		local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SpriteItem", spriteList, self)
+		spriteItem:FindChild("SpriteItemIcon"):SetSprite(spriteIcon)
+		spriteItem:FindChild("SpriteItemText"):SetText(spriteName)
+		local x = math.floor(currentPos % iconsPerRow) * 110
+		local y = math.floor(currentPos / iconsPerRow) * 140
+		spriteItem:SetAnchorOffsets(x, y, x + spriteItem:GetWidth(), y + spriteItem:GetHeight())
+		currentPos = currentPos + 1
+	end
 end
 
 function AuraMastery:CreateControls()
@@ -184,7 +231,8 @@ end
 
 -- on SlashCommand "/am"
 function AuraMastery:OnAuraMasteryOn()
-	self.wndMain:Show(true) -- show the window
+	self.wndMain:Show(true)
+	self.wndMain:ToFront()
 end
 
 
@@ -264,13 +312,6 @@ function AuraMastery:ProcessCooldowns(abilities)
 	end
 end
 
-function AuraMastery:OnResize( wndHandler, wndControl, fNewValue, fOldValue )
-	self.iconForm:SetScale(fNewValue)
-	for _, icon in pairs(self.Icons) do
-		icon:SetScale(fNewValue)
-	end
-end
-
 function AuraMastery:OnLockIcon( wndHandler, wndControl, eMouseButton )
 	local iconId = tonumber(wndHandler:GetParent():FindChild("Id"):GetText())
 	if self.Icons[iconId] ~= nil then
@@ -283,20 +324,6 @@ function AuraMastery:OnUnlockIcon( wndHandler, wndControl, eMouseButton )
 	local iconId = tonumber(wndHandler:GetParent():FindChild("Id"):GetText())
 	if self.Icons[iconId] ~= nil then
 		self.Icons[iconId]:Unlock()
-	end
-end
-
-function AuraMastery:OnToggleBarLock()
-	if not self.BarLocked then
-		self.iconForm:SetStyle("Moveable", false)
-		self.iconForm:SetBGColor(ApolloColor.new(0, 1, 1, 0))
-		self.wndMain:FindChild("UnlockBarButton"):SetText("Unlock All")
-		self.BarLocked = true
-	else
-		self.iconForm:SetStyle("Moveable", true)
-		self.iconForm:SetBGColor(ApolloColor.new(1, 1, 0, 1))
-		self.wndMain:FindChild("UnlockBarButton"):SetText("Lock All")
-		self.BarLocked = false
 	end
 end
 
@@ -318,8 +345,8 @@ function AuraMastery:OnRemoveIcon( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMastery:AddIcon()
-	local newIcon = Icon.new(self.buffWatch, self.iconForm, self.wndMain)
-	newIcon:SetScale(self.wndMain:FindChild("BarResize"):GetValue())
+	local newIcon = Icon.new(self.buffWatch, self.wndMain)
+	newIcon:SetScale(1)
 	
 	local iconList = self.wndMain:FindChild("IconListHolder"):FindChild("IconList")
 	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
@@ -373,6 +400,33 @@ function AuraMastery:OnIconScale( wndHandler, wndControl, fNewValue, fOldValue )
 	icon:SetScale(fNewValue)
 end
 
+function AuraMastery:OnTabSelected( wndHandler, wndControl, eMouseButton )
+	self.wndMain:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(true)
+end
+
+function AuraMastery:OnTabUnselected( wndHandler, wndControl, eMouseButton )
+	self.wndMain:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(false)
+end
+
+local function OnColorUpdate()
+	AuraMasteryInst:OnColorUpdate()
+end
+
+function AuraMastery:OnColorUpdate()
+	self.wndMain:FindChild("BuffColorSample"):SetBGColor(self.selectedColor)
+	for _, icon in pairs(self.wndMain:FindChild("SpriteItemList"):GetChildren()) do
+		icon:FindChild("SpriteItemIcon"):SetBGColor(self.selectedColor)
+	end
+end
+
+function AuraMastery:OnColorSelect( wndHandler, wndControl, eMouseButton )
+	ColorPicker.AdjustCColor(self.selectedColor, true, OnColorUpdate)
+end
+
+function AuraMastery:OnSpellNameChanged( wndHandler, wndControl, strText )
+	self.wndMain:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(strText))
+end
+
 --------------------------------------------------------------------------------------------
 -- IconListItem Functions
 ---------------------------------------------------------------------------------------------------
@@ -393,6 +447,17 @@ function AuraMastery:SelectIcon(iconItem)
 		self.wndMain:FindChild("SelectedSound"):SetText(icon.iconSound)
 		self.wndMain:FindChild("BuffScale"):SetValue(icon.icon:GetScale())
 		self.wndMain:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
+		self.wndMain:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
+		self.wndMain:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
+		self.selectedColor = icon.iconColor
+		self:OnColorUpdate()
+		
+		for _, spriteIcon in pairs(self.wndMain:FindChild("SpriteItemList"):GetChildren()) do
+			if (icon.iconSprite == "" and spriteIcon:FindChild("SpriteItemText"):GetText() == "Spell Icon") or spriteIcon:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
+				self:SelectSpriteIcon(spriteIcon)
+				break
+			end
+		end
 		
 		if self.selectedIcon ~= nil then
 			self.selectedIcon:SetBGColor(ApolloColor.new(1, 1, 1, 1))
@@ -413,7 +478,6 @@ function AuraMastery:SelectIcon(iconItem)
 				self.wndMain:FindChild("SoundSelect"):SetVScrollPos(top)
 				break
 			end
-		
 		end
 	end
 end
@@ -440,4 +504,25 @@ end
 AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
 
+---------------------------------------------------------------------------------------------------
+-- SpriteItem Functions
+---------------------------------------------------------------------------------------------------
+function AuraMastery:OnSpriteIconSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	if wndHandler == wndControl then
+		self:SelectSpriteIcon(wndHandler)
+	end
+end
 
+function AuraMastery:SelectSpriteIcon(spriteIcon)
+	if self.selectedSprite ~= nil then
+		self.selectedSprite:SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
+	end
+	self.selectedSprite = spriteIcon
+	if self.selectedSprite:FindChild("SpriteItemText"):GetText() == "Spell Icon" then
+		self.wndMain:FindChild("SelectedSprite"):SetText("")
+	else
+		self.wndMain:FindChild("SelectedSprite"):SetText(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
+	end
+	self.selectedSprite:SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
+	self.selectedSprite:SetText("")
+end
