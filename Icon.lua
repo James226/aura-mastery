@@ -5,6 +5,8 @@
 
 require "Window"
 
+local GeminiPackages = _G["GeminiPackages"]   
+
 local Icon  = {} 
 Icon.__index = Icon
 
@@ -15,15 +17,14 @@ setmetatable(Icon, {
 })
 
 local EmptyBuffIcon = "CRB_ActionBarFrameSprites:sprActionBarFrame_VehicleIconBG"
+local IconText
 
 function Icon.new(buffWatch, configForm)
-	if position == nil then
-		position = 0
-	end
 	local self = setmetatable({}, Icon)
+	
 	self.iconForm = iconForm
 	self.buffWatch = buffWatch
-	self.icon = Apollo.LoadForm("AuraMastery.xml", "Icon", nil, self)
+	self.icon = Apollo.LoadForm("AuraMastery.xml", "AM_Icon", nil, self)
 	self.iconType = "Buff"
 	self.iconName = ""
 	self.iconTarget = "Player"
@@ -34,8 +35,22 @@ function Icon.new(buffWatch, configForm)
 	self.iconBorder = true
 	self.iconColor = CColor.new(1, 1, 1, 1)
 	self.iconSprite = ""
+	self.iconScale = 1
+	self.defaultSize = { width = self.icon:GetWidth(), height = self.icon:GetHeight() }
+	self.duration = 0
+	self.maxDuration = 0
 	
 	self.isActive = true
+	
+	GeminiPackages:Require("AuraMastery:IconText", function(iconText)
+		IconText = iconText
+		self.iconText = IconText.new(self)
+	end)
+		
+	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
+		IconOverlay = iconOverlay
+		self.iconOverlay = IconOverlay.new(self)
+	end)
 	
 	self:AddToBuffWatch()
 	
@@ -56,8 +71,8 @@ function Icon:Load(saveData)
 		self.iconSound = saveData.iconSound
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
 		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
-		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + self.icon:GetWidth(),  saveData.iconPosition.top + self.icon:GetHeight())
-		self.icon:SetScale(saveData.iconScale or 1)
+		self.iconScale = saveData.iconScale or 1
+		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + (self.iconScale * self.defaultSize.width),  saveData.iconPosition.top + (self.iconScale * self.defaultSize.height))
 		if saveData.iconColor ~= nil then
 			self.iconColor = CColor.new(saveData.iconColor[1], saveData.iconColor[2], saveData.iconColor[3], saveData.iconColor[4])
 		end
@@ -65,6 +80,9 @@ function Icon:Load(saveData)
 		self.iconSprite = saveData.iconSprite or ""
 		self.iconBorder = saveData.iconBorder
 		self.icon:SetStyle("Border", self.iconBorder)
+		if saveData.iconText ~= nil then
+			self.iconText:Load(saveData.iconText[1])
+		end
 	end
 	self:AddToBuffWatch()
 end
@@ -77,11 +95,11 @@ function Icon:GetSaveData()
 	saveData.iconTarget = self.iconTarget 
 	saveData.iconSound = self.iconSound 
 	saveData.iconBackground = self.iconBackground
-	saveData.iconScale = self.icon:GetScale()
+	saveData.iconScale = self.iconScale
 	saveData.iconBorder = self.iconBorder
 	saveData.iconColor = { self.iconColor.r, self.iconColor.g, self.iconColor.b, self.iconColor.a }
 	saveData.iconSprite = self.iconSprite
-
+	saveData.iconText = { self.iconText:Save() }
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
 	saveData.iconPosition = {
 		left = left,
@@ -194,7 +212,7 @@ function Icon:SetIcon(configWnd)
 	self.iconTarget = configWnd:FindChild("BuffTarget"):GetText()
 	self.iconShown = configWnd:FindChild("BuffShown"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
-	self.icon:SetScale(configWnd:FindChild("BuffScale"):GetValue())
+	self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
 	
 	self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
 	self.icon:SetStyle("Border", self.iconBorder)
@@ -205,6 +223,8 @@ function Icon:SetIcon(configWnd)
 		self.iconSound = nil
 	end
 	self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
+	
+	self.iconText:SetConfig(configWnd:FindChild("AM_Config_TextEditor"))
 	self:AddToBuffWatch()
 end
 
@@ -226,6 +246,14 @@ function Icon:PostUpdate()
 	if not self.isSet then
 		self:ClearBuff()
 	end
+	
+	if self.iconText ~= nil then
+		self.iconText:Update()
+	end
+	
+	if self.iconOverlay ~= nil then
+		self.iconOverlay:Update()
+	end
 end
 
 function Icon:SetSprite(spriteIcon)
@@ -239,18 +267,11 @@ end
 
 function Icon:SetSpell(spell, remaining, total, charges)
 	self:SetSprite(spell:GetIcon())
-	self.icon:Show(true)
-	self.icon:FindChild("IconOverlay"):SetAnchorPoints(0, 1 - (remaining / total), 1, 1)
+	self.icon:Show(true)	
 	
-	if remaining == 0 then
-		self.icon:SetText("")
-	else	
-		if remaining > 60 then	
-			self.icon:SetText(string.format("%i:%02d", math.floor(remaining / 60), math.floor(remaining % 60)))
-		else
-			self.icon:SetText(string.format("%.2fs", remaining))
-		end		
-	end
+	self.duration = remaining
+	self.maxDuration = total
+	
 	self.isSet = true
 end
 
@@ -264,15 +285,9 @@ function Icon:SetBuff(buff)
 	if self.iconShown == "Active" or self.iconShown == "Both" then
 		self:SetSprite(buff.spell:GetIcon())
 		self.icon:Show(true)
-		self.icon:FindChild("IconOverlay"):SetAnchorPoints(0, 1 - (buff.fTimeRemaining / self.buffStart), 1, 1)
 		
-		if buff.fTimeRemaining > 0 then
-			if buff.fTimeRemaining > 60 then
-				self.icon:SetText(string.format("%i:%02d", math.floor(buff.fTimeRemaining / 60), math.floor(buff.fTimeRemaining % 60)))
-			else
-				self.icon:SetText(string.format("%.2fs", buff.fTimeRemaining))
-			end
-		end
+		self.duration = buff.fTimeRemaining
+		self.maxDuration = self.buffStart
 	else
 		if self.iconBackground then
 			self.icon:SetSprite(EmptyBuffIcon)
@@ -286,7 +301,7 @@ end
 function Icon:GetSpellIconByName(spellName)
 	local abilities = AbilityBook.GetAbilitiesList()
 	if abilities ~= nil then
-		for _, ability in pairs() do
+		for _, ability in pairs(abilities) do
 			if ability.strName == spellName then
 				return ability.tTiers[1].splObject:GetIcon()
 			end
@@ -308,7 +323,7 @@ function Icon:ClearBuff()
 			spriteIcon = self.lastSprite
 			self.icon:Show(true)
 		end
-		self.icon:FindChild("IconOverlay"):SetAnchorPoints(0, 0, 1, 0)
+		self.duration = 0
 		
 		if spriteIcon == "" then
 			self.icon:Show(false)
@@ -316,7 +331,7 @@ function Icon:ClearBuff()
 			self:SetSprite(spriteIcon)
 		end
 		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
-		self.icon:SetText("")
+		self.icon:FindChild("IconText"):SetText("")
 		self.isActive = false
 	end
 end
@@ -330,7 +345,9 @@ function Icon:Lock()
 end
 
 function Icon:SetScale(scale)
-	self.icon:SetScale(scale)
+	self.iconScale = scale
+	local left, top, right, bottom = self.icon:GetAnchorOffsets()
+	self.icon:SetAnchorOffsets(left, top, left + (self.iconScale * self.defaultSize.width),  top + (self.iconScale * self.defaultSize.height))
 end
 
 if _G["AuraMasteryLibs"] == nil then

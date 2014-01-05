@@ -47,6 +47,7 @@ function AuraMastery:new(o)
 	self.BarLocked = true
 	self.nextIconId = 1
 	self.selectedColor = CColor.new(1,1,1,1)
+	self.selectedFontColor = CColor.new(1,1,1,1)
 	
     return o
 end
@@ -150,6 +151,9 @@ function AuraMastery:OnLoad()
 	self.wndMain:FindChild("SoundSelect"):SetVScrollInfo(nextItem - soundSelectHeight, soundSelectHeight, soundSelectHeight)
 	
 	self:LoadSpriteIcons()
+	
+	self.textEditor = Apollo.LoadForm("AuraMastery.xml", "AM_Config_TextEditor", self.wndMain:FindChild("TextTab"), self)
+	self:LoadFontSelector()
 	
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
@@ -445,11 +449,12 @@ function AuraMastery:SelectIcon(iconItem)
 		self.wndMain:FindChild("BuffTarget"):SetText(icon.iconTarget)
 		self.wndMain:FindChild("BuffShown"):SetText(icon.iconShown)
 		self.wndMain:FindChild("SelectedSound"):SetText(icon.iconSound)
-		self.wndMain:FindChild("BuffScale"):SetValue(icon.icon:GetScale())
+		self.wndMain:FindChild("BuffScale"):SetValue(icon.iconScale)
 		self.wndMain:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		self.wndMain:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
 		self.wndMain:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor
+		self.selectedFontColor = icon.iconText.textFontColor
 		self:OnColorUpdate()
 		
 		for _, spriteIcon in pairs(self.wndMain:FindChild("SpriteItemList"):GetChildren()) do
@@ -479,6 +484,22 @@ function AuraMastery:SelectIcon(iconItem)
 				break
 			end
 		end
+		
+		local selectedTextAnchor = self.wndMain:FindChild("AnchorPosition_" .. icon.iconText.textAnchor)
+		if selectedTextAnchor ~= nil then
+			selectedTextAnchor:SetCheck(true)
+		end
+		
+		for _, font in pairs(self.wndMain:FindChild("FontSelector"):GetChildren()) do
+			if font:GetText() == icon.iconText.textFont then
+				self:SelectFont(font)
+				local left, top, right, bottom = font:GetAnchorOffsets()
+				self.wndMain:FindChild("FontSelector"):SetVScrollPos(top)
+				break
+			end
+		end
+		self.wndMain:FindChild("FontColorSample"):SetBGColor(icon.iconText.textFontColor)
+		self.wndMain:FindChild("FontSample"):SetTextColor(icon.iconText.textFontColor)
 	end
 end
 
@@ -526,3 +547,49 @@ function AuraMastery:SelectSpriteIcon(spriteIcon)
 	self.selectedSprite:SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 	self.selectedSprite:SetText("")
 end
+
+function AuraMastery:LoadFontSelector()
+	local fontSelector = self.wndMain:FindChild("FontSelector")
+	local currentIdx = 0
+	for _, font in pairs(Apollo.GetGameFonts()) do
+		local fontItem = Apollo.LoadForm("AuraMastery.xml", "AM_Config_TextEditor_Font", fontSelector, self)
+		fontItem:SetAnchorOffsets(0, currentIdx * fontItem:GetHeight(), 0, currentIdx * fontItem:GetHeight() + fontItem:GetHeight())
+		fontItem:SetText(font.name)
+		currentIdx = currentIdx + 1
+	end	
+end
+
+---------------------------------------------------------------------------------------------------
+-- AM_Config_TextEditor_Font Functions
+---------------------------------------------------------------------------------------------------
+function AuraMastery:OnFontSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	if wndHandler == wndControl then
+		self:SelectFont(wndHandler)
+	end
+end
+
+function AuraMastery:SelectFont(fontElement)
+	if self.selectedFont ~= nil then
+		self.selectedFont:SetBGColor(CColor.new(1,1,1,1))
+	end
+	self.wndMain:FindChild("FontSample"):SetFont(fontElement:GetText())
+	self.wndMain:FindChild("SelectedFont"):SetText(fontElement:GetText())
+	self.selectedFont = fontElement
+	self.selectedFont:SetBGColor(CColor.new(1,0,1,1))
+end
+
+local function OnFontColorUpdate()
+	AuraMasteryInst:OnFontColorUpdate()
+end
+
+function AuraMastery:OnFontColorSelect( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		ColorPicker.AdjustCColor(self.selectedFontColor, true, OnFontColorUpdate)
+	end
+end
+
+function AuraMastery:OnFontColorUpdate()
+	self.wndMain:FindChild("FontColorSample"):SetBGColor(self.selectedFontColor)
+	self.wndMain:FindChild("FontSample"):SetTextColor(self.selectedFontColor)
+end
+
