@@ -485,6 +485,10 @@ function AuraMastery:SelectIcon(iconItem)
 			end
 		end
 		
+		for _, anchor in pairs(self.wndMain:FindChild("AnchorSelector"):GetChildren()) do
+			anchor:SetCheck(false)
+		end
+		
 		local selectedTextAnchor = self.wndMain:FindChild("AnchorPosition_" .. icon.iconText.textAnchor)
 		if selectedTextAnchor ~= nil then
 			selectedTextAnchor:SetCheck(true)
