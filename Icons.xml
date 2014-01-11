@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Sprites>
     <Sprite Name="icon_Tick" Cycle="1">
-        <Frame Texture="AuraMastery\Icons\Tick.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="0" HotspotY="0" Duration="1.000" StartColor="white" EndColor="white"/>
+        <Frame Texture="AuraMastery\Icons\Tick.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
     </Sprite>
     <Sprite Name="icon_No" Cycle="1">
         <Frame Texture="AuraMastery\Icons\No.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
@@ -23,5 +23,8 @@
     </Sprite>
     <Sprite Name="icon_Paw" Cycle="1">
         <Frame Texture="AuraMastery\Icons\Paw.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_HexBladeLeft" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\HexBladeLeft.png" x0="0" x1="0" x2="1000" x3="1000" x4="1000" x5="1000" y0="0" y1="0" y2="1000" y3="1000" y4="1000" y5="1000" Stretchy="1" HotspotX="500" HotspotY="500" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
     </Sprite>
 </Sprites>

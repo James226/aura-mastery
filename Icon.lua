@@ -83,6 +83,8 @@ function Icon:Load(saveData)
 		if saveData.iconText ~= nil then
 			self.iconText:Load(saveData.iconText[1])
 		end
+		
+		self.iconOverlay:Load(saveData.iconOverlay)
 	end
 	self:AddToBuffWatch()
 end
@@ -105,6 +107,8 @@ function Icon:GetSaveData()
 		left = left,
 		top = top
 	}
+	
+	saveData.iconOverlay = self.iconOverlay:Save()
 	
 	return saveData
 end
@@ -225,6 +229,7 @@ function Icon:SetIcon(configWnd)
 	self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
 	
 	self.iconText:SetConfig(configWnd:FindChild("AM_Config_TextEditor"))
+	self.iconOverlay:SetConfig(configWnd)
 	self:AddToBuffWatch()
 end
 
@@ -263,6 +268,7 @@ function Icon:SetSprite(spriteIcon)
 	else
 		self.icon:SetSprite(spriteIcon)
 	end
+	self.iconOverlay:UpdateOverlaySprite()
 end
 
 function Icon:SetSpell(spell, remaining, total, charges)

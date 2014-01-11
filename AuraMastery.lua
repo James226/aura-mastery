@@ -22,7 +22,8 @@ local spriteIcons = {
 	Fluer = "icon_Fluer",
 	Heart = "icon_Heart",
 	Lightning = "icon_Lightning",
-	Paw = "icon_Paw"
+	Paw = "icon_Paw",
+	HexBladeLeft = "icon_HexBladeLeft"
 }
 
 -----------------------------------------------------------------------------------------------
@@ -48,6 +49,7 @@ function AuraMastery:new(o)
 	self.nextIconId = 1
 	self.selectedColor = CColor.new(1,1,1,1)
 	self.selectedFontColor = CColor.new(1,1,1,1)
+	self.currentSampleNum = 0
 	
     return o
 end
@@ -158,6 +160,20 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
 	
+	self.wndMain:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetMax(100)
+	self.wndMain:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetProgress(75)
+	
+	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetMax(100)
+	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetProgress(75)
+	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetSprite("icon_Tick")
+	
+	self.wndMain:FindChild("LinearOverlay"):FindChild("ProgressBar"):SetMax(100)
+	self.wndMain:FindChild("LinearOverlay"):FindChild("ProgressBar"):SetProgress(75)
+	
+	self.wndMain:FindChild("RadialOverlay"):FindChild("ProgressBar"):SetMax(100)
+	self.wndMain:FindChild("RadialOverlay"):FindChild("ProgressBar"):SetProgress(75)
+	
+	self.wndMain:FindChild("IconSample"):FindChild("ProgressBar"):SetMax(100)
 	
 	self.Icons = {}
 	
@@ -406,10 +422,24 @@ end
 
 function AuraMastery:OnTabSelected( wndHandler, wndControl, eMouseButton )
 	self.wndMain:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(true)
+	
+	if wndHandler:GetText() == "Appearance" then
+		Apollo.RegisterTimerHandler("AuraMastery_IconPreview", "OnIconPreview", self)
+		Apollo.CreateTimer("AuraMastery_IconPreview", 0.1, true)
+	end
 end
 
 function AuraMastery:OnTabUnselected( wndHandler, wndControl, eMouseButton )
 	self.wndMain:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(false)
+	
+	if wndHandler:GetText() == "Appearance" then
+		Apollo.StopTimer("AuraMastery_IconPreview")
+	end
+end
+
+function AuraMastery:OnIconPreview()
+	self.currentSampleNum = (self.currentSampleNum + 2) % 100
+	self.wndMain:FindChild("IconSample"):FindChild("ProgressBar"):SetProgress(self.currentSampleNum)
 end
 
 local function OnColorUpdate()
@@ -418,6 +448,7 @@ end
 
 function AuraMastery:OnColorUpdate()
 	self.wndMain:FindChild("BuffColorSample"):SetBGColor(self.selectedColor)
+	self.wndMain:FindChild("IconSample"):FindChild("IconSprite"):SetBGColor(self.selectedColor)
 	for _, icon in pairs(self.wndMain:FindChild("SpriteItemList"):GetChildren()) do
 		icon:FindChild("SpriteItemIcon"):SetBGColor(self.selectedColor)
 	end
@@ -429,6 +460,45 @@ end
 
 function AuraMastery:OnSpellNameChanged( wndHandler, wndControl, strText )
 	self.wndMain:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(strText))
+end
+
+function AuraMastery:OnOverlaySelection( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	if wndHandler == wndControl then
+		local overlaySelection = wndHandler:FindChild("OverlayIconText"):GetText()
+		
+		if overlaySelection == "Solid" then
+			self.wndMain:FindChild("SolidOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
+			self.wndMain:FindChild("IconOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
+			
+		elseif overlaySelection == "Icon" then
+			self.wndMain:FindChild("SolidOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
+			self.wndMain:FindChild("IconOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
+		end
+		
+		if overlaySelection == "Linear" then
+			self.wndMain:FindChild("LinearOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
+			self.wndMain:FindChild("RadialOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
+			self.wndMain:FindChild("IconSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", false)
+		elseif overlaySelection == "Radial" then
+			self.wndMain:FindChild("LinearOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
+			self.wndMain:FindChild("RadialOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
+			self.wndMain:FindChild("IconSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", true)
+		end
+	end    
+end
+
+local function OnOverlayColorUpdate()
+	AuraMasteryInst:OnOverlayColorUpdate()
+end
+
+function AuraMastery:OnOverlayColorUpdate()
+	self.wndMain:FindChild("OverlayColorSample"):SetBGColor(self.selectedOverlayColor)
+	self.wndMain:FindChild("IconSample"):FindChild("ProgressBar"):SetBGColor(self.selectedOverlayColor)
+	self.wndMain:FindChild("IconSample"):FindChild("ProgressBar"):SetBarColor(self.selectedOverlayColor)
+end
+
+function AuraMastery:OnOverlayColorSelect( wndHandler, wndControl, eMouseButton )
+	ColorPicker.AdjustCColor(self.selectedOverlayColor, true, OnOverlayColorUpdate)
 end
 
 --------------------------------------------------------------------------------------------
@@ -454,6 +524,7 @@ function AuraMastery:SelectIcon(iconItem)
 		self.wndMain:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
 		self.wndMain:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor
+		self.selectedOverlayColor = icon.iconOverlay.overlayColor
 		self.selectedFontColor = icon.iconText.textFontColor
 		self:OnColorUpdate()
 		
@@ -550,6 +621,7 @@ function AuraMastery:SelectSpriteIcon(spriteIcon)
 	end
 	self.selectedSprite:SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 	self.selectedSprite:SetText("")
+	self.wndMain:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
 end
 
 function AuraMastery:LoadFontSelector()
