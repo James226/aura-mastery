@@ -13,39 +13,56 @@ function IconOverlay.new(icon)
 	local self = setmetatable({}, IconOverlay)
 	self.icon = icon
 	self.overlayColor = CColor.new(1, 0, 0, 1)
+	self.overlayStyle = "Linear"
+	self.overlayShape = "Solid"
 	self.overlayElement = self.icon.icon:FindChild("IconOverlay")
 	self.overlayElement:SetBarColor(self.overlayColor)
+	self.overlayElement:SetBGColor(self.overlayColor)
 	self.overlayElement:SetMax(100)
 	return self
 end
 
 function IconOverlay:Load(saveData)
-
+	if saveData ~= nil then
+		self.overlayShape = saveData.overlayShape or "Solid"
+		
+		if saveData.overlayColor ~= nil then
+			self.overlayColor = CColor.new(saveData.overlayColor[1], saveData.overlayColor[2], saveData.overlayColor[3], saveData.overlayColor[4])
+		end
+		
+		self.overlayStyle = saveData.overlayStyle or "Linear"
+		
+		self:UpdateOverlaySprite()
+	end
 end
 
-function IconOverlay:Save(saveData)
-
+function IconOverlay:Save()
+	local saveData = { }
+	saveData.overlayShape = self.overlayShape
+	saveData.overlayColor = { self.overlayColor.r, self.overlayColor.g, self.overlayColor.b, self.overlayColor.a }
+	saveData.overlayStyle = self.overlayStyle
+	return saveData
 end
 
 function IconOverlay:UpdateOverlaySprite()
-	if self.overlayStyle == "Icon" then
+	if self.overlayShape == "Icon" then
 		self.overlayElement:SetFullSprite(self.icon.icon:GetSprite())
 	else
 		self.overlayElement:SetFullSprite("ActionSetBuilder_TEMP:spr_TEMP_ActionSetBottomTierBG")
 	end
+	
+	self.overlayElement:SetStyleEx("RadialBar", self.overlayStyle == "Radial")
+	
+	self.overlayElement:SetBarColor(self.overlayColor)
+	self.overlayElement:SetBGColor(self.overlayColor)
 end
 
 function IconOverlay:SetConfig(configWnd)
-	self.overlayStyle = (configWnd:FindChild("IconOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow") and "Icon" or "Solid"
-		
+	self.overlayShape = (configWnd:FindChild("IconOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow") and "Icon" or "Solid"
+	self.overlayColor = configWnd:FindChild("OverlayColor"):FindChild("OverlayColorSample"):GetBGColor()	
+	self.overlayStyle = (configWnd:FindChild("RadialOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow" and "Radial" or "Linear")
+	
 	self:UpdateOverlaySprite()
-	
-	self.radialOverlay = (configWnd:FindChild("RadialOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow")
-	self.overlayElement:SetStyleEx("RadialBar", self.radialOverlay)
-	
-	
-	self.overlayElement:SetBarColor(configWnd:FindChild("OverlayColor"):FindChild("OverlayColorSample"):GetBGColor())
-	self.overlayElement:SetBGColor(configWnd:FindChild("OverlayColor"):FindChild("OverlayColorSample"):GetBGColor())
 end
 
 function IconOverlay:Update()

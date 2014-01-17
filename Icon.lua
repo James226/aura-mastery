@@ -169,10 +169,11 @@ function Icon:RemoveBuffFromBuffWatch(type, target)
 end
 
 function Icon:GetSpellCooldown(spell)
+gSpell = spell
 	local charges = spell:GetAbilityCharges()
-	if charges and charges.chargesMax > 0 then
-		if charges.rechargePercentRemaining and charges.rechargePercentRemaining > 0 then
-			return charges.rechargePercentRemaining * charges.rechargeTime, charges.rechargeTime, tostring(charges.chargesRemaining)
+	if charges and charges.nChargesMax > 0 then
+		if charges.fRechargePercentRemaining and charges.fRechargePercentRemaining > 0 then
+			return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, tostring(charges.nChargesRemaining)
 		end
 	else
 		local cooldown = spell:GetCooldownRemaining()

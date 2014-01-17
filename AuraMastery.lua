@@ -50,6 +50,7 @@ function AuraMastery:new(o)
 	self.selectedColor = CColor.new(1,1,1,1)
 	self.selectedFontColor = CColor.new(1,1,1,1)
 	self.currentSampleNum = 0
+	self.abilitiesList = nil
 	
     return o
 end
@@ -90,6 +91,10 @@ function AuraMastery:OnLoadIcons(tData)
 	self:UpdateControls()
 	self:SelectFirstIcon()
 end
+
+function AuraMastery:OnAbilityBookChange()
+	self.abilitiesList = AbilityBook.GetAbilitiesList()
+end
  
 
 -----------------------------------------------------------------------------------------------
@@ -100,6 +105,7 @@ function AuraMastery:OnLoad()
     -- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
     Apollo.RegisterSlashCommand("am", "OnAuraMasteryOn", self)
 	Apollo.RegisterEventHandler("AMLoadIcons", "OnLoadIcons", self)
+	Apollo.RegisterEventHandler("PlayerSettingsChanged", "OnAbilityBookChange", self)
 	Apollo.LoadSprites("Icons.xml")
     
     -- load our forms
@@ -165,7 +171,7 @@ function AuraMastery:OnLoad()
 	
 	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetProgress(75)
-	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetSprite("icon_Tick")
+	self.wndMain:FindChild("IconOverlay"):FindChild("ProgressBar"):SetFullSprite("icon_Crosshair")
 	
 	self.wndMain:FindChild("LinearOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.wndMain:FindChild("LinearOverlay"):FindChild("ProgressBar"):SetProgress(75)
@@ -180,8 +186,15 @@ function AuraMastery:OnLoad()
 	self:SelectFirstIcon()
 end
 
+function AuraMastery:GetAbilitiesList()
+	if self.abilitiesList == nil then
+		self.abilitiesList = AbilityBook.GetAbilitiesList()
+	end
+	return self.abilitiesList
+end
+
 function AuraMastery:GetSpellIconByName(spellName)
-	local abilities = AbilityBook.GetAbilitiesList()
+	local abilities = self:GetAbilitiesList()
 	if abilities ~= nil then
 		for _, ability in pairs(abilities) do
 			if ability.strName == spellName then
@@ -288,7 +301,7 @@ function AuraMastery:OnUpdate()
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 	end	
 	
-	local abilities = AbilityBook.GetAbilitiesList()
+	local abilities = self:GetAbilitiesList()
 	if abilities then
 		self:ProcessCooldowns(abilities)
 	end
@@ -575,6 +588,23 @@ function AuraMastery:SelectIcon(iconItem)
 		end
 		self.wndMain:FindChild("FontColorSample"):SetBGColor(icon.iconText.textFontColor)
 		self.wndMain:FindChild("FontSample"):SetTextColor(icon.iconText.textFontColor)
+		
+		self.wndMain:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
+		if icon.iconOverlay.overlayShape == "Icon" then
+			self.wndMain:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+			self.wndMain:FindChild("SolidOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+		else
+			self.wndMain:FindChild("SolidOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+			self.wndMain:FindChild("IconOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+		end
+		
+		if icon.iconOverlay.overlayStyle == "Radial" then
+			self.wndMain:FindChild("RadialOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+			self.wndMain:FindChild("LinearOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+		else
+			self.wndMain:FindChild("LinearOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+			self.wndMain:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+		end
 	end
 end
 
