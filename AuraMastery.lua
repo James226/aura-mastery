@@ -26,6 +26,8 @@ local spriteIcons = {
 	HexBladeLeft = "icon_HexBladeLeft"
 }
 
+local criticalTime = 5
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
@@ -51,6 +53,7 @@ function AuraMastery:new(o)
 	self.selectedFontColor = CColor.new(1,1,1,1)
 	self.currentSampleNum = 0
 	self.abilitiesList = nil
+	self.lastCritical = 0
 	
     return o
 end
@@ -95,7 +98,15 @@ end
 function AuraMastery:OnAbilityBookChange()
 	self.abilitiesList = AbilityBook.GetAbilitiesList()
 end
- 
+
+function AuraMastery:OnDamageDealt(tData)
+	if tData.unitCaster ~= nil and tData.unitCaster.IsThePlayer then
+		if tData.eCombatResult == GameLib.CodeEnumCombatResult.Critical then
+			self.lastCritical = os.time()
+		end
+	end
+end
+
 
 -----------------------------------------------------------------------------------------------
 -- AuraMastery OnLoad
@@ -105,7 +116,12 @@ function AuraMastery:OnLoad()
     -- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
     Apollo.RegisterSlashCommand("am", "OnAuraMasteryOn", self)
 	Apollo.RegisterEventHandler("AMLoadIcons", "OnLoadIcons", self)
-	Apollo.RegisterEventHandler("PlayerSettingsChanged", "OnAbilityBookChange", self)
+	Apollo.RegisterEventHandler("AbilityBookChange", "OnAbilityBookChange", self)
+	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
+	
+	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
+	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)
+	
 	Apollo.LoadSprites("Icons.xml")
     
     -- load our forms
@@ -306,6 +322,8 @@ function AuraMastery:OnUpdate()
 		self:ProcessCooldowns(abilities)
 	end
 	
+	self:ProcessInnate()
+	
 	for _, icon in pairs(self.Icons) do
 		icon:PostUpdate()
 	end
@@ -313,16 +331,16 @@ end
 
 function AuraMastery:ProcessBuffs(buffs, target)
 	for idx, buff in pairs(buffs.arBeneficial) do
-		if self.buffWatch["Buff"][target][buff.spell:GetName()] ~= nil then
-			for _, icon in pairs(self.buffWatch["Buff"][target][buff.spell:GetName()]) do
+		if self.buffWatch["Buff"][target][buff.splEffect:GetName()] ~= nil then
+			for _, icon in pairs(self.buffWatch["Buff"][target][buff.splEffect:GetName()]) do
 				icon:SetBuff(buff)
 			end
 		end
 	end
 	
 	for idx, buff in pairs(buffs.arHarmful) do
-		if self.buffWatch["Debuff"][target][buff.spell:GetName()] ~= nil then
-			for _, icon in pairs(self.buffWatch["Debuff"][target][buff.spell:GetName()]) do
+		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
+			for _, icon in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
 				icon:SetBuff(buff)
 			end
 		end
@@ -330,6 +348,7 @@ function AuraMastery:ProcessBuffs(buffs, target)
 end
 
 function AuraMastery:ProcessCooldowns(abilities)
+	local inCriticalTime = (os.difftime(os.time(), self.lastCritical) < criticalTime)
 	for k, v in pairs(abilities) do
 		if v.bIsActive and v.nCurrentTier and v.tTiers then
 			local tier = v.tTiers[v.nCurrentTier]
@@ -337,12 +356,16 @@ function AuraMastery:ProcessCooldowns(abilities)
 				local s = tier.splObject
 				if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
 					for _, icon in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
-						icon:ProcessSpell(s)
+						icon:ProcessSpell(s, inCriticalTime )
 					end
 				end
 			end
 		end
 	end
+end
+
+function AuraMastery:ProcessInnate()
+	--GameLib.GetClassInnateAbility()
 end
 
 function AuraMastery:OnLockIcon( wndHandler, wndControl, eMouseButton )
@@ -535,6 +558,7 @@ function AuraMastery:SelectIcon(iconItem)
 		self.wndMain:FindChild("BuffScale"):SetValue(icon.iconScale)
 		self.wndMain:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		self.wndMain:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
+		self.wndMain:FindChild("BuffCriticalRequired"):SetCheck(icon.criticalRequired)
 		self.wndMain:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor
 		self.selectedOverlayColor = icon.iconOverlay.overlayColor

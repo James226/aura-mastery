@@ -39,6 +39,8 @@ function Icon.new(buffWatch, configForm)
 	self.defaultSize = { width = self.icon:GetWidth(), height = self.icon:GetHeight() }
 	self.duration = 0
 	self.maxDuration = 0
+	self.criticalRequired = false
+	self.criticalRequirementPassed = true
 	
 	self.isActive = true
 	
@@ -85,6 +87,10 @@ function Icon:Load(saveData)
 		end
 		
 		self.iconOverlay:Load(saveData.iconOverlay)
+		
+		if saveData.criticalRequired ~= nil then
+			self.criticalRequired = saveData.criticalRequired
+		end
 	end
 	self:AddToBuffWatch()
 end
@@ -109,6 +115,7 @@ function Icon:GetSaveData()
 	}
 	
 	saveData.iconOverlay = self.iconOverlay:Save()
+	saveData.criticalRequired = self.criticalRequired
 	
 	return saveData
 end
@@ -169,7 +176,6 @@ function Icon:RemoveBuffFromBuffWatch(type, target)
 end
 
 function Icon:GetSpellCooldown(spell)
-gSpell = spell
 	local charges = spell:GetAbilityCharges()
 	if charges and charges.nChargesMax > 0 then
 		if charges.fRechargePercentRemaining and charges.fRechargePercentRemaining > 0 then
@@ -184,11 +190,15 @@ gSpell = spell
 	return 0, 0, 0
 end
 
-function Icon:ProcessSpell(spell)
-	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
+function Icon:CriticalRequirementPassed(inCriticalTime)
+	return not self.criticalRequired or inCriticalTime
+end
 
-	if (chargesRemaining > 0 or cdRemaining == 0) then
-		if self.iconShown == "Inactive" or self.iconShown == "Both" then
+function Icon:ProcessSpell(spell, inCriticalTime)
+	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
+	self.criticalRequirementPassed = self:CriticalRequirementPassed(inCriticalTime)
+	if (chargesRemaining > 0 or cdRemaining == 0) and self.criticalRequirementPassed then
+		if (self.iconShown == "Inactive" or self.iconShown == "Both") then
 			if self.isActive then
 				self.isActive = false
 				if self.iconSound ~= nil then
@@ -202,8 +212,8 @@ function Icon:ProcessSpell(spell)
 	else
 		self.isActive = true
 		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
-		if self.iconShown == "Active" or self.iconShown == "Both" then
-			self:SetSpell(spell, cdRemaining, cdTotal, chargesRemaining)
+		if self.iconShown == "Active" or self.iconShown == "Both" then			
+			self:SetSpell(spell, cdRemaining, cdTotal, chargesRemaining, criticalRequirementPassed)
 		else
 			self:ClearBuff()
 		end
@@ -217,6 +227,7 @@ function Icon:SetIcon(configWnd)
 	self.iconTarget = configWnd:FindChild("BuffTarget"):GetText()
 	self.iconShown = configWnd:FindChild("BuffShown"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
+	self.criticalRequired = configWnd:FindChild("BuffCriticalRequired"):IsChecked()
 	self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
 	
 	self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
@@ -273,36 +284,40 @@ function Icon:SetSprite(spriteIcon)
 end
 
 function Icon:SetSpell(spell, remaining, total, charges)
-	self:SetSprite(spell:GetIcon())
-	self.icon:Show(true)	
-	
-	self.duration = remaining
-	self.maxDuration = total
-	
-	self.isSet = true
+	if not self.isSet or self.duration < remaining then
+		self:SetSprite(spell:GetIcon())
+		self.icon:Show(true)
+		
+		self.duration = remaining
+		self.maxDuration = total	
+		
+		self.isSet = true
+	end
 end
 
 function Icon:SetBuff(buff)
-	if not self.isActive or buff.fTimeRemaining > self.buffStart then
-		self.isActive = true
-		self.buffStart = buff.fTimeRemaining
-	end
-	self.lastSprite = buff.spell:GetIcon()
-	
-	if self.iconShown == "Active" or self.iconShown == "Both" then
-		self:SetSprite(buff.spell:GetIcon())
-		self.icon:Show(true)
-		
-		self.duration = buff.fTimeRemaining
-		self.maxDuration = self.buffStart
-	else
-		if self.iconBackground then
-			self.icon:SetSprite(EmptyBuffIcon)
-		else
-			self.icon:Show(false)
+	if not self.isSet or self.duration < buff.fTimeRemaining then
+		if not self.isActive or buff.fTimeRemaining > self.buffStart then
+			self.isActive = true
+			self.buffStart = buff.fTimeRemaining
 		end
+		self.lastSprite = buff.splEffect:GetIcon()
+		
+		if self.iconShown == "Active" or self.iconShown == "Both" then
+			self:SetSprite(buff.splEffect:GetIcon())
+			self.icon:Show(true)
+			
+			self.duration = buff.fTimeRemaining
+			self.maxDuration = self.buffStart
+		else
+			if self.iconBackground then
+				self.icon:SetSprite(EmptyBuffIcon)
+			else
+				self.icon:Show(false)
+			end
+		end
+		self.isSet = true
 	end
-	self.isSet = true
 end
 
 function Icon:GetSpellIconByName(spellName)
@@ -317,13 +332,17 @@ function Icon:GetSpellIconByName(spellName)
 	return ""
 end
 
+function Icon:ShowWhenInactive()
+	return self.iconType ~= "Cooldown" and (self.iconShown == "Inactive" or self.iconShown == "Both")
+end
+
 function Icon:ClearBuff()
-	if self.isActive then
-		if self.iconType ~= "Cooldown" then
+	if self.isActive or self:ShowWhenInactive() then
+		if self.isActive and self.iconType ~= "Cooldown" then
 			Sound.Play(self.iconSound)
 		end
 		local spriteIcon = self.iconBackground and EmptyBuffIcon or ""
-		if self.iconType ~= "Cooldown" and (self.iconShown == "Inactive" or self.iconShown == "Both") then
+		if self:ShowWhenInactive() then
 			if self.lastSprite == nil or self.lastSprite == "" then
 				self.lastSprite = self:GetSpellIconByName(self.iconName)
 			end
