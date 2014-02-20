@@ -248,4 +248,3 @@ end
 AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
 
-

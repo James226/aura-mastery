@@ -49,13 +49,10 @@ function Icon.new(buffWatch, configForm)
 	
 	self.isActive = true
 	
-	GeminiPackages:Require("AuraMastery:IconText", function(iconText)
-		IconText = iconText
-		self.iconText = IconText.new(self)
-	end)
+	self.iconText = {}
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
-		IconOverlay = iconOverlay
+		local IconOverlay = iconOverlay
 		self.iconOverlay = IconOverlay.new(self)
 	end)
 	
@@ -88,7 +85,13 @@ function Icon:Load(saveData)
 		self.iconBorder = saveData.iconBorder
 		self.icon:SetStyle("Border", self.iconBorder)
 		if saveData.iconText ~= nil then
-			self.iconText:Load(saveData.iconText[1])
+			GeminiPackages:Require("AuraMastery:IconText", function(iconText)
+				local IconText = iconText
+				for textId, iconText in pairs(saveData.iconText) do
+					self.iconText[textId] = IconText.new(self)
+					self.iconText[textId]:Load(saveData.iconText[textId])
+				end
+			end)
 		end
 		
 		self.iconOverlay:Load(saveData.iconOverlay)
@@ -112,7 +115,12 @@ function Icon:GetSaveData()
 	saveData.iconBorder = self.iconBorder
 	saveData.iconColor = { self.iconColor.r, self.iconColor.g, self.iconColor.b, self.iconColor.a }
 	saveData.iconSprite = self.iconSprite
-	saveData.iconText = { self.iconText:Save() }
+	
+	saveData.iconText = {}
+	for iconTextId, iconText in pairs(self.iconText) do
+		saveData.iconText[iconTextId] = iconText:Save()
+	end
+
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
 	saveData.iconPosition = {
 		left = left,
@@ -240,7 +248,10 @@ function Icon:SetIcon(configWnd)
 	end
 	self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
 	
-	self.iconText:SetConfig(configWnd:FindChild("AM_Config_TextEditor"))
+	for iconTextId, iconText in pairs(self.iconText) do
+		iconText:SetConfig(configWnd:FindChild("TextList"):GetChildren()[iconTextId])
+	end
+	
 	self.iconOverlay:SetConfig(configWnd)
 	self:AddToBuffWatch()
 end
@@ -264,8 +275,8 @@ function Icon:PostUpdate()
 		self:ClearBuff()
 	end
 	
-	if self.iconText ~= nil then
-		self.iconText:Update()
+	for _, iconText in pairs(self.iconText) do
+		iconText:Update()
 	end
 	
 	if self.iconOverlay ~= nil then

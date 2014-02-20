@@ -3,6 +3,8 @@ require "Window"
 local AuraMasteryConfig  = {} 
 AuraMasteryConfig .__index = AuraMasteryConfig
 
+local IconText = nil
+
 setmetatable(AuraMasteryConfig, {
   __call = function (cls, ...)
     return cls.new(...)
@@ -66,9 +68,7 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("SoundSelect"):SetVScrollInfo(nextItem - soundSelectHeight, soundSelectHeight, soundSelectHeight)
 	
 	self:LoadSpriteIcons()
-	
-	self.textEditor = Apollo.LoadForm("AuraMastery.xml", "AM_Config_TextEditor", self.configForm:FindChild("TextTab"), self)
-	self:LoadFontSelector()
+	self.iconTextEditor = {}	
 	
 	self.configForm:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.configForm:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetProgress(75)
@@ -87,6 +87,10 @@ function AuraMasteryConfig:Init()
 	
 	self:CreateControls()
 	self:SelectFirstIcon()
+	
+	GeminiPackages:Require("AuraMastery:IconText", function(iconText)
+		IconText = iconText
+	end)
 end
 
 function AuraMasteryConfig:GetAbilitiesList()
@@ -218,6 +222,15 @@ function AuraMasteryConfig:OnAddIcon( wndHandler, wndControl, eMouseButton )
 	if wndHandler == wndControl then
 		local icon = self.auraMastery:AddIcon()
 		self:CreateIconItem(icon.iconId, icon)
+		local timeText = self:AddIconText(icon)
+		timeText.textAnchor = "OB"
+		timeText.textString = "{time}"
+		local stacksText = self:AddIconText(icon)
+		stacksText.textAnchor = "IBR"
+		stacksText.textString = "{stacks}"
+		local chargesText = self:AddIconText(icon)
+		timeText.textAnchor = "ITL"
+		timeText.textString = "{charges}"
 	end
 end
 
@@ -385,7 +398,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor
 		self.selectedOverlayColor = icon.iconOverlay.overlayColor
-		self.selectedFontColor = icon.iconText.textFontColor
+
 		self:OnColorUpdate()
 		
 		for _, spriteIcon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
@@ -415,27 +428,39 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				break
 			end
 		end
-		for _, anchor in pairs(self.configForm:FindChild("TextTab"):FindChild("AnchorSelector"):GetChildren()) do
-			anchor:SetCheck(false)
+		
+		
+		for textEditorId, textEditor in pairs(self.iconTextEditor) do
+			textEditor:Destroy()
+			self.iconTextEditor[textEditorId] = nil
 		end
 		
-		local selectedTextAnchor = self.configForm:FindChild("TextTab"):FindChild("AnchorPosition_" .. icon.iconText.textAnchor)
-		if selectedTextAnchor ~= nil then
-			selectedTextAnchor:SetCheck(true)
-		end
-		
-		for _, font in pairs(self.configForm:FindChild("TextTab"):FindChild("FontSelector"):GetChildren()) do
-			if font:GetText() == icon.iconText.textFont then
-				self:SelectFont(font)
-				local left, top, right, bottom = font:GetAnchorOffsets()
-				self.configForm:FindChild("TextTab"):FindChild("FontSelector"):SetVScrollPos(top)
-				break
+		for iconTextId, iconText in pairs(icon.iconText) do
+			self:AddIconTextEditor()
+			
+			local textEditor = self.configForm:FindChild("TextList"):GetChildren()[iconTextId]
+			
+			for _, anchor in pairs(textEditor:FindChild("AnchorSelector"):GetChildren()) do
+				anchor:SetCheck(false)
 			end
+			local selectedTextAnchor = textEditor:FindChild("AnchorPosition_" .. icon.iconText[iconTextId].textAnchor)
+			if selectedTextAnchor ~= nil then
+				selectedTextAnchor:SetCheck(true)
+			end
+			
+			for _, font in pairs(textEditor:FindChild("FontSelector"):GetChildren()) do
+				if font:GetText() == icon.iconText[iconTextId].textFont then
+					self:SelectFont(font)
+					local left, top, right, bottom = font:GetAnchorOffsets()
+					textEditor:FindChild("FontSelector"):SetVScrollPos(top)
+					break
+				end
+			end
+			textEditor:FindChild("FontColorSample"):SetBGColor(icon.iconText[iconTextId].textFontColor)
+			textEditor:FindChild("FontSample"):SetTextColor(icon.iconText[iconTextId].textFontColor)
+			textEditor:FindChild("TextString"):SetText(icon.iconText[iconTextId].textString)
 		end
-		self.configForm:FindChild("TextTab"):FindChild("FontColorSample"):SetBGColor(icon.iconText.textFontColor)
-		self.configForm:FindChild("TextTab"):FindChild("FontSample"):SetTextColor(icon.iconText.textFontColor)
-		self.configForm:FindChild("TextTab"):FindChild("TextString"):SetText(icon.iconText.textString)
-		
+			
 		self.configForm:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
 		if icon.iconOverlay.overlayShape == "Icon" then
 			self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
@@ -456,13 +481,17 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 end
 
 function AuraMasteryConfig:SelectFont(fontElement)
-	if self.selectedFont ~= nil then
-		self.selectedFont:SetBGColor(CColor.new(1,1,1,1))
+	local textEditor = fontElement:GetParent():GetParent()
+	local editorData = textEditor:GetData()
+	if editorData.selectedFont ~= nil then
+		editorData.selectedFont:SetBGColor(CColor.new(1,1,1,1))
 	end
-	self.configForm:FindChild("FontSample"):SetFont(fontElement:GetText())
-	self.configForm:FindChild("SelectedFont"):SetText(fontElement:GetText())
-	self.selectedFont = fontElement
-	self.selectedFont:SetBGColor(CColor.new(1,0,1,1))
+	textEditor:FindChild("FontSample"):SetFont(fontElement:GetText())
+	textEditor:FindChild("SelectedFont"):SetText(fontElement:GetText())
+	editorData.selectedFont = fontElement
+	editorData.selectedFont:SetBGColor(CColor.new(1,0,1,1))
+	
+	textEditor:SetData(editorData)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -505,8 +534,19 @@ function AuraMasteryConfig:SelectSpriteIcon(spriteIcon)
 	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
 end
 
-function AuraMasteryConfig:LoadFontSelector()
-	local fontSelector = self.configForm:FindChild("FontSelector")
+function AuraMasteryConfig:AddIconTextEditor()
+	local nextIconTextId = # self.iconTextEditor + 1
+	local textEditor = Apollo.LoadForm("AuraMastery.xml", "AM_Config_TextEditor", self.configForm:FindChild("TextList"), self)
+	textEditor:FindChild("IconTextId"):SetText(tostring(nextIconTextId))
+	self.iconTextEditor[nextIconTextId] = textEditor
+	local left, top, right, bottom = textEditor:GetAnchorOffsets()
+	textEditor:SetAnchorOffsets(left, top + ((nextIconTextId - 1) * textEditor:GetHeight()), right, bottom + (nextIconTextId - 1) * textEditor:GetHeight())
+	textEditor:SetData({selectedFont = nil})
+	self:LoadFontSelector(nextIconTextId)
+end
+
+function AuraMasteryConfig:LoadFontSelector(textId)
+	local fontSelector = self.iconTextEditor[textId]:FindChild("FontSelector")
 	local currentIdx = 0
 	for _, font in pairs(Apollo.GetGameFonts()) do
 		local fontItem = Apollo.LoadForm("AuraMastery.xml", "AM_Config_TextEditor_Font", fontSelector, self)
@@ -519,32 +559,59 @@ end
 ---------------------------------------------------------------------------------------------------
 -- AM_Config_TextEditor_Font Functions
 ---------------------------------------------------------------------------------------------------
+
+function AuraMasteryConfig:OnIconTextAdd( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	self:AddIconText(icon)
+	self:AddIconTextEditor()
+end
+
+function AuraMasteryConfig:AddIconText(icon)
+	local iconText = IconText.new(icon)
+	icon.iconText[#icon.iconText + 1] = iconText
+	return iconText
+end
+
+
 function AuraMasteryConfig:OnFontSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
 	if wndHandler == wndControl then
 		self:SelectFont(wndHandler)
 	end
 end
 
-function AuraMasteryConfig:SelectFont(fontElement)
-	if self.selectedFont ~= nil then
-		self.selectedFont:SetBGColor(CColor.new(1,1,1,1))
-	end
-	self.configForm:FindChild("FontSample"):SetFont(fontElement:GetText())
-	self.configForm:FindChild("SelectedFont"):SetText(fontElement:GetText())
-	self.selectedFont = fontElement
-	self.selectedFont:SetBGColor(CColor.new(1,0,1,1))
-end
-
 function AuraMasteryConfig:OnFontColorSelect( wndHandler, wndControl, eMouseButton )
-	if wndHandler == wndControl and ColorPicker ~= nil then
-		ColorPicker.AdjustCColor(self.selectedFontColor, true, function() self:OnFontColorUpdate() end)
+	if wndHandler == wndControl then
+		if ColorPicker ~= nil then
+			local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+			local icon = self.auraMastery.Icons[iconId]
+			local iconTextId = tonumber(wndHandler:GetParent():FindChild("IconTextId"):GetText())
+			Print(iconTextId)
+			self.selectedFontColor = icon.iconText[iconTextId].textFontColor
+			ColorPicker.AdjustCColor(self.selectedFontColor, true, function() self:OnFontColorUpdate(wndHandler:GetParent()) end)
+		else
+			Print("ColorPicker addon must be loaded to edit colors.")
+		end
 	end
 end
 
-function AuraMasteryConfig:OnFontColorUpdate()
-	self.configForm:FindChild("FontColorSample"):SetBGColor(self.selectedFontColor)
-	self.configForm:FindChild("FontSample"):SetTextColor(self.selectedFontColor)
+function AuraMasteryConfig:OnFontColorUpdate(textEditor)
+	textEditor:FindChild("FontColorSample"):SetBGColor(self.selectedFontColor)
+	textEditor:FindChild("FontSample"):SetTextColor(self.selectedFontColor)
 end
+
+function AuraMasteryConfig:OnIconTextRemove( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+		local icon = self.auraMastery.Icons[iconId]
+		local iconTextId = tonumber(wndHandler:GetParent():FindChild("IconTextId"):GetText())
+		table.remove(icon.iconText, iconTextId)
+		
+		self.iconTextEditor[iconTextId]:Destroy()
+		table.remove(self.iconTextEditor, iconTextId)
+	end
+end
+
 
 
 local GeminiPackages = _G["GeminiPackages"]
