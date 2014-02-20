@@ -41,6 +41,11 @@ function Icon.new(buffWatch, configForm)
 	self.maxDuration = 0
 	self.criticalRequired = false
 	self.criticalRequirementPassed = true
+	self.chargesRemaining = 0
+	self.iconId = 0
+	
+	self.buff = nil
+	self.spell = nil
 	
 	self.isActive = true
 	
@@ -178,16 +183,10 @@ end
 function Icon:GetSpellCooldown(spell)
 	local charges = spell:GetAbilityCharges()
 	if charges and charges.nChargesMax > 0 then
-		if charges.fRechargePercentRemaining and charges.fRechargePercentRemaining > 0 then
-			return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, tostring(charges.nChargesRemaining)
-		end
+		return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, charges.nChargesRemaining
 	else
-		local cooldown = spell:GetCooldownRemaining()
-		if cooldown and cooldown > 0 then
-			return cooldown, spell:GetCooldownTime(), 0
-		end
+		return spell:GetCooldownRemaining(), spell:GetCooldownTime(), 0
 	end
-	return 0, 0, 0
 end
 
 function Icon:CriticalRequirementPassed(inCriticalTime)
@@ -196,6 +195,7 @@ end
 
 function Icon:ProcessSpell(spell, inCriticalTime)
 	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
+	self.chargesRemaining = chargesRemaining
 	self.criticalRequirementPassed = self:CriticalRequirementPassed(inCriticalTime)
 	if (chargesRemaining > 0 or cdRemaining == 0) and self.criticalRequirementPassed then
 		if (self.iconShown == "Inactive" or self.iconShown == "Both") then
@@ -301,6 +301,7 @@ function Icon:SetBuff(buff)
 			self.isActive = true
 			self.buffStart = buff.fTimeRemaining
 		end
+		self.buff = buff
 		self.lastSprite = buff.splEffect:GetIcon()
 		
 		if self.iconShown == "Active" or self.iconShown == "Both" then
@@ -318,6 +319,13 @@ function Icon:SetBuff(buff)
 		end
 		self.isSet = true
 	end
+end
+
+function Icon:GetStacks()
+	if self.buff ~= nil then
+		return self.buff.nCount
+	end
+	return 0
 end
 
 function Icon:GetSpellIconByName(spellName)
@@ -359,6 +367,7 @@ function Icon:ClearBuff()
 		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
 		self.icon:FindChild("IconText"):SetText("")
 		self.isActive = false
+		self.buff = nil
 	end
 end
 

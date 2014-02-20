@@ -21,6 +21,8 @@ function IconText.new(icon)
 	self:UpdateTextPosition()
 	self.textFontColor = CColor.new(1, 1, 1, 1)
 	self.textElement:SetTextColor(self.textFontColor)
+	self.textString = "{time}"
+	
 	return self
 end
 
@@ -45,6 +47,7 @@ function IconText:Load(data)
 		self.textFontColor = CColor.new(data.textFontColor[1], data.textFontColor[2], data.textFontColor[3], data.textFontColor[4])
 		self.textElement:SetTextColor(self.textFontColor)
 	end
+	self.textString = data.textString or "{time}"
 end
 
 function IconText:Save()
@@ -52,21 +55,41 @@ function IconText:Save()
 	saveData.textAnchor = self.textAnchor
 	saveData.textFont = self.textFont
 	saveData.textFontColor = { self.textFontColor.r, self.textFontColor.g, self.textFontColor.b, self.textFontColor.a }
+	saveData.textString = self.textString
 	return saveData
 end
 
 function IconText:Update()
+	self.textElement:SetText(string.gsub(self.textString, "{(.-)}", function(t) return self:GetTagText(t) end))
+end
+
+function IconText:GetTagText(tag)
+	if tag == "time" then
+		return self:GetTimeText()
+	elseif tag == 'charges' then
+		return self.icon.chargesRemaining > 0 and self.icon.chargesRemaining or ""
+	elseif tag == 'stacks' then
+		if self.icon.buff ~= nil then
+			return self.icon.buff.nCount
+		else
+			return ""
+		end
+	end
+	return '{' .. tag .. '}'
+end
+
+function IconText:GetTimeText()
 	local duration = self.icon.duration
 	if duration == 0 then
-		self.textElement:SetText("")
-	else	
+		return ""
+	else
 		if duration > 60 then
-			self.textElement:SetText(string.format("%i:%02d", math.floor(duration / 60), math.floor(duration % 60)))
+			return string.format("%i:%02d", math.floor(duration / 60), math.floor(duration % 60))
 		else
-			self.textElement:SetText(string.format("%.2fs", duration))
+			return string.format("%.2fs", duration)
 		end		
 	end
-end
+end 
 
 function IconText:SetConfig(configForm)
 	local anchorSelector = configForm:FindChild("AnchorSelector")
@@ -91,6 +114,7 @@ function IconText:SetConfig(configForm)
 	
 	self.textFontColor = configForm:FindChild("FontColorSample"):GetBGColor()
 	self.textElement:SetTextColor(self.textFontColor)
+	self.textString = configForm:FindChild("TextString"):GetText()
 end
 
 function IconText:UpdateTextPosition()
