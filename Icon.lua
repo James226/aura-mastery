@@ -43,11 +43,16 @@ function Icon.new(buffWatch, configForm)
 	self.criticalRequirementPassed = true
 	self.chargesRemaining = 0
 	self.iconId = 0
+	self.enabled = true
 	
 	self.buff = nil
 	self.spell = nil
 	
+	self.isEnabled = true
+	
 	self.isActive = true
+	
+	self.actionSets = { true, true, true, true }
 	
 	self.iconText = {}
 		
@@ -94,13 +99,28 @@ function Icon:Load(saveData)
 			end)
 		end
 		
+		if saveData.actionSets ~= nil then
+			self.actionSets = saveData.actionSets
+		end
+		
 		self.iconOverlay:Load(saveData.iconOverlay)
 		
 		if saveData.criticalRequired ~= nil then
 			self.criticalRequired = saveData.criticalRequired
 		end
 	end
-	self:AddToBuffWatch()
+	
+	self.enabled = saveData.iconEnabled == nil or saveData.iconEnabled
+	
+	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
+end
+
+function Icon:ChangeActionSet(newActionSet)
+	if self.enabled and self.actionSets[newActionSet] then
+		self:Enable()
+	else
+		self:Disable()
+	end
 end
 
 function Icon:GetSaveData()
@@ -115,6 +135,8 @@ function Icon:GetSaveData()
 	saveData.iconBorder = self.iconBorder
 	saveData.iconColor = { self.iconColor.r, self.iconColor.g, self.iconColor.b, self.iconColor.a }
 	saveData.iconSprite = self.iconSprite
+	saveData.iconEnabled = self.enabled
+	saveData.actionSets = self.actionSets
 	
 	saveData.iconText = {}
 	for iconTextId, iconText in pairs(self.iconText) do
@@ -131,6 +153,20 @@ function Icon:GetSaveData()
 	saveData.criticalRequired = self.criticalRequired
 	
 	return saveData
+end
+
+function Icon:Enable()
+	self.isEnabled = true
+	self:AddToBuffWatch()
+	self.icon:Show(true)
+	self.isActive = false
+	self.isSet = false
+end
+
+function Icon:Disable()
+	self.isEnabled = false
+	self:RemoveFromBuffWatch()
+	self.icon:Show(false)
 end
 
 function Icon:Delete()
@@ -181,11 +217,15 @@ function Icon:RemoveFromBuffWatch()
 end
 
 function Icon:RemoveCooldownFromBuffWatch(type, target)
-	self.buffWatch[type][self.iconName][tostring(self)] = nil
+	if self.buffWatch[type][self.iconName] ~= nil then
+		self.buffWatch[type][self.iconName][tostring(self)] = nil
+	end
 end
 
 function Icon:RemoveBuffFromBuffWatch(type, target)
-	self.buffWatch[type][target][self.iconName][tostring(self)] = nil
+	if self.buffWatch[type][target][self.iconName] ~= nil then
+		self.buffWatch[type][target][self.iconName][tostring(self)] = nil
+	end
 end
 
 function Icon:GetSpellCooldown(spell)
@@ -236,6 +276,7 @@ function Icon:SetIcon(configWnd)
 	self.iconShown = configWnd:FindChild("BuffShown"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
 	self.criticalRequired = configWnd:FindChild("BuffCriticalRequired"):IsChecked()
+	
 	self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
 	
 	self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
@@ -253,7 +294,17 @@ function Icon:SetIcon(configWnd)
 	end
 	
 	self.iconOverlay:SetConfig(configWnd)
-	self:AddToBuffWatch()
+	
+	self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
+	
+	self.actionSets = {
+		configWnd:FindChild("BuffActionSet1"):IsChecked(),
+		configWnd:FindChild("BuffActionSet2"):IsChecked(),
+		configWnd:FindChild("BuffActionSet3"):IsChecked(),
+		configWnd:FindChild("BuffActionSet4"):IsChecked()
+	}
+	
+	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 end
 
 function Icon:SetName(name)

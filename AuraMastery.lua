@@ -129,6 +129,7 @@ function AuraMastery:OnLoad()
 
 	Apollo.RegisterEventHandler("AbilityBookChange", "OnAbilityBookChange", self)
 	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
+	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
 	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)
@@ -177,7 +178,9 @@ function AuraMastery:OnUpdate()
 	local targetPlayer = GameLib.GetTargetUnit()
 
 	for _, icon in pairs(self.Icons) do
-		icon:PreUpdate()
+		if icon.isEnabled then
+			icon:PreUpdate()
+		end
 	end
 	
 	if unitPlayer ~= nil then
@@ -196,7 +199,9 @@ function AuraMastery:OnUpdate()
 	self:ProcessInnate()
 	
 	for _, icon in pairs(self.Icons) do
-		icon:PostUpdate()
+		if icon.isEnabled then
+			icon:PostUpdate()
+		end
 	end
 end
 
@@ -240,6 +245,11 @@ function AuraMastery:ProcessInnate()
 	--unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
 end
 
+function AuraMastery:OnSpecChanged(newSpec)
+	for _, icon in pairs(self.Icons) do
+		icon:ChangeActionSet(newSpec)
+	end
+end
 
 
 -----------------------------------------------------------------------------------------------

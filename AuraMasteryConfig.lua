@@ -395,9 +395,15 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
 		self.configForm:FindChild("BuffCriticalRequired"):SetCheck(icon.criticalRequired)
+		self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
 		self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor
 		self.selectedOverlayColor = icon.iconOverlay.overlayColor
+		
+		self.configForm:FindChild("BuffActionSet1"):SetCheck(icon.actionSets[1])
+		self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
+		self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
+		self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
 
 		self:OnColorUpdate()
 		
@@ -586,7 +592,6 @@ function AuraMasteryConfig:OnFontColorSelect( wndHandler, wndControl, eMouseButt
 			local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 			local icon = self.auraMastery.Icons[iconId]
 			local iconTextId = tonumber(wndHandler:GetParent():FindChild("IconTextId"):GetText())
-			Print(iconTextId)
 			self.selectedFontColor = icon.iconText[iconTextId].textFontColor
 			ColorPicker.AdjustCColor(self.selectedFontColor, true, function() self:OnFontColorUpdate(wndHandler:GetParent()) end)
 		else
