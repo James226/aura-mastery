@@ -153,6 +153,7 @@ function IconTrigger:RemoveBuffFromBuffWatch(target, option)
 end
 
 function IconTrigger:ResetTrigger()
+	self.Stacks = 0
 	self.isSet = false
 end
 

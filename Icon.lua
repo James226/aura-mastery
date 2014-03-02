@@ -44,6 +44,7 @@ function Icon.new(buffWatch, configForm)
 	self.chargesRemaining = 0
 	self.iconId = 0
 	self.enabled = true
+	self.defaultIcon = ""
 
 	self.Triggers = {}
 	
@@ -66,8 +67,6 @@ function Icon.new(buffWatch, configForm)
 		self.iconOverlay = IconOverlay.new(self)
 	end)
 	
-	self:AddToBuffWatch()
-	
 	return self
 end
 
@@ -76,7 +75,6 @@ function Icon:SetConfigElement(configElement)
 end
 
 function Icon:Load(saveData)
-	self:RemoveFromBuffWatch()
 	if saveData ~= nil then
 		self.iconType = saveData.iconType
 		self.iconName = saveData.iconName
@@ -113,6 +111,8 @@ function Icon:Load(saveData)
 		if saveData.criticalRequired ~= nil then
 			self.criticalRequired = saveData.criticalRequired
 		end
+
+		self.defaultIcon = self:GetSpellIconByName(self.iconName)
 	end
 	
 	self.enabled = saveData.iconEnabled == nil or saveData.iconEnabled
@@ -122,8 +122,7 @@ function Icon:Load(saveData)
 			for _, triggerData in pairs(saveData.Triggers) do
 				local trigger = iconTrigger.new(self.buffWatch)
 				trigger:Load(triggerData)
-				--table.insert(self.Triggers, trigger)
-				self.Triggers[#self.Triggers + 1] = trigger
+				table.insert(self.Triggers, trigger)
 			end
 		end)
 	end
@@ -171,7 +170,8 @@ function Icon:GetSaveData()
 	saveData.Triggers = {}
 
 	for _, trigger in pairs(self.Triggers) do
-		saveData.Triggers[#saveData.Triggers] = trigger:Save()
+		table.insert(saveData.Triggers, trigger:Save())
+		--saveData.Triggers[#saveData.Triggers] = trigger:Save()
 	end
 	
 	return saveData
@@ -179,7 +179,6 @@ end
 
 function Icon:Enable()
 	self.isEnabled = true
-	self:AddToBuffWatch()
 	self.icon:Show(true)
 	self.isActive = false
 	self.isSet = false
@@ -187,113 +186,14 @@ end
 
 function Icon:Disable()
 	self.isEnabled = false
-	self:RemoveFromBuffWatch()
 	self.icon:Show(false)
 end
 
 function Icon:Delete()
-	self:RemoveFromBuffWatch()
 	self.icon:Destroy()
 end
 
-function Icon:AddToBuffWatch()
-	if false then
-	if self.iconType == "Cooldown" then
-		self:AddCooldownToBuffWatch(self.iconType)
-	else
-		if self.iconTarget == "Player" or self.iconTarget == "Both" then
-			self:AddBuffToBuffWatch(self.iconType, "Player")
-		end
-		
-		if self.iconTarget == "Target" or self.iconTarget == "Both" then
-			self:AddBuffToBuffWatch(self.iconType, "Target")
-		end
-	end
-	end
-end
-
-function Icon:AddCooldownToBuffWatch(type)
-	if self.buffWatch[type][self.iconName] == nil then
-		self.buffWatch[type][self.iconName] = {}
-	end
-	self.buffWatch[type][self.iconName][tostring(self)] = self
-end
-
-function Icon:AddBuffToBuffWatch(type, target)
-	if self.buffWatch[type][target][self.iconName] == nil then
-		self.buffWatch[type][target][self.iconName] = {}
-	end
-	self.buffWatch[type][target][self.iconName][tostring(self)] = self
-end
-
-function Icon:RemoveFromBuffWatch()
-	if self.iconType == "Cooldown" then
-		self:RemoveCooldownFromBuffWatch(self.iconType)
-	else
-		if self.iconTarget == "Player" or self.iconTarget == "Both" then
-			self:RemoveBuffFromBuffWatch(self.iconType, "Player")
-		end
-		
-		if self.iconTarget == "Target" or self.iconTarget == "Both" then
-			self:RemoveBuffFromBuffWatch(self.iconType, "Target")
-		end
-	end
-end
-
-function Icon:RemoveCooldownFromBuffWatch(type, target)
-	if self.buffWatch[type][self.iconName] ~= nil then
-		self.buffWatch[type][self.iconName][tostring(self)] = nil
-	end
-end
-
-function Icon:RemoveBuffFromBuffWatch(type, target)
-	if self.buffWatch[type][target][self.iconName] ~= nil then
-		self.buffWatch[type][target][self.iconName][tostring(self)] = nil
-	end
-end
-
-function Icon:GetSpellCooldown(spell)
-	local charges = spell:GetAbilityCharges()
-	if charges and charges.nChargesMax > 0 then
-		return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, charges.nChargesRemaining
-	else
-		return spell:GetCooldownRemaining(), spell:GetCooldownTime(), 0
-	end
-end
-
-function Icon:CriticalRequirementPassed(inCriticalTime)
-	return not self.criticalRequired or inCriticalTime
-end
-
-function Icon:ProcessSpell(spell, inCriticalTime)
-	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
-	self.chargesRemaining = chargesRemaining
-	self.criticalRequirementPassed = self:CriticalRequirementPassed(inCriticalTime)
-	if (chargesRemaining > 0 or cdRemaining == 0) and self.criticalRequirementPassed then
-		if (self.iconShown == "Inactive" or self.iconShown == "Both") then
-			if self.isActive then
-				self.isActive = false
-				if self.iconSound ~= nil then
-					Sound.Play(self.iconSound)
-				end
-			end
-			self:SetSpell(spell, cdRemaining, cdTotal, chargesRemaining)
-		else
-			self:ClearBuff()
-		end
-	else
-		self.isActive = true
-		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
-		if self.iconShown == "Active" or self.iconShown == "Both" then			
-			self:SetSpell(spell, cdRemaining, cdTotal, chargesRemaining, criticalRequirementPassed)
-		else
-			self:ClearBuff()
-		end
-	end
-end
-
 function Icon:SetIcon(configWnd)
-	self:RemoveFromBuffWatch()
 	self.iconName = configWnd:FindChild("BuffName"):GetText()
 	self.iconType = configWnd:FindChild("BuffType"):GetText()
 	self.iconTarget = configWnd:FindChild("BuffTarget"):GetText()
@@ -330,15 +230,15 @@ function Icon:SetIcon(configWnd)
 	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 
+	self.defaultIcon = self:GetSpellIconByName(self.iconName)
+
 	local editor = configWnd:FindChild("TriggerEditor")
 	local trigger = editor:GetData()
 	trigger:SetConfig(editor)
 end
 
 function Icon:SetName(name)
-	self:RemoveFromBuffWatch()
 	self.iconName = name
-	self:AddToBuffWatch()
 end
 
 function Icon:GetName()
@@ -350,24 +250,6 @@ function Icon:PreUpdate()
 	for _, trigger in pairs(self.Triggers) do
 		trigger:ResetTrigger()
 	end
-end
-
-local function All(table, func)
-	for _, object in pairs(table) do
-		if not func(object) then
-			return false
-		end
-	end
-	return true
-end
-
-local function Any(table, func)
-	for _, object in pairs(table) do
-		if func(object) then
-			return true
-		end
-	end
-	return false
 end
 
 function Icon:PostUpdate()
@@ -398,7 +280,7 @@ function Icon:PostUpdate()
 
 	if showIcon then
 		self.icon:Show(true)
-		self.icon:SetSprite(self.iconSprite == "" and self:GetSpellIconByName(self.iconName) or self.iconSprite)
+		self.icon:SetSprite(self.iconSprite == "" and self.defaultIcon or self.iconSprite)
 		self.icon:SetBGColor(self.iconColor)
 	else
 		self.icon:Show(false)
@@ -417,61 +299,6 @@ function Icon:PostUpdate()
 	end
 end
 
-function Icon:SetSprite(spriteIcon)
-	self.icon:SetBGColor(self.iconColor)
-	if self.iconSprite ~= "" and spriteIcon ~= EmptyBuffIcon then
-		self.icon:SetSprite(self.iconSprite)
-	else
-		self.icon:SetSprite(spriteIcon)
-	end
-	self.iconOverlay:UpdateOverlaySprite()
-end
-
-function Icon:SetSpell(spell, remaining, total, charges)
-	if not self.isSet or self.duration < remaining then
-		self:SetSprite(spell:GetIcon())
-		self.icon:Show(true)
-		
-		self.duration = remaining
-		self.maxDuration = total	
-		
-		self.isSet = true
-	end
-end
-
-function Icon:SetBuff(buff)
-	if not self.isSet or self.duration < buff.fTimeRemaining then
-		if not self.isActive or buff.fTimeRemaining > self.buffStart then
-			self.isActive = true
-			self.buffStart = buff.fTimeRemaining
-		end
-		self.buff = buff
-		self.lastSprite = buff.splEffect:GetIcon()
-		
-		if self.iconShown == "Active" or self.iconShown == "Both" then
-			self:SetSprite(buff.splEffect:GetIcon())
-			self.icon:Show(true)
-			
-			self.duration = buff.fTimeRemaining
-			self.maxDuration = self.buffStart
-		else
-			if self.iconBackground then
-				self.icon:SetSprite(EmptyBuffIcon)
-			else
-				self.icon:Show(false)
-			end
-		end
-		self.isSet = true
-	end
-end
-
-function Icon:GetStacks()
-	if self.buff ~= nil then
-		return self.buff.nCount
-	end
-	return 0
-end
-
 function Icon:GetSpellIconByName(spellName)
 	local abilities = AbilityBook.GetAbilitiesList()
 	if abilities ~= nil then
@@ -482,37 +309,6 @@ function Icon:GetSpellIconByName(spellName)
 		end
 	end
 	return ""
-end
-
-function Icon:ShowWhenInactive()
-	return self.iconType ~= "Cooldown" and (self.iconShown == "Inactive" or self.iconShown == "Both")
-end
-
-function Icon:ClearBuff()
-	if self.isActive or self:ShowWhenInactive() then
-		if self.isActive and self.iconType ~= "Cooldown" then
-			Sound.Play(self.iconSound)
-		end
-		local spriteIcon = self.iconBackground and EmptyBuffIcon or ""
-		if self:ShowWhenInactive() then
-			if self.lastSprite == nil or self.lastSprite == "" then
-				self.lastSprite = self:GetSpellIconByName(self.iconName)
-			end
-			spriteIcon = self.lastSprite
-			self.icon:Show(true)
-		end
-		self.duration = 0
-		
-		if spriteIcon == "" then
-			self.icon:Show(false)
-		else
-			self:SetSprite(spriteIcon)
-		end
-		self.icon:SetBGColor(ApolloColor.new(1, 0, 0, 1))
-		self.icon:FindChild("IconText"):SetText("")
-		self.isActive = false
-		self.buff = nil
-	end
 end
 
 function Icon:Unlock()
