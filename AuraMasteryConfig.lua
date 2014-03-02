@@ -483,6 +483,9 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
 			self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
 		end
+
+		self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
+		self:PopulateTriggers(icon)
 	end
 end
 
@@ -617,7 +620,199 @@ function AuraMasteryConfig:OnIconTextRemove( wndHandler, wndControl, eMouseButto
 	end
 end
 
+---------------------------------------------------------------------------------------------------
+-- Trigger Tab Functions
+---------------------------------------------------------------------------------------------------
+function AuraMasteryConfig:PopulateTriggers(icon)
+	local triggerSelectDropdown = self.configForm:FindChild("TriggerSelectDropdown")
 
+	triggerSelectDropdown:DestroyChildren()
+
+	local firstTrigger = true
+	for _, trigger in pairs(icon.Triggers) do
+		local triggerItem = self:AddTriggerDropdown(triggerSelectDropdown, trigger)
+		if firstTrigger then
+			self:SelectTrigger(triggerItem)
+			firstTrigger = false
+		end
+	end
+
+	if firstTrigger then
+		self.configForm:FindChild("TriggerSelectButton"):SetText("")
+	end
+end
+
+function AuraMasteryConfig:AddTriggerDropdown(triggerSelectDropdown, trigger)
+	local numChildren = # triggerSelectDropdown:GetChildren()
+	local triggerDropdownItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.TriggersTab.TriggerSelectDropdown.TriggerItem", triggerSelectDropdown, self)
+	triggerDropdownItem:SetAnchorOffsets(10, 10 + numChildren * 45, -10, 10 + numChildren * 45 + 45)
+	triggerDropdownItem:FindChild("TriggerName"):SetText(trigger.Name)
+	triggerDropdownItem:SetData(trigger)
+	return triggerDropdownItem
+end
+
+function AuraMasteryConfig:OnCheckTriggerSelectButton( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerEditor"):Enable(false)
+	self.configForm:FindChild("TriggerSelectDropdown"):Show(true)
+	self.configForm:FindChild("TriggerSelectDropdown"):BringToFront()
+end
+
+function AuraMasteryConfig:OnUncheckTriggerSelectButton( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
+end
+
+function AuraMasteryConfig:OnTriggerSelectDropdownHidden( wndHandler, wndControl )
+	self.configForm:FindChild("TriggerSelectButton"):SetCheck(false)
+	self.configForm:FindChild("TriggerEditor"):Enable(true)
+end
+
+function AuraMasteryConfig:OnTriggerSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	if wndHandler == wndControl then
+		self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
+		self:SelectTrigger(wndHandler)
+	end
+end
+
+function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
+	local editor = self.configForm:FindChild("TriggerEditor")
+	local trigger = triggerDropdownItem:GetData()
+	editor:SetData(trigger)
+	self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
+	editor:FindChild("TriggerName"):SetText(trigger.Name)
+	editor:FindChild("TriggerType"):SetText(trigger.Type)
+
+	self:PopulateTriggerDetails(trigger.Type)
+
+	if trigger.Type == "Action Set" then
+		editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
+		editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
+		editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
+		editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
+	elseif trigger.Type == "Cooldown" then
+		editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+	elseif trigger.Type == "Buff" then
+		editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
+		editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+		editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+	elseif trigger.Type == "Debuff" then
+		editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
+		editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+		editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+	end
+
+	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+end
+
+function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		local triggerSelectDropdown = self.configForm:FindChild("TriggerSelectDropdown")
+
+		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger) 
+			local trigger = iconTrigger.new(icon.buffWatch)
+			trigger.Name = "Trigger " .. tostring(# triggerSelectDropdown:GetChildren() + 1)
+			table.insert(icon.Triggers, trigger)
+			
+			local triggerDropdownItem = self:AddTriggerDropdown(triggerSelectDropdown, trigger)
+
+			self:SelectTrigger(triggerDropdownItem)
+		end)
+	end
+end
+
+function AuraMasteryConfig:OnDeleteTrigger( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		local trigger = wndHandler:GetParent():GetData()
+		for triggerId, t in pairs(icon.Triggers) do
+			if trigger == t then
+				table.remove(icon.Triggers, triggerId)
+				self:PopulateTriggers(icon)
+				break
+			end
+		end
+	end
+end
+
+function AuraMasteryConfig:OnTriggerMoveUp( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		local trigger = wndHandler:GetParent():GetData()
+		for triggerId, t in pairs(icon.Triggers) do
+			if trigger == t then
+				if triggerId > 1 then
+					icon.Triggers[triggerId] = icon.Triggers[triggerId-1]
+					icon.Triggers[triggerId-1] = trigger
+
+					self:PopulateTriggers(icon)
+				end
+				break
+			end
+		end
+	end
+end
+
+function AuraMasteryConfig:OnTriggerMoveDown( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		local trigger = wndHandler:GetParent():GetData()
+		for triggerId, t in pairs(icon.Triggers) do
+			if trigger == t then
+				if triggerId < # icon.Triggers then
+					icon.Triggers[triggerId] = icon.Triggers[triggerId+1]
+					icon.Triggers[triggerId+1] = trigger
+
+					self:PopulateTriggers(icon)
+				end
+				break
+			end
+		end
+	end
+end
+
+function AuraMasteryConfig:OnTriggerType( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	self.configForm:FindChild("TriggerType"):SetText(wndHandler:GetText())
+	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+
+	self:PopulateTriggerDetails(wndHandler:GetText())
+end
+
+function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
+	local editor = self.configForm:FindChild("TriggerEditor")
+	local triggerDetails = editor:FindChild("TriggerDetails")
+	if triggerDetails ~= nil then
+		triggerDetails:Destroy()
+	end
+
+	local triggerEffects = self.configForm:FindChild("TriggerEffects")
+
+	local detailsEditor = Apollo.LoadForm("AuraMastery.xml", "TriggerDetails." .. triggerType, editor, self)
+	if detailsEditor ~= nil then
+		detailsEditor:SetName("TriggerDetails")
+		detailsEditor:SetAnchorOffsets(0, 100, 0, 100 + detailsEditor:GetHeight())
+		triggerEffects:SetAnchorOffsets(0, 100 + detailsEditor:GetHeight(), 0, 100 + detailsEditor:GetHeight() + triggerEffects:GetHeight())
+	else
+		triggerEffects:SetAnchorOffsets(0, 100, 0, triggerEffects:GetHeight())
+	end
+end
+
+function AuraMasteryConfig:OnCheckTriggerTypeButton( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerEditor"):Enable(false)
+	self.configForm:FindChild("TriggerTypeDropdown"):Show(true)
+end
+
+function AuraMasteryConfig:OnUncheckTriggerTypeButton( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+end
+
+function AuraMasteryConfig:OnTriggerTypeDropdownHidden( wndHandler, wndControl )
+	self.configForm:FindChild("TriggerType"):SetCheck(false)
+	self.configForm:FindChild("TriggerEditor"):Enable(true)
+end
 
 local GeminiPackages = _G["GeminiPackages"]
 GeminiPackages:NewPackage(AuraMasteryConfig, "AuraMastery:Config", 1)

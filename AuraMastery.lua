@@ -92,6 +92,7 @@ function AuraMastery:OnLoadIcons(tData)
 		local newIcon = self:AddIcon()
 		newIcon:Load(icon)
 	end
+	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 end
 
 function AuraMastery:OnAbilityBookChange()
@@ -104,6 +105,10 @@ function AuraMastery:OnDamageDealt(tData)
 			self.lastCritical = os.time()
 		end
 	end
+end
+
+function AuraMastery:OnCharacterCreated()
+	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 end
 
 function AuraMastery:AddIcon()
@@ -130,6 +135,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("AbilityBookChange", "OnAbilityBookChange", self)
 	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
+	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
 	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)

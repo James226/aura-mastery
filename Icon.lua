@@ -44,6 +44,8 @@ function Icon.new(buffWatch, configForm)
 	self.chargesRemaining = 0
 	self.iconId = 0
 	self.enabled = true
+
+	self.Triggers = {}
 	
 	self.buff = nil
 	self.spell = nil
@@ -111,6 +113,16 @@ function Icon:Load(saveData)
 	end
 	
 	self.enabled = saveData.iconEnabled == nil or saveData.iconEnabled
+
+	if saveData.Triggers ~= nil then
+		GeminiPackages:Require("AuraMastery:IconTrigger", function(iconTrigger)
+			for _, triggerData in pairs(saveData.Triggers) do
+				local trigger = iconTrigger.new(self.buffWatch)
+				trigger:Load(triggerData)
+				self.Triggers[#self.Triggers] = trigger
+			end
+		end)
+	end
 	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 end
@@ -151,6 +163,12 @@ function Icon:GetSaveData()
 	
 	saveData.iconOverlay = self.iconOverlay:Save()
 	saveData.criticalRequired = self.criticalRequired
+
+	saveData.Triggers = {}
+
+	for _, trigger in pairs(self.Triggers) do
+		saveData.Triggers[#saveData.Triggers] = trigger:Save()
+	end
 	
 	return saveData
 end
@@ -305,6 +323,10 @@ function Icon:SetIcon(configWnd)
 	}
 	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
+
+	local editor = configWnd:FindChild("TriggerEditor")
+	local trigger = editor:GetData()
+	trigger:SetConfig(editor)
 end
 
 function Icon:SetName(name)

@@ -3,6 +3,7 @@
     <Script Name="Libs/GeminiPackages.lua"/>
     <Script Name="AuraMasteryConfig.lua"/>
     <Script Name="Icon.lua"/>
+    <Script Name="IconTrigger.lua"/>
     <Script Name="IconText.lua"/>
     <Script Name="IconOverlay.lua"/>
     <Script Name="AuraMastery.lua"/>
