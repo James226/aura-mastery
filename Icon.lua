@@ -193,6 +193,7 @@ function Icon:Delete()
 end
 
 function Icon:AddToBuffWatch()
+	if false then
 	if self.iconType == "Cooldown" then
 		self:AddCooldownToBuffWatch(self.iconType)
 	else
@@ -203,6 +204,7 @@ function Icon:AddToBuffWatch()
 		if self.iconTarget == "Target" or self.iconTarget == "Both" then
 			self:AddBuffToBuffWatch(self.iconType, "Target")
 		end
+	end
 	end
 end
 
@@ -341,12 +343,55 @@ end
 
 function Icon:PreUpdate()
 	self.isSet = false
+	for _, trigger in pairs(self.Triggers) do
+		trigger:ResetTrigger()
+	end
+end
+
+local function All(table, func)
+	for _, object in pairs(table) do
+		if not func(object) then
+			return false
+		end
+	end
+	return true
+end
+
+local function Any(table, func)
+	for _, object in pairs(table) do
+		if func(object) then
+			return true
+		end
+	end
+	return false
 end
 
 function Icon:PostUpdate()
-	if not self.isSet then
-		self:ClearBuff()
+	local showIcon = true
+	for _, trigger in pairs(self.Triggers) do
+		showIcon = showIcon and trigger:IsSet()
+		if not showIcon then break end
+
+		if trigger.Time ~= nil then
+			self.duration = trigger.Time
+		end
+
+		if trigger.MaxDuration ~= nil then
+			self.maxDuration = trigger.MaxDuration
+		end
 	end
+
+	if showIcon then
+		self.icon:Show(true)
+		self.icon:SetSprite(self.iconSprite == "" and self:GetSpellIconByName(self.iconName) or self.iconSprite)
+		self.icon:SetBGColor(self.iconColor)
+	else
+		self.icon:Show(false)
+	end
+
+	-- if not self.isSet then
+	-- 	self:ClearBuff()
+	-- end
 	
 	for _, iconText in pairs(self.iconText) do
 		iconText:Update()

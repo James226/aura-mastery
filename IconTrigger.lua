@@ -28,6 +28,8 @@ function IconTrigger:Load(saveData)
 		self.Name = saveData.Name
 		self.Type = saveData.Type
 		self.TriggerDetails = saveData.TriggerDetails
+
+		self:AddToBuffWatch()
 	end
 end
 
@@ -40,6 +42,8 @@ function IconTrigger:Save()
 end
 
 function IconTrigger:SetConfig(editor)
+	self:RemoveFromBuffWatch()
+
 	self.Name = editor:FindChild("TriggerName"):GetText()
 	self.Type = editor:FindChild("TriggerType"):GetText()
 
@@ -73,6 +77,79 @@ function IconTrigger:SetConfig(editor)
 			}
 		}
 	end
+
+	self:AddToBuffWatch()
+end
+
+function IconTrigger:AddToBuffWatch()
+	if self.Type == "Cooldown" then
+		self:AddCooldownToBuffWatch(self.TriggerDetails.SpellName)
+	elseif self.Type == "Buff" or self.Type == "Debuff" then
+		if self.TriggerDetails.Target.Player then
+			self:AddBuffToBuffWatch("Player", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+		end
+		
+		if self.TriggerDetails.Target.Target then
+			self:AddBuffToBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+		end
+	elseif self.Type == "On Critical" then
+		self:AddBasicToBuffWatch()
+	end
+end
+
+function IconTrigger:AddCooldownToBuffWatch(option)
+	if self.buffWatch[self.Type][option] == nil then
+		self.buffWatch[self.Type][option] = {}
+	end
+	self.buffWatch[self.Type][option][tostring(self)] = function(buff) self:ProcessSpell(buff) end
+end
+
+function IconTrigger:AddBasicToBuffWatch()
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType] == nil then
+		self.buffWatch[triggerType] = {}
+	end
+	self.buffWatch[triggerType][tostring(self)] = function() self:ProcessEvent() end
+end
+
+function IconTrigger:AddBuffToBuffWatch(target, option)
+	if self.buffWatch[self.Type][target][option] == nil then
+		self.buffWatch[self.Type][target][option] = {}
+	end
+	self.buffWatch[self.Type][target][option][tostring(self)] = function(spell) self:ProcessBuff(spell) end
+end
+
+function IconTrigger:RemoveFromBuffWatch()
+	if self.Type == "Cooldown" then
+		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.SpellName)
+	elseif self.Type == "Buff" or self.Type == "Debuff" then
+		if self.TriggerDetails.Target.Player then
+			self:RemoveBuffFromBuffWatch("Player", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+		end
+		
+		if self.TriggerDetails.Target.Target then
+			self:RemoveBuffFromBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+		end
+	end
+end
+
+function IconTrigger:RemoveBasicFromBuffWatch()
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType] ~= nil then
+		self.buffWatch[triggerType][tostring(self)] = nil
+	end
+end
+
+function IconTrigger:RemoveCooldownFromBuffWatch(option)
+	if self.buffWatch[self.Type][option] ~= nil then
+		self.buffWatch[self.Type][option][tostring(self)] = nil
+	end
+end
+
+function IconTrigger:RemoveBuffFromBuffWatch(target, option)
+	if self.buffWatch[self.Type][target][option] ~= nil then
+		self.buffWatch[self.Type][target][option][tostring(self)] = nil
+	end
 end
 
 function IconTrigger:ResetTrigger()
@@ -80,7 +157,41 @@ function IconTrigger:ResetTrigger()
 end
 
 function IconTrigger:IsSet()
-	return isSet
+	return self.isSet
+end
+
+function IconTrigger:GetSpellCooldown(spell)
+	local charges = spell:GetAbilityCharges()
+	if charges and charges.nChargesMax > 0 then
+		return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, charges.nChargesRemaining
+	else
+		return spell:GetCooldownRemaining(), spell:GetCooldownTime(), 0
+	end
+end
+
+function IconTrigger:ProcessSpell(spell)
+	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
+	self.chargesRemaining = chargesRemaining
+	if chargesRemaining > 0 or cdRemaining == 0 then
+		self.isSet = false
+		self.Time = 0
+	else
+		self.isSet = true
+		self.Time = cdRemaining
+		self.MaxDuration = cdTotal
+	end
+end
+
+function IconTrigger:ProcessBuff(buff)
+	self.isSet = true
+	self.Time = buff.fTimeRemaining
+	if self.MaxDuration == nil or self.MaxDuration < self.Time then
+		self.MaxDuration = self.Time
+	end
+end
+
+function IconTrigger:ProcessEvent()
+	self.isSet = true
 end
 
 local GeminiPackages = _G["GeminiPackages"]

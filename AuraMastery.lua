@@ -45,7 +45,8 @@ function AuraMastery:new(o)
 			Player = {},
 			Target = {}
 		},
-		Cooldown = {}
+		Cooldown = {},
+		OnCritical = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
@@ -201,8 +202,10 @@ function AuraMastery:OnUpdate()
 	if abilities then
 		self:ProcessCooldowns(abilities)
 	end
+
+	self:ProcessOnCritical()
 	
-	self:ProcessInnate()
+	--self:ProcessInnate()
 	
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
@@ -211,11 +214,23 @@ function AuraMastery:OnUpdate()
 	end
 end
 
+function AuraMastery:ProcessOnCritical()
+	if os.difftime(os.time(), self.lastCritical) < criticalTime then
+		for _, watcher in pairs(self.buffWatch["OnCritical"]) do
+			watcher()
+		end
+	end
+end
+
 function AuraMastery:ProcessBuffs(buffs, target)
 	for idx, buff in pairs(buffs.arBeneficial) do
 		if self.buffWatch["Buff"][target][buff.splEffect:GetName()] ~= nil then
 			for _, icon in pairs(self.buffWatch["Buff"][target][buff.splEffect:GetName()]) do
-				icon:SetBuff(buff)
+				if type(icon) == "function" then
+					icon(buff)
+				else
+					icon:SetBuff(buff)
+				end
 			end
 		end
 	end
@@ -223,7 +238,11 @@ function AuraMastery:ProcessBuffs(buffs, target)
 	for idx, buff in pairs(buffs.arHarmful) do
 		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
 			for _, icon in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
-				icon:SetBuff(buff)
+				if type(icon) == "function" then
+					icon(buff)
+				else
+					icon:SetBuff(buff)
+				end
 			end
 		end
 	end
@@ -238,7 +257,11 @@ function AuraMastery:ProcessCooldowns(abilities)
 				local s = tier.splObject
 				if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
 					for _, icon in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
-						icon:ProcessSpell(s, inCriticalTime )
+						if type(icon) == "function" then
+							icon(s)
+						else
+							icon:ProcessSpell(s, inCriticalTime )
+						end
 					end
 				end
 			end
