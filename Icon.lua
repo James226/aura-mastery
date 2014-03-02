@@ -61,6 +61,8 @@ function Icon.new(buffWatch, configForm)
 
 	self.Stacks = 0
 	self.Charges = 0
+
+	self.showWhen = "All"
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
@@ -237,10 +239,6 @@ function Icon:SetIcon(configWnd)
 	trigger:SetConfig(editor)
 end
 
-function Icon:SetName(name)
-	self.iconName = name
-end
-
 function Icon:GetName()
 	return self.iconName
 end
@@ -253,28 +251,37 @@ function Icon:PreUpdate()
 end
 
 function Icon:PostUpdate()
-	local showIcon = true
+	local showIcon = nil
 
 	for i = #self.Triggers, 1, -1 do
 		local trigger = self.Triggers[i]
 
-		showIcon = showIcon and trigger:IsSet()
-		if not showIcon then break end
-
-		if trigger.Time ~= nil then
-			self.duration = trigger.Time
+		if showIcon == nil then
+			showIcon = trigger:IsSet()
+		elseif self.showWhen == "All" then
+			showIcon = showIcon and trigger:IsSet()
+			if not showIcon then break end
+		else
+			showIcon = showIcon or trigger:IsSet()
 		end
 
-		if trigger.MaxDuration ~= nil then
-			self.maxDuration = trigger.MaxDuration
-		end
 
-		if trigger.Stacks ~= nil then
-			self.Stacks = trigger.Stacks
-		end
+		if trigger:IsSet() then
+			if trigger.Time ~= nil then
+				self.duration = trigger.Time
+			end
 
-		if trigger.Charges ~= nil then
-			self.Charges = trigger.Charges
+			if trigger.MaxDuration ~= nil then
+				self.maxDuration = trigger.MaxDuration
+			end
+
+			if trigger.Stacks ~= nil then
+				self.Stacks = trigger.Stacks
+			end
+
+			if trigger.Charges ~= nil then
+				self.Charges = trigger.Charges
+			end
 		end
 	end
 
@@ -285,10 +292,6 @@ function Icon:PostUpdate()
 	else
 		self.icon:Show(false)
 	end
-
-	-- if not self.isSet then
-	-- 	self:ClearBuff()
-	-- end
 	
 	for _, iconText in pairs(self.iconText) do
 		iconText:Update()

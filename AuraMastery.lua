@@ -46,7 +46,8 @@ function AuraMastery:new(o)
 			Target = {}
 		},
 		Cooldown = {},
-		OnCritical = {}
+		OnCritical = {},
+		ActionSet = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
@@ -277,6 +278,10 @@ end
 function AuraMastery:OnSpecChanged(newSpec)
 	for _, icon in pairs(self.Icons) do
 		icon:ChangeActionSet(newSpec)
+	end
+
+	for _, watcher in pairs(self.buffWatch["ActionSet"]) do
+		watcher(newSpec)
 	end
 end
 

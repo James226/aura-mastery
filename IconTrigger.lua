@@ -16,6 +16,7 @@ function IconTrigger.new(buffWatch)
 
 	self.Name = ""
 	self.Type = "Cooldown"
+	self.Behaviour = "Pass"
 	self.TriggerDetails = {}
 
 	self.isSet = false
@@ -27,6 +28,7 @@ function IconTrigger:Load(saveData)
 	if saveData ~= nil then
 		self.Name = saveData.Name
 		self.Type = saveData.Type
+		self.Behaviour = saveData.Behaviour or "Pass"
 		self.TriggerDetails = saveData.TriggerDetails
 
 		self:AddToBuffWatch()
@@ -37,6 +39,7 @@ function IconTrigger:Save()
 	local saveData = { }
 	saveData.Name = self.Name
 	saveData.Type = self.Type
+	saveData.Behaviour = self.Behaviour
 	saveData.TriggerDetails = self.TriggerDetails
 	return saveData
 end
@@ -46,9 +49,10 @@ function IconTrigger:SetConfig(editor)
 
 	self.Name = editor:FindChild("TriggerName"):GetText()
 	self.Type = editor:FindChild("TriggerType"):GetText()
+	self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
 
 	if self.Type == "Action Set" then
-		self.selfDetails = {	
+		self.TriggerDetails = {	
 			ActionSets = {
 				editor:FindChild("ActionSet1"):IsChecked(),
 				editor:FindChild("ActionSet2"):IsChecked(),
@@ -92,7 +96,7 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
 		end
-	elseif self.Type == "On Critical" then
+	elseif self.Type == "On Critical" or self.Type == "Action Set" then
 		self:AddBasicToBuffWatch()
 	end
 end
@@ -109,7 +113,7 @@ function IconTrigger:AddBasicToBuffWatch()
 	if self.buffWatch[triggerType] == nil then
 		self.buffWatch[triggerType] = {}
 	end
-	self.buffWatch[triggerType][tostring(self)] = function() self:ProcessEvent() end
+	self.buffWatch[triggerType][tostring(self)] = function(result) self:ProcessEvent(result) end
 end
 
 function IconTrigger:AddBuffToBuffWatch(target, option)
@@ -153,12 +157,22 @@ function IconTrigger:RemoveBuffFromBuffWatch(target, option)
 end
 
 function IconTrigger:ResetTrigger()
-	self.Stacks = 0
-	self.isSet = false
+	self.Stacks = nil
+	self.Time = nil
+	if self.Type ~= "Action Set" then
+		self.isSet = false
+	end
 end
 
 function IconTrigger:IsSet()
-	return self.isSet
+	if self.Behaviour == "Pass" then
+		return self.isSet
+	elseif self.Behaviour == "Fail" then
+		return not self.isSet
+	elseif self.Behaviour == "Ignore" then
+		return true
+	end
+	return false
 end
 
 function IconTrigger:GetSpellCooldown(spell)
@@ -178,7 +192,7 @@ function IconTrigger:ProcessSpell(spell)
 	self.MaxDuration = cdTotal
 
 	if chargesRemaining > 0 or cdRemaining == 0 then
-		self.isSet = true
+		self.isSet = false
 		if cdRemaining == 0 then
 			self.Time = 0
 		end
@@ -196,8 +210,12 @@ function IconTrigger:ProcessBuff(buff)
 	self.Stacks = buff.nCount
 end
 
-function IconTrigger:ProcessEvent()
-	self.isSet = true
+function IconTrigger:ProcessEvent(result)
+	if self.Type == "Action Set" then
+		self.isSet = self.TriggerDetails.ActionSets[result]
+	else
+		self.isSet = true
+	end
 end
 
 local GeminiPackages = _G["GeminiPackages"]

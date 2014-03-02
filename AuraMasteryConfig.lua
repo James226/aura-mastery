@@ -84,6 +84,8 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("RadialOverlay"):FindChild("ProgressBar"):SetProgress(75)
 	
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetMax(100)
+
+	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
 	
 	self:CreateControls()
 	self:SelectFirstIcon()
@@ -680,6 +682,7 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 	self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
 	editor:FindChild("TriggerName"):SetText(trigger.Name)
 	editor:FindChild("TriggerType"):SetText(trigger.Type)
+	editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
 
 	self:PopulateTriggerDetails(trigger.Type)
 
@@ -793,10 +796,10 @@ function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
 	local detailsEditor = Apollo.LoadForm("AuraMastery.xml", "TriggerDetails." .. triggerType, editor, self)
 	if detailsEditor ~= nil then
 		detailsEditor:SetName("TriggerDetails")
-		detailsEditor:SetAnchorOffsets(0, 100, 0, 100 + detailsEditor:GetHeight())
-		triggerEffects:SetAnchorOffsets(0, 100 + detailsEditor:GetHeight(), 0, 100 + detailsEditor:GetHeight() + triggerEffects:GetHeight())
+		detailsEditor:SetAnchorOffsets(0, 150, 0, 150 + detailsEditor:GetHeight())
+		triggerEffects:SetAnchorOffsets(0, 150 + detailsEditor:GetHeight(), 0, 150 + detailsEditor:GetHeight() + triggerEffects:GetHeight())
 	else
-		triggerEffects:SetAnchorOffsets(0, 100, 0, triggerEffects:GetHeight())
+		triggerEffects:SetAnchorOffsets(0, 150, 0, triggerEffects:GetHeight())
 	end
 end
 
@@ -813,6 +816,26 @@ function AuraMasteryConfig:OnTriggerTypeDropdownHidden( wndHandler, wndControl )
 	self.configForm:FindChild("TriggerType"):SetCheck(false)
 	self.configForm:FindChild("TriggerEditor"):Enable(true)
 end
+
+function AuraMasteryConfig:OnTriggerBehaviour( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	self.configForm:FindChild("TriggerBehaviour"):SetText(wndHandler:GetText())
+	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
+end
+
+function AuraMasteryConfig:OnTriggerBehaviourDropdownHidden( wndHandler, wndControl )
+	self.configForm:FindChild("TriggerBehaviour"):SetCheck(false)
+	self.configForm:FindChild("TriggerEditor"):Enable(true)
+end
+
+function AuraMasteryConfig:OnCheckTriggerBehaviourButton( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerEditor"):Enable(false)
+	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(true)
+end
+
+function AuraMasteryConfig:OnUncheckTriggerBehaviourButton( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
+end
+
 
 local GeminiPackages = _G["GeminiPackages"]
 GeminiPackages:NewPackage(AuraMasteryConfig, "AuraMastery:Config", 1)
