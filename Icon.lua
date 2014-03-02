@@ -57,6 +57,9 @@ function Icon.new(buffWatch, configForm)
 	self.actionSets = { true, true, true, true }
 	
 	self.iconText = {}
+
+	self.Stacks = 0
+	self.Charges = 0
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
@@ -119,7 +122,8 @@ function Icon:Load(saveData)
 			for _, triggerData in pairs(saveData.Triggers) do
 				local trigger = iconTrigger.new(self.buffWatch)
 				trigger:Load(triggerData)
-				self.Triggers[#self.Triggers] = trigger
+				--table.insert(self.Triggers, trigger)
+				self.Triggers[#self.Triggers + 1] = trigger
 			end
 		end)
 	end
@@ -368,7 +372,10 @@ end
 
 function Icon:PostUpdate()
 	local showIcon = true
-	for _, trigger in pairs(self.Triggers) do
+
+	for i = #self.Triggers, 1, -1 do
+		local trigger = self.Triggers[i]
+
 		showIcon = showIcon and trigger:IsSet()
 		if not showIcon then break end
 
@@ -378,6 +385,14 @@ function Icon:PostUpdate()
 
 		if trigger.MaxDuration ~= nil then
 			self.maxDuration = trigger.MaxDuration
+		end
+
+		if trigger.Stacks ~= nil then
+			self.Stacks = trigger.Stacks
+		end
+
+		if trigger.Charges ~= nil then
+			self.Charges = trigger.Charges
 		end
 	end
 

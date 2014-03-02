@@ -14,7 +14,7 @@ function IconText.new(icon)
 	
 	self.icon = icon
 	self.textElement = Apollo.LoadForm("AuraMastery.xml", "AM_IconText", icon.icon, self)	
-	self.textAnchor = "C"
+	self.textAnchor = "OB"
 	self.textFont = "Default"
 	self.textSize = { height = 40, width = 300 }
 	self:SetFont(self.textFont)
@@ -39,10 +39,10 @@ function IconText:SetFont(fontName)
 end
 
 function IconText:Load(data)
-	self.textAnchor = data.textAnchor or "C"
+	self.textAnchor = data.textAnchor or "OB"
 	self.textFont = data.textFont or "Default"
 	self:SetFont(self.textFont)
-	self:UpdateTextPosition()	
+	self:UpdateTextPosition()
 	if data.textFontColor ~= nil then
 		self.textFontColor = CColor.new(data.textFontColor[1], data.textFontColor[2], data.textFontColor[3], data.textFontColor[4])
 		self.textElement:SetTextColor(self.textFontColor)
@@ -67,13 +67,9 @@ function IconText:GetTagText(tag)
 	if tag == "time" then
 		return self:GetTimeText()
 	elseif tag == 'charges' then
-		return self.icon.chargesRemaining > 0 and self.icon.chargesRemaining or ""
+		return self.icon.Charges > 0 and tostring(self.icon.Charges) or ""
 	elseif tag == 'stacks' then
-		if self.icon.buff ~= nil then
-			return self.icon.buff.nCount
-		else
-			return ""
-		end
+		return self.icon.Stacks > 0 and tostring(self.icon.Stacks) or ""
 	end
 	return '{' .. tag .. '}'
 end

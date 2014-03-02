@@ -171,14 +171,18 @@ end
 
 function IconTrigger:ProcessSpell(spell)
 	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
-	self.chargesRemaining = chargesRemaining
+
+	self.Charges = chargesRemaining
+	self.Time = cdRemaining
+	self.MaxDuration = cdTotal
+
 	if chargesRemaining > 0 or cdRemaining == 0 then
-		self.isSet = false
-		self.Time = 0
+		self.isSet = true
+		if cdRemaining == 0 then
+			self.Time = 0
+		end
 	else
 		self.isSet = true
-		self.Time = cdRemaining
-		self.MaxDuration = cdTotal
 	end
 end
 
@@ -188,6 +192,7 @@ function IconTrigger:ProcessBuff(buff)
 	if self.MaxDuration == nil or self.MaxDuration < self.Time then
 		self.MaxDuration = self.Time
 	end
+	self.Stacks = buff.nCount
 end
 
 function IconTrigger:ProcessEvent()
