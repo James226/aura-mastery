@@ -24,20 +24,16 @@ function AuraMasteryConfig:Init()
 		tab:Show(false)
 	end
 	self.configForm:FindChild("GeneralTabButton"):SetCheck(true)
-	self.configForm:FindChild("BuffEditor"):FindChild("GeneralTab"):Show(true)
-	
-	self.configForm:FindChild("BuffType"):AddItem("Buff", "", 1)
-	self.configForm:FindChild("BuffType"):AddItem("Debuff", "", 2)
-	self.configForm:FindChild("BuffType"):AddItem("Cooldown", "", 3)
-	
-	self.configForm:FindChild("BuffTarget"):AddItem("Player", "", 1)
-	self.configForm:FindChild("BuffTarget"):AddItem("Target", "", 2)
-	self.configForm:FindChild("BuffTarget"):AddItem("Both", "", 3)
-	
+	self.configForm:FindChild("BuffEditor"):FindChild("GeneralTab"):Show(true)	
 		
-	self.configForm:FindChild("BuffShown"):AddItem("Active", "", 1)
-	self.configForm:FindChild("BuffShown"):AddItem("Inactive", "", 2)
-	self.configForm:FindChild("BuffShown"):AddItem("Both", "", 3)
+	self.configForm:FindChild("BuffShowWhen"):AddItem("Always", "", 1)
+	self.configForm:FindChild("BuffShowWhen"):AddItem("All", "", 2)
+	self.configForm:FindChild("BuffShowWhen"):AddItem("Any", "", 3)
+	self.configForm:FindChild("BuffShowWhen"):AddItem("None", "", 4)
+
+	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("All", "", 1)
+	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("Any", "", 2)
+	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("None", "", 3)
 	
 	local soundList = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList")
 	local nextItem = 0
@@ -389,14 +385,12 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 	if icon ~= nil then
 		self.configForm:FindChild("BuffId"):SetText(tonumber(iconItem:FindChild("Id"):GetText()))
 		self.configForm:FindChild("BuffName"):SetText(icon.iconName)
-		self.configForm:FindChild("BuffType"):SetText(icon.iconType)
-		self.configForm:FindChild("BuffTarget"):SetText(icon.iconTarget)
-		self.configForm:FindChild("BuffShown"):SetText(icon.iconShown)
+		self.configForm:FindChild("BuffShowWhen"):SetText(icon.showWhen)
+		self.configForm:FindChild("BuffPlaySoundWhen"):SetText(icon.playSoundWhen)
 		self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
 		self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
 		self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
-		self.configForm:FindChild("BuffCriticalRequired"):SetCheck(icon.criticalRequired)
 		self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
 		self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor

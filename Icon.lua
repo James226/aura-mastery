@@ -25,10 +25,7 @@ function Icon.new(buffWatch, configForm)
 	self.iconForm = iconForm
 	self.buffWatch = buffWatch
 	self.icon = Apollo.LoadForm("AuraMastery.xml", "AM_Icon", nil, self)
-	self.iconType = "Buff"
 	self.iconName = ""
-	self.iconTarget = "Player"
-	self.iconShown = "Active"
 	self.iconSound = -1
 	self.iconBackground = true
 	self.buffStart = 0
@@ -39,7 +36,6 @@ function Icon.new(buffWatch, configForm)
 	self.defaultSize = { width = self.icon:GetWidth(), height = self.icon:GetHeight() }
 	self.duration = 0
 	self.maxDuration = 0
-	self.criticalRequired = false
 	self.criticalRequirementPassed = true
 	self.chargesRemaining = 0
 	self.iconId = 0
@@ -62,7 +58,10 @@ function Icon.new(buffWatch, configForm)
 	self.Stacks = 0
 	self.Charges = 0
 
-	self.showWhen = "All"
+	self.showWhen = "Always"
+	self.playSoundWhen = "None"
+	
+	self.soundPlayed = true
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
@@ -78,10 +77,7 @@ end
 
 function Icon:Load(saveData)
 	if saveData ~= nil then
-		self.iconType = saveData.iconType
 		self.iconName = saveData.iconName
-		self.iconTarget = saveData.iconTarget
-		self.iconShown = saveData.iconShown
 		self.iconSound = saveData.iconSound
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
 		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
@@ -110,26 +106,84 @@ function Icon:Load(saveData)
 		
 		self.iconOverlay:Load(saveData.iconOverlay)
 		
-		if saveData.criticalRequired ~= nil then
-			self.criticalRequired = saveData.criticalRequired
-		end
-
 		self.defaultIcon = self:GetSpellIconByName(self.iconName)
-	end
-	
-	self.enabled = saveData.iconEnabled == nil or saveData.iconEnabled
 
-	if saveData.Triggers ~= nil then
+		if saveData.showWhen == nil then
+			if saveData.iconShown == "Both" then
+				self.showWhen = "Always"
+			elseif saveData.iconShown == "Active" then
+				self.showWhen = "All"
+			else
+				self.showWhen = "None"
+			end
+		else
+			self.showWhen = saveData.showWhen
+		end
+		self.playSoundWhen = saveData.playSoundWhen or "None"
+
+		self.enabled = saveData.iconEnabled == nil or saveData.iconEnabled
+
+		
 		GeminiPackages:Require("AuraMastery:IconTrigger", function(iconTrigger)
-			for _, triggerData in pairs(saveData.Triggers) do
+			if saveData.Triggers ~= nil then
+				for _, triggerData in pairs(saveData.Triggers) do
+					local trigger = iconTrigger.new(self.buffWatch)
+					trigger:Load(triggerData)
+					table.insert(self.Triggers, trigger)
+				end
+			end
+
+			if saveData.iconType ~= nil then
+				if saveData.criticalRequired ~= nil and saveData.criticalRequired then
+					local trigger = iconTrigger.new(self.buffWatch)
+					trigger.Name = "OnCritical"
+					trigger.Type = "On Critical"
+					table.insert(self.Triggers, trigger)
+				end
+
 				local trigger = iconTrigger.new(self.buffWatch)
-				trigger:Load(triggerData)
+				self:ConvertTriggerFromOldFormat(trigger, saveData)
 				table.insert(self.Triggers, trigger)
 			end
 		end)
+
 	end
 	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
+end
+
+function Icon:ConvertTriggerFromOldFormat(trigger, saveData)
+	if saveData.iconType == "Cooldown" then
+		trigger.Name = "CD:" .. self.iconName
+		trigger.Type = "Cooldown"
+		trigger.TriggerDetails = {
+			SpellName = self.iconName
+		}
+	elseif saveData.iconType == "Buff" then
+		trigger.Name = "Buff:" .. self.iconName
+		trigger.Type = "Buff"
+		trigger.TriggerDetails = {
+			BuffName = self.iconName,
+			Target = {
+				Player = saveData.iconTarget == "Player" or saveData.iconTarget == "Both",
+				Target = saveData.iconTarget == "Target" or saveData.iconTarget == "Both"
+			}
+		}
+	elseif saveData.iconType == "Debuff" then
+		trigger.Name = "Debuff:" .. self.iconName
+		trigger.Type = "Debuff"
+		trigger.TriggerDetails = {
+			DebuffName = self.iconName,
+			Target = {
+				Player = saveData.iconTarget == "Player" or saveData.iconTarget == "Both",
+				Target = saveData.iconTarget == "Target" or saveData.iconTarget == "Both"
+			}
+		}
+	end
+end
+
+function Icon:UpdateDefaultIcon()
+	self.defaultIcon = self:GetSpellIconByName(self.iconName)
 end
 
 function Icon:ChangeActionSet(newActionSet)
@@ -143,9 +197,6 @@ end
 function Icon:GetSaveData()
 	local saveData = { }
 	saveData.iconName = self.iconName
-	saveData.iconType = self.iconType 
-	saveData.iconShown = self.iconShown 
-	saveData.iconTarget = self.iconTarget 
 	saveData.iconSound = self.iconSound 
 	saveData.iconBackground = self.iconBackground
 	saveData.iconScale = self.iconScale
@@ -161,20 +212,21 @@ function Icon:GetSaveData()
 	end
 
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
-	saveData.iconPosition = {
+	saveData.iconPosition = { 
 		left = left,
 		top = top
 	}
 	
 	saveData.iconOverlay = self.iconOverlay:Save()
-	saveData.criticalRequired = self.criticalRequired
 
 	saveData.Triggers = {}
 
 	for _, trigger in pairs(self.Triggers) do
 		table.insert(saveData.Triggers, trigger:Save())
-		--saveData.Triggers[#saveData.Triggers] = trigger:Save()
 	end
+
+	saveData.showWhen = self.showWhen
+	saveData.playSoundWhen = self.playSoundWhen
 	
 	return saveData
 end
@@ -197,11 +249,9 @@ end
 
 function Icon:SetIcon(configWnd)
 	self.iconName = configWnd:FindChild("BuffName"):GetText()
-	self.iconType = configWnd:FindChild("BuffType"):GetText()
-	self.iconTarget = configWnd:FindChild("BuffTarget"):GetText()
-	self.iconShown = configWnd:FindChild("BuffShown"):GetText()
+	self.showWhen = configWnd:FindChild("BuffShowWhen"):GetText()
+	self.playSoundWhen = configWnd:FindChild("BuffPlaySoundWhen"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
-	self.criticalRequired = configWnd:FindChild("BuffCriticalRequired"):IsChecked()
 	
 	self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
 	
@@ -252,18 +302,46 @@ end
 
 function Icon:PostUpdate()
 	local showIcon = nil
+	local playSound = nil
+
+	self.duration = 0
+	self.maxDuration = 0
+	self.Stacks = 0
+	self.Charges = 0
 
 	for i = #self.Triggers, 1, -1 do
 		local trigger = self.Triggers[i]
-
-		if showIcon == nil then
-			showIcon = trigger:IsSet()
-		elseif self.showWhen == "All" then
-			showIcon = showIcon and trigger:IsSet()
-			if not showIcon then break end
-		else
-			showIcon = showIcon or trigger:IsSet()
+	
+		local triggerSet = trigger:IsSet()
+		
+		if self.showWhen ~= "Always" then
+			if showIcon == nil then
+				if self.showWhen == "None" then
+					showIcon = not triggerSet 
+				else
+					showIcon = triggerSet
+				end
+			elseif self.showWhen == "All" then
+				showIcon = showIcon and triggerSet 
+			else
+				showIcon = showIcon or triggerSet 
+			end
 		end
+		
+		if playSound == nil then
+			if self.playSoundWhen == "None" then
+				playSound = not triggerSet
+			else
+				playSound = triggerSet
+			end
+		elseif self.playSoundWhen == "All" then
+			playSound = playSound and triggerSet 
+		elseif self.playSoundWhen == "None" then
+			playSound = playSound and not triggerSet
+		else
+			playSound = playSound or triggerSet		
+		end
+
 
 
 		if trigger:IsSet() then
@@ -285,13 +363,18 @@ function Icon:PostUpdate()
 		end
 	end
 
-	if showIcon then
+	if showIcon or self.showWhen == "Always" then
 		self.icon:Show(true)
 		self.icon:SetSprite(self.iconSprite == "" and self.defaultIcon or self.iconSprite)
 		self.icon:SetBGColor(self.iconColor)
 	else
 		self.icon:Show(false)
 	end
+
+	if playSound and not self.soundPlayed and self.iconSound ~= -1 then
+		Sound.Play(self.iconSound)
+	end	
+	self.soundPlayed = playSound
 	
 	for _, iconText in pairs(self.iconText) do
 		iconText:Update()

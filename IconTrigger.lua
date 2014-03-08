@@ -96,7 +96,7 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
 		end
-	elseif self.Type == "On Critical" or self.Type == "Action Set" then
+	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" then
 		self:AddBasicToBuffWatch()
 	end
 end

@@ -27,6 +27,7 @@ AuraMastery.spriteIcons = {
 }
 
 local criticalTime = 5
+local deflectTime = 4
 
 -----------------------------------------------------------------------------------------------
 -- Initialization
@@ -47,6 +48,7 @@ function AuraMastery:new(o)
 		},
 		Cooldown = {},
 		OnCritical = {},
+		OnDeflect = {},
 		ActionSet = {}
 	}
 	self.BarLocked = true
@@ -56,6 +58,7 @@ function AuraMastery:new(o)
 	self.currentSampleNum = 0
 	self.abilitiesList = nil
 	self.lastCritical = 0
+	self.lastDeflect = 0
 	self.Icons = {}
 	
     return o
@@ -73,7 +76,6 @@ function AuraMastery:OnSave(eLevel)
 	local saveData = { }
 	
 	saveData["Icons"] = { }
-	Print("Saving Icons")
 	for idx, icon in pairs(self.Icons) do
 		saveData["Icons"][# saveData["Icons"] + 1] = icon:GetSaveData()
 	end
@@ -99,12 +101,23 @@ end
 
 function AuraMastery:OnAbilityBookChange()
 	self.abilitiesList = AbilityBook.GetAbilitiesList()
+	for _, icon in pairs(self.Icons) do
+		icon:UpdateDefaultIcon()
+	end
 end
 
 function AuraMastery:OnDamageDealt(tData)
 	if tData.unitCaster ~= nil and tData.unitCaster.IsThePlayer then
 		if tData.eCombatResult == GameLib.CodeEnumCombatResult.Critical then
 			self.lastCritical = os.time()
+		end
+	end
+end
+
+function AuraMastery:OnMiss( unitCaster, unitTarget, eMissType )
+	if unitTarget.IsThePlayer then
+		if eMissType == GameLib.CodeEnumMissType.Dodge then
+			self.lastDeflect = os.time()
 		end
 	end
 end
@@ -136,6 +149,7 @@ function AuraMastery:OnLoad()
 
 	Apollo.RegisterEventHandler("AbilityBookChange", "OnAbilityBookChange", self)
 	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
+	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 
@@ -205,6 +219,7 @@ function AuraMastery:OnUpdate()
 	end
 
 	self:ProcessOnCritical()
+	self:ProcessOnDeflect()
 	
 	--self:ProcessInnate()
 	
@@ -223,15 +238,19 @@ function AuraMastery:ProcessOnCritical()
 	end
 end
 
+function AuraMastery:ProcessOnDeflect()
+	if os.difftime(os.time(), self.lastDeflect) < deflectTime then
+		for _, watcher in pairs(self.buffWatch["OnDeflect"]) do
+			watcher()
+		end
+	end
+end
+
 function AuraMastery:ProcessBuffs(buffs, target)
 	for idx, buff in pairs(buffs.arBeneficial) do
 		if self.buffWatch["Buff"][target][buff.splEffect:GetName()] ~= nil then
 			for _, icon in pairs(self.buffWatch["Buff"][target][buff.splEffect:GetName()]) do
-				if type(icon) == "function" then
-					icon(buff)
-				else
-					icon:SetBuff(buff)
-				end
+				icon(buff)
 			end
 		end
 	end
@@ -239,18 +258,13 @@ function AuraMastery:ProcessBuffs(buffs, target)
 	for idx, buff in pairs(buffs.arHarmful) do
 		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
 			for _, icon in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
-				if type(icon) == "function" then
-					icon(buff)
-				else
-					icon:SetBuff(buff)
-				end
+				icon(buff)
 			end
 		end
 	end
 end
 
 function AuraMastery:ProcessCooldowns(abilities)
-	local inCriticalTime = (os.difftime(os.time(), self.lastCritical) < criticalTime)
 	for k, v in pairs(abilities) do
 		if v.bIsActive and v.nCurrentTier and v.tTiers then
 			local tier = v.tTiers[v.nCurrentTier]
@@ -258,11 +272,7 @@ function AuraMastery:ProcessCooldowns(abilities)
 				local s = tier.splObject
 				if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
 					for _, icon in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
-						if type(icon) == "function" then
-							icon(s)
-						else
-							icon:ProcessSpell(s, inCriticalTime )
-						end
+						icon(s)
 					end
 				end
 			end
