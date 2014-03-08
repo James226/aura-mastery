@@ -391,6 +391,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
 		self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
+		self.configForm:FindChild("BuffOnlyInCombat"):SetCheck(icon.onlyInCombat)
 		self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
 		self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 		self.selectedColor = icon.iconColor

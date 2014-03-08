@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="Caedo" APIVersion="7" Name="AuraMastery" Description="" Version="0.5">
+<Addon Author="Caedo" APIVersion="7" Name="AuraMastery" Description="" Version="0.6">
     <Script Name="Libs/GeminiPackages.lua"/>
     <Script Name="AuraMasteryConfig.lua"/>
     <Script Name="Icon.lua"/>

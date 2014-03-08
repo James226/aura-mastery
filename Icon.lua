@@ -60,8 +60,11 @@ function Icon.new(buffWatch, configForm)
 
 	self.showWhen = "Always"
 	self.playSoundWhen = "None"
+
+	self.onlyInCombat = false
 	
 	self.soundPlayed = true
+	self.isInCombat = false
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
@@ -85,6 +88,10 @@ function Icon:Load(saveData)
 		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + (self.iconScale * self.defaultSize.width),  saveData.iconPosition.top + (self.iconScale * self.defaultSize.height))
 		if saveData.iconColor ~= nil then
 			self.iconColor = CColor.new(saveData.iconColor[1], saveData.iconColor[2], saveData.iconColor[3], saveData.iconColor[4])
+		end
+
+		if saveData.onlyInCombat ~= nil then
+			self.onlyInCombat = saveData.onlyInCombat
 		end
 
 		self.iconSprite = saveData.iconSprite or ""
@@ -199,6 +206,7 @@ function Icon:GetSaveData()
 	saveData.iconName = self.iconName
 	saveData.iconSound = self.iconSound 
 	saveData.iconBackground = self.iconBackground
+	saveData.onlyInCombat = self.onlyInCombat
 	saveData.iconScale = self.iconScale
 	saveData.iconBorder = self.iconBorder
 	saveData.iconColor = { self.iconColor.r, self.iconColor.g, self.iconColor.b, self.iconColor.a }
@@ -252,6 +260,7 @@ function Icon:SetIcon(configWnd)
 	self.showWhen = configWnd:FindChild("BuffShowWhen"):GetText()
 	self.playSoundWhen = configWnd:FindChild("BuffPlaySoundWhen"):GetText()
 	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
+	self.onlyInCombat = configWnd:FindChild("BuffOnlyInCombat"):IsChecked()
 	
 	self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
 	
@@ -363,7 +372,7 @@ function Icon:PostUpdate()
 		end
 	end
 
-	if showIcon or self.showWhen == "Always" then
+	if self:InCombatCheck() and (showIcon or self.showWhen == "Always") then
 		self.icon:Show(true)
 		self.icon:SetSprite(self.iconSprite == "" and self.defaultIcon or self.iconSprite)
 		self.icon:SetBGColor(self.iconColor)
@@ -383,6 +392,10 @@ function Icon:PostUpdate()
 	if self.iconOverlay ~= nil then
 		self.iconOverlay:Update()
 	end
+end
+
+function Icon:InCombatCheck()
+	return self.isInCombat or not self.onlyInCombat
 end
 
 function Icon:GetSpellIconByName(spellName)

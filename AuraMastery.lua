@@ -152,6 +152,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
+	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
 
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
 	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)
@@ -211,7 +212,7 @@ function AuraMastery:OnUpdate()
 	
 	if targetPlayer ~= nil then
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
-	end	
+	end
 	
 	local abilities = self:GetAbilitiesList()
 	if abilities then
@@ -249,16 +250,16 @@ end
 function AuraMastery:ProcessBuffs(buffs, target)
 	for idx, buff in pairs(buffs.arBeneficial) do
 		if self.buffWatch["Buff"][target][buff.splEffect:GetName()] ~= nil then
-			for _, icon in pairs(self.buffWatch["Buff"][target][buff.splEffect:GetName()]) do
-				icon(buff)
+			for _, watcher in pairs(self.buffWatch["Buff"][target][buff.splEffect:GetName()]) do
+				watcher(buff)
 			end
 		end
 	end
 	
 	for idx, buff in pairs(buffs.arHarmful) do
 		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
-			for _, icon in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
-				icon(buff)
+			for _, watcher in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
+				watcher(buff)
 			end
 		end
 	end
@@ -271,8 +272,8 @@ function AuraMastery:ProcessCooldowns(abilities)
 			if tier then
 				local s = tier.splObject
 				if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
-					for _, icon in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
-						icon(s)
+					for _, watcher in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
+						watcher(s)
 					end
 				end
 			end
@@ -292,6 +293,14 @@ function AuraMastery:OnSpecChanged(newSpec)
 
 	for _, watcher in pairs(self.buffWatch["ActionSet"]) do
 		watcher(newSpec)
+	end
+end
+
+function AuraMastery:OnEnteredCombat(unit, inCombat)
+	if unit:IsThePlayer() then
+		for _, icon in pairs(self.Icons) do
+			icon.isInCombat = inCombat
+		end
 	end
 end
 
