@@ -696,9 +696,32 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
 		editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
 		editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+	elseif trigger.Type == "Resources" then
+		self:PopulateResourceEditor(trigger, editor, "Mana")
+		self:PopulateResourceEditor(trigger, editor, "Resource")
 	end
 
 	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+end
+
+function AuraMasteryConfig:PopulateResourceEditor(trigger, editor, resourceType)
+	local resourceEditor = editor:FindChild(resourceType)
+
+	resourceEditor:FindChild("Operator"):AddItem("==", "", 1)
+	resourceEditor:FindChild("Operator"):AddItem("!=", "", 2)
+	resourceEditor:FindChild("Operator"):AddItem(">", "", 3)
+	resourceEditor:FindChild("Operator"):AddItem("<", "", 4)
+	resourceEditor:FindChild("Operator"):AddItem(">=", "", 5)
+	resourceEditor:FindChild("Operator"):AddItem("<=", "", 6)
+	if trigger.TriggerDetails[resourceType] ~= nil then
+		editor:FindChild(resourceType .. "Enabled"):SetCheck(true)
+		self:ToggleResourceEditor(resourceEditor, true)
+		resourceEditor:FindChild("Value"):SetText(trigger.TriggerDetails[resourceType].Value)
+	else
+		editor:FindChild(resourceType .. "Enabled"):SetCheck(false)
+		self:ToggleResourceEditor(resourceEditor, false)
+		resourceEditor:FindChild("Value"):SetText("")
+	end
 end
 
 function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
@@ -830,6 +853,20 @@ end
 function AuraMasteryConfig:OnUncheckTriggerBehaviourButton( wndHandler, wndControl, eMouseButton )
 	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
 end
+
+function AuraMasteryConfig:OnResourceStateToggle( wndHandler, wndControl, eMouseButton )
+	local resourceName = string.sub(wndControl:GetName(), 0, -8)
+	local editor = wndControl:GetParent():FindChild(resourceName)
+	if editor ~= nil then
+		self:ToggleResourceEditor(editor, wndControl:IsChecked())
+	end
+end
+
+function AuraMasteryConfig:ToggleResourceEditor(editor, enabled)
+	editor:Enable(enabled)
+	editor:SetSprite(enabled and "CRB_Basekit:kitBase_HoloOrange_TinyNoGlow" or "CRB_Basekit:kitBase_HoloBlue_TinyNoGlow")
+end
+
 
 
 local GeminiPackages = _G["GeminiPackages"]

@@ -46,7 +46,7 @@ end
 
 function IconOverlay:UpdateOverlaySprite()
 	if self.overlayShape == "Icon" then
-		self.overlayElement:SetFullSprite(self.icon.icon:GetSprite())
+		self.overlayElement:SetFullSprite(self.icon:GetSprite())
 	else
 		self.overlayElement:SetFullSprite("ActionSetBuilder_TEMP:spr_TEMP_ActionSetBottomTierBG")
 	end

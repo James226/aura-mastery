@@ -29,6 +29,22 @@ AuraMastery.spriteIcons = {
 local criticalTime = 5
 local deflectTime = 4
 
+local resourceIds = {}
+resourceIds[GameLib.CodeEnumClass.Warrior] = 1
+resourceIds[GameLib.CodeEnumClass.Engineer] = 1
+resourceIds[GameLib.CodeEnumClass.Stalker] = 3
+resourceIds[GameLib.CodeEnumClass.Esper] = 1
+resourceIds[GameLib.CodeEnumClass.Spellslinger] = 4
+resourceIds[GameLib.CodeEnumClass.Medic] = 1
+
+local abilitiesList = nil
+local function GetAbilitiesList()
+	if abilitiesList == nil then
+		abilitiesList = AbilityBook.GetAbilitiesList()
+	end
+	return abilitiesList
+end
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
@@ -49,14 +65,14 @@ function AuraMastery:new(o)
 		Cooldown = {},
 		OnCritical = {},
 		OnDeflect = {},
-		ActionSet = {}
+		ActionSet = {},
+		Resources = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
 	self.selectedColor = CColor.new(1,1,1,1)
 	self.selectedFontColor = CColor.new(1,1,1,1)
 	self.currentSampleNum = 0
-	self.abilitiesList = nil
 	self.lastCritical = 0
 	self.lastDeflect = 0
 	self.Icons = {}
@@ -100,7 +116,7 @@ function AuraMastery:OnLoadIcons(tData)
 end
 
 function AuraMastery:OnAbilityBookChange()
-	self.abilitiesList = AbilityBook.GetAbilitiesList()
+	abilitiesList = AbilityBook.GetAbilitiesList()
 	for _, icon in pairs(self.Icons) do
 		icon:UpdateDefaultIcon()
 	end
@@ -177,15 +193,8 @@ function AuraMastery:OnOpenConfig()
 	self.config = self.auraMasteryConfig.new(self, self.xmlDoc)
 end
 
-function AuraMastery:GetAbilitiesList()
-	if self.abilitiesList == nil then
-		self.abilitiesList = AbilityBook.GetAbilitiesList()
-	end
-	return self.abilitiesList
-end
-
 function AuraMastery:GetSpellIconByName(spellName)
-	local abilities = self:GetAbilitiesList()
+	local abilities = GetAbilitiesList()
 	if abilities ~= nil then
 		for _, ability in pairs(abilities) do
 			if ability.strName == spellName then
@@ -214,13 +223,14 @@ function AuraMastery:OnUpdate()
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 	end
 	
-	local abilities = self:GetAbilitiesList()
+	local abilities = GetAbilitiesList()
 	if abilities then
 		self:ProcessCooldowns(abilities)
 	end
 
 	self:ProcessOnCritical()
 	self:ProcessOnDeflect()
+	self:ProcessResources()
 	
 	--self:ProcessInnate()
 	
@@ -243,6 +253,18 @@ function AuraMastery:ProcessOnDeflect()
 	if os.difftime(os.time(), self.lastDeflect) < deflectTime then
 		for _, watcher in pairs(self.buffWatch["OnDeflect"]) do
 			watcher()
+		end
+	end
+end
+
+function AuraMastery:ProcessResources()
+	local playerUnit = GameLib.GetPlayerUnit()
+	if playerUnit ~= nil then
+		local resourceId = resourceIds[playerUnit:GetClassId()]
+
+		local mana, maxMana, resource, maxResource = playerUnit:GetMana(), playerUnit:GetMaxMana(), playerUnit:GetResource(resourceId), playerUnit:GetMaxResource(resourceId)
+		for _, watcher in pairs(self.buffWatch["Resources"]) do
+			watcher({Mana = mana, MaxMana = maxMana, Resource = resource, MaxResource = maxResource})
 		end
 	end
 end
@@ -304,10 +326,21 @@ function AuraMastery:OnEnteredCombat(unit, inCombat)
 	end
 end
 
+if _G["AuraMasteryLibs"] == nil then
+	_G["AuraMasteryLibs"] = { }
+end
+_G["AuraMasteryLibs"]["GetAbilitiesList"] = GetAbilitiesList
+
 
 -----------------------------------------------------------------------------------------------
 -- AuraMastery Instance
 -----------------------------------------------------------------------------------------------
 AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
+
+---------------------------------------------------------------------------------------------------
+-- TriggerDetails Functions
+---------------------------------------------------------------------------------------------------
+function AuraMastery:OnResourceStateToggle( wndHandler, wndControl, eMouseButton )
+end
 

@@ -80,6 +80,22 @@ function IconTrigger:SetConfig(editor)
 				Target = editor:FindChild("TargetTarget"):IsChecked()
 			}
 		}
+	elseif self.Type == "Resources" then
+		self.TriggerDetails = { }
+		if editor:FindChild("ManaEnabled"):IsChecked() then
+			local resourceEditor = editor:FindChild("Mana")
+			self.TriggerDetails.Mana = {
+				Operator = ">",
+				Value = tonumber(resourceEditor:FindChild("Value"):GetText())
+			}
+		end
+		if editor:FindChild("ResourceEnabled"):IsChecked() then
+			local resourceEditor = editor:FindChild("Resource")
+			self.TriggerDetails.Resource = {
+				Operator = ">",
+				Value = tonumber(resourceEditor:FindChild("Value"):GetText())
+			}
+		end
 	end
 
 	self:AddToBuffWatch()
@@ -96,7 +112,7 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
 		end
-	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" then
+	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
 		self:AddBasicToBuffWatch()
 	end
 end
@@ -213,8 +229,37 @@ end
 function IconTrigger:ProcessEvent(result)
 	if self.Type == "Action Set" then
 		self.isSet = self.TriggerDetails.ActionSets[result]
+	elseif self.Type == "Resources" then
+		return self:ProcessResources(result)
 	else
 		self.isSet = true
+	end
+end
+
+function IconTrigger:ProcessResources(result)
+	self.isSet = true
+	if self.TriggerDetails["Mana"] ~= nil then
+		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Mana, result.Mana, result.MaxMana)
+	end
+
+	if self.TriggerDetails["Resource"] ~= nil then
+		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Resource, result.Resource, result.MaxResource)
+	end
+end
+
+function IconTrigger:ProcessResource(operation, resource, maxResource)
+	if operation.Operator == "==" then
+		return resource == operation.Value
+	elseif operation.Operator == "!=" then
+		return resource ~= operation.Value
+	elseif operation.Operator == ">" then
+		return resource > operation.Value
+	elseif operation.Operator == "<" then
+		return resource < operation.Value
+	elseif operation.Operator == ">=" then
+		return resource >= operation.Value
+	elseif operation.Operator == "<=" then
+		return resource <= operation.Value
 	end
 end
 

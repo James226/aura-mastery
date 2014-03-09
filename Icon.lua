@@ -113,7 +113,7 @@ function Icon:Load(saveData)
 		
 		self.iconOverlay:Load(saveData.iconOverlay)
 		
-		self.defaultIcon = self:GetSpellIconByName(self.iconName)
+		self:UpdateDefaultIcon()
 
 		if saveData.showWhen == nil then
 			if saveData.iconShown == "Both" then
@@ -191,6 +191,7 @@ end
 
 function Icon:UpdateDefaultIcon()
 	self.defaultIcon = self:GetSpellIconByName(self.iconName)
+	self.iconOverlay:UpdateOverlaySprite()
 end
 
 function Icon:ChangeActionSet(newActionSet)
@@ -291,7 +292,7 @@ function Icon:SetIcon(configWnd)
 	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 
-	self.defaultIcon = self:GetSpellIconByName(self.iconName)
+	self:UpdateDefaultIcon()
 
 	local editor = configWnd:FindChild("TriggerEditor")
 	local trigger = editor:GetData()
@@ -351,8 +352,6 @@ function Icon:PostUpdate()
 			playSound = playSound or triggerSet		
 		end
 
-
-
 		if trigger:IsSet() then
 			if trigger.Time ~= nil then
 				self.duration = trigger.Time
@@ -374,7 +373,7 @@ function Icon:PostUpdate()
 
 	if self:InCombatCheck() and (showIcon or self.showWhen == "Always") then
 		self.icon:Show(true)
-		self.icon:SetSprite(self.iconSprite == "" and self.defaultIcon or self.iconSprite)
+		self.icon:SetSprite(self:GetSprite())
 		self.icon:SetBGColor(self.iconColor)
 	else
 		self.icon:Show(false)
@@ -394,12 +393,20 @@ function Icon:PostUpdate()
 	end
 end
 
+function Icon:GetSprite()
+	return self.iconSprite == "" and self.defaultIcon or self.iconSprite
+end
+
 function Icon:InCombatCheck()
 	return self.isInCombat or not self.onlyInCombat
 end
 
+function Icon:GetAbilitiesList()
+	return _G["AuraMasteryLibs"]["GetAbilitiesList"]()
+end
+
 function Icon:GetSpellIconByName(spellName)
-	local abilities = AbilityBook.GetAbilitiesList()
+	local abilities = self:GetAbilitiesList()
 	if abilities ~= nil then
 		for _, ability in pairs(abilities) do
 			if ability.strName == spellName then
