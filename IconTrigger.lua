@@ -85,17 +85,49 @@ function IconTrigger:SetConfig(editor)
 		if editor:FindChild("ManaEnabled"):IsChecked() then
 			local resourceEditor = editor:FindChild("Mana")
 			self.TriggerDetails.Mana = {
-				Operator = ">",
-				Value = tonumber(resourceEditor:FindChild("Value"):GetText())
+				Operator = resourceEditor:FindChild("Operator"):GetText(),
+				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+				Percent = resourceEditor:FindChild("Percent"):IsChecked()
 			}
 		end
 		if editor:FindChild("ResourceEnabled"):IsChecked() then
 			local resourceEditor = editor:FindChild("Resource")
 			self.TriggerDetails.Resource = {
-				Operator = ">",
-				Value = tonumber(resourceEditor:FindChild("Value"):GetText())
+				Operator = resourceEditor:FindChild("Operator"):GetText(),
+				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+				Percent = resourceEditor:FindChild("Percent"):IsChecked()
 			}
 		end
+	elseif self.Type == "Health" then
+		self.TriggerDetails = { 
+			Target = {
+				Player = editor:FindChild("TargetPlayer"):IsChecked(),
+				Target = editor:FindChild("TargetTarget"):IsChecked()
+			}
+		}
+		if editor:FindChild("HealthEnabled"):IsChecked() then
+			local resourceEditor = editor:FindChild("Health")
+			self.TriggerDetails.Health = {
+				Operator = resourceEditor:FindChild("Operator"):GetText(),
+				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+				Percent = resourceEditor:FindChild("Percent"):IsChecked()
+			}
+		end
+		if editor:FindChild("ShieldEnabled"):IsChecked() then
+			local resourceEditor = editor:FindChild("Shield")
+			self.TriggerDetails.Shield = {
+				Operator = resourceEditor:FindChild("Operator"):GetText(),
+				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+				Percent = resourceEditor:FindChild("Percent"):IsChecked()
+			}
+		end
+	elseif self.Type == "Moment Of Opportunity" then
+		self.TriggerDetails = { 
+			Target = {
+				Player = editor:FindChild("TargetPlayer"):IsChecked(),
+				Target = editor:FindChild("TargetTarget"):IsChecked()
+			}
+		}
 	end
 
 	self:AddToBuffWatch()
@@ -114,14 +146,22 @@ function IconTrigger:AddToBuffWatch()
 		end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
 		self:AddBasicToBuffWatch()
+	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
+		if self.TriggerDetails.Target.Player then
+			self:AddCooldownToBuffWatch("Player")
+		end
+		if self.TriggerDetails.Target.Target then
+			self:AddCooldownToBuffWatch("Target")
+		end
 	end
 end
 
 function IconTrigger:AddCooldownToBuffWatch(option)
-	if self.buffWatch[self.Type][option] == nil then
-		self.buffWatch[self.Type][option] = {}
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType][option] == nil then
+		self.buffWatch[triggerType][option] = {}
 	end
-	self.buffWatch[self.Type][option][tostring(self)] = function(buff) self:ProcessSpell(buff) end
+	self.buffWatch[triggerType][option][tostring(self)] = function(result) self:ProcessOptionEvent(result) end
 end
 
 function IconTrigger:AddBasicToBuffWatch()
@@ -200,6 +240,16 @@ function IconTrigger:GetSpellCooldown(spell)
 	end
 end
 
+function IconTrigger:ProcessOptionEvent(result)
+	if self.Type == "Cooldown" then
+		self:ProcessSpell(result)
+	elseif self.Type == "Health" then
+		self:ProcessHealth(result)
+	elseif self.Type == "Moment Of Opportunity" then
+		self:ProcessMOO(result)
+	end
+end
+
 function IconTrigger:ProcessSpell(spell)
 	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
 
@@ -247,19 +297,51 @@ function IconTrigger:ProcessResources(result)
 	end
 end
 
+function IconTrigger:ProcessHealth(result)
+	self.isSet = true
+	if self.TriggerDetails["Health"] ~= nil then
+		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Health, result.Health, result.MaxHealth)
+	end
+
+	if self.TriggerDetails["Shield"] ~= nil then
+		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Shield, result.Shield, result.MaxShield)
+	end
+end
+
 function IconTrigger:ProcessResource(operation, resource, maxResource)
-	if operation.Operator == "==" then
-		return resource == operation.Value
-	elseif operation.Operator == "!=" then
-		return resource ~= operation.Value
-	elseif operation.Operator == ">" then
-		return resource > operation.Value
-	elseif operation.Operator == "<" then
-		return resource < operation.Value
-	elseif operation.Operator == ">=" then
-		return resource >= operation.Value
-	elseif operation.Operator == "<=" then
-		return resource <= operation.Value
+	local resourceValue = 0
+	if resource ~= nil then
+		if operation.Percent then
+			resourceValue = (resource / maxResource) * 100
+		else
+			resourceValue = resource
+		end
+
+		if operation.Operator == "==" then
+			return resourceValue == operation.Value
+		elseif operation.Operator == "!=" then
+			return resourceValue ~= operation.Value
+		elseif operation.Operator == ">" then
+			return resourceValue > operation.Value
+		elseif operation.Operator == "<" then
+			return resourceValue < operation.Value
+		elseif operation.Operator == ">=" then
+			return resourceValue >= operation.Value
+		elseif operation.Operator == "<=" then
+			return resourceValue <= operation.Value
+		end
+	end
+end
+
+function IconTrigger:ProcessMOO(result)
+	if result.TimeRemaining > 0 then
+		self.isSet = true
+		self.Time = result.TimeRemaining
+		if self.MaxDuration == nil or self.MaxDuration < self.Time then
+			self.MaxDuration = self.Time
+		end
+	else
+		self.MaxDuration = nil
 	end
 end
 

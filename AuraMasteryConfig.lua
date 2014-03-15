@@ -19,10 +19,16 @@ function AuraMasteryConfig.new(auraMastery, xmlDoc)
 	return self
 end
 
+function AuraMasteryConfig:Show()
+	self.configForm:FindChild("ShareConfirmDialog"):Show(false)
+	self.configForm:Show(true)
+end
+
 function AuraMasteryConfig:Init()
 	for _, tab in pairs(self.configForm:FindChild("BuffEditor"):GetChildren()) do
 		tab:Show(false)
 	end
+	self.shareChannel = ICCommLib.JoinChannel("AuraMastery", "OnShareMsg", nil)
 	self.configForm:FindChild("GeneralTabButton"):SetCheck(true)
 	self.configForm:FindChild("BuffEditor"):FindChild("GeneralTab"):Show(true)	
 		
@@ -117,7 +123,6 @@ function AuraMasteryConfig:OnOpenConfig()
 
 	if self.configForm == nil then
 		Print("Not Loaded")
-		
 	end
 	self.configForm:Show(true)
 
@@ -172,11 +177,11 @@ end
 function AuraMasteryConfig:CreateIconItem(i, icon)
 	local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
 	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
-	iconItem:SetAnchorOffsets(0, (i-1) * 40, 500, (i-1) * 40 + 40)
 	iconItem:FindChild("Id"):SetText(i)
 	iconItem:FindChild("Label"):SetText(icon:GetName())
 	iconItem:FindChild("LockButton"):SetCheck(true)
 	icon:SetConfigElement(iconItem)
+	iconList:ArrangeChildrenVert()
 	return iconItem
 end
 
@@ -244,16 +249,14 @@ function AuraMasteryConfig:AddIcon()
 	
 	local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
 	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
-	iconItem:SetAnchorOffsets(0, (self.nextIconId-1) * 40, 0, (self.nextIconId-1) * 40 + 40)
 	iconItem:FindChild("Id"):SetText(tostring(self.nextIconId))
 	iconItem:FindChild("Label"):SetText(newIcon:GetName())
 	iconItem:FindChild("LockButton"):SetCheck(true)
 	newIcon:SetConfigElement(iconItem)
 	self.auraMastery.Icons[self.nextIconId] = newIcon
 	self.nextIconId = self.nextIconId + 1
-	
-	local windowHeight = iconList:GetHeight()
-	iconList:SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
+
+	iconList:ArrangeChildrenVert()
 	
 	return newIcon
 end
@@ -265,16 +268,8 @@ function AuraMasteryConfig:RemoveIcon(icon)
 	self.auraMastery.Icons[iconId]:Delete()
 	self.auraMastery.Icons[iconId] = nil
 	self:SelectFirstIcon()
-	
-	local currentPos = 0
-	for _, iconItem in pairs(self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
-		iconItem:SetAnchorOffsets(0, currentPos, 0, currentPos + iconItem:GetHeight())
-		currentPos = currentPos + iconItem:GetHeight()
-	end
-	
 
-	local windowHeight = self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetHeight()
-	self.configForm:FindChild("IconListHolder"):FindChild("IconList"):SetVScrollInfo(self:NumIcons() * 40 - windowHeight, windowHeight, windowHeight)
+	self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
 end
 
 function AuraMasteryConfig:NumIcons()
@@ -481,6 +476,8 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
 		end
 
+		self.configForm:FindChild("ShareForm"):Show(false)
+
 		self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
 		self:PopulateTriggers(icon)
 	end
@@ -636,6 +633,7 @@ function AuraMasteryConfig:PopulateTriggers(icon)
 
 	if firstTrigger then
 		self.configForm:FindChild("TriggerSelectButton"):SetText("")
+		self:SelectTrigger(nil)	
 	end
 end
 
@@ -672,55 +670,72 @@ end
 
 function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 	local editor = self.configForm:FindChild("TriggerEditor")
-	local trigger = triggerDropdownItem:GetData()
-	editor:SetData(trigger)
-	self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
-	editor:FindChild("TriggerName"):SetText(trigger.Name)
-	editor:FindChild("TriggerType"):SetText(trigger.Type)
-	editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
 
-	self:PopulateTriggerDetails(trigger.Type)
+	if triggerDropdownItem == nil then
+		editor:Show(false)
+	else
+		editor:Show(true)
+		local trigger = triggerDropdownItem:GetData()
+		editor:SetData(trigger)
+		self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
+		editor:FindChild("TriggerName"):SetText(trigger.Name)
+		editor:FindChild("TriggerType"):SetText(trigger.Type)
+		editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
 
-	if trigger.Type == "Action Set" then
-		editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
-		editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
-		editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
-		editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
-	elseif trigger.Type == "Cooldown" then
-		editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
-	elseif trigger.Type == "Buff" then
-		editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
-		editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-		editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-	elseif trigger.Type == "Debuff" then
-		editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
-		editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-		editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-	elseif trigger.Type == "Resources" then
-		self:PopulateResourceEditor(trigger, editor, "Mana")
-		self:PopulateResourceEditor(trigger, editor, "Resource")
+		self:PopulateTriggerDetails(trigger.Type)
+
+		if trigger.Type == "Action Set" then
+			editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
+			editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
+			editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
+			editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
+		elseif trigger.Type == "Cooldown" then
+			editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+		elseif trigger.Type == "Buff" then
+			editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
+			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+		elseif trigger.Type == "Debuff" then
+			editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
+			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+		elseif trigger.Type == "Resources" then
+			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
+
+			self:PopulateValueBasedEditor(trigger, editor, "Mana")
+			self:PopulateValueBasedEditor(trigger, editor, "Resource")
+		elseif trigger.Type == "Health" then
+			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
+
+			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+
+			self:PopulateValueBasedEditor(trigger, editor, "Health")
+			self:PopulateValueBasedEditor(trigger, editor, "Shield")
+		elseif trigger.Type == "Moment Of Opportunity" then
+			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+		end
+
+		self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
 	end
-
-	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
 end
 
-function AuraMasteryConfig:PopulateResourceEditor(trigger, editor, resourceType)
+function AuraMasteryConfig:PopulateValueBasedEditor(trigger, editor, resourceType)
 	local resourceEditor = editor:FindChild(resourceType)
-
-	resourceEditor:FindChild("Operator"):AddItem("==", "", 1)
-	resourceEditor:FindChild("Operator"):AddItem("!=", "", 2)
-	resourceEditor:FindChild("Operator"):AddItem(">", "", 3)
-	resourceEditor:FindChild("Operator"):AddItem("<", "", 4)
-	resourceEditor:FindChild("Operator"):AddItem(">=", "", 5)
-	resourceEditor:FindChild("Operator"):AddItem("<=", "", 6)
+	
 	if trigger.TriggerDetails[resourceType] ~= nil then
 		editor:FindChild(resourceType .. "Enabled"):SetCheck(true)
 		self:ToggleResourceEditor(resourceEditor, true)
+		resourceEditor:FindChild("Operator"):SetText(trigger.TriggerDetails[resourceType].Operator)
 		resourceEditor:FindChild("Value"):SetText(trigger.TriggerDetails[resourceType].Value)
+		resourceEditor:FindChild("Percent"):SetCheck(trigger.TriggerDetails[resourceType].Percent)
 	else
 		editor:FindChild(resourceType .. "Enabled"):SetCheck(false)
 		self:ToggleResourceEditor(resourceEditor, false)
+		resourceEditor:FindChild("Operator"):SetText(">")
 		resourceEditor:FindChild("Value"):SetText("")
+		resourceEditor:FindChild("Percent"):SetCheck(false)
 	end
 end
 
@@ -733,6 +748,7 @@ function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
 		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger) 
 			local trigger = iconTrigger.new(icon.buffWatch)
 			trigger.Name = "Trigger " .. tostring(# triggerSelectDropdown:GetChildren() + 1)
+			trigger.TriggerDetails = { SpellName = "" }
 			table.insert(icon.Triggers, trigger)
 			
 			local triggerDropdownItem = self:AddTriggerDropdown(triggerSelectDropdown, trigger)
@@ -816,9 +832,31 @@ function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
 		detailsEditor:SetName("TriggerDetails")
 		detailsEditor:SetAnchorOffsets(0, 150, 0, 150 + detailsEditor:GetHeight())
 		triggerEffects:SetAnchorOffsets(0, 150 + detailsEditor:GetHeight(), 0, 150 + detailsEditor:GetHeight() + triggerEffects:GetHeight())
+
+		self:InitializeTriggerDetailsWindow(triggerType, self.configForm)
 	else
 		triggerEffects:SetAnchorOffsets(0, 150, 0, triggerEffects:GetHeight())
 	end
+end
+
+function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEditor)
+	detailsEditor:FindChild("TriggerTypeDropdown"):Show(false)
+	if triggerType == "Resources" then
+		self:InitializeResourceEditor(detailsEditor:FindChild("Mana"))
+		self:InitializeResourceEditor(detailsEditor:FindChild("Resource"))
+	elseif triggerType == "Health" then
+		self:InitializeResourceEditor(detailsEditor:FindChild("Health"))
+		self:InitializeResourceEditor(detailsEditor:FindChild("Shield"))
+	end
+end
+
+function AuraMasteryConfig:InitializeResourceEditor(editor)
+	editor:FindChild("Operator"):AddItem("==", "", 1)
+	editor:FindChild("Operator"):AddItem("!=", "", 2)
+	editor:FindChild("Operator"):AddItem(">", "", 3)
+	editor:FindChild("Operator"):AddItem("<", "", 4)
+	editor:FindChild("Operator"):AddItem(">=", "", 5)
+	editor:FindChild("Operator"):AddItem("<=", "", 6)
 end
 
 function AuraMasteryConfig:OnCheckTriggerTypeButton( wndHandler, wndControl, eMouseButton )
@@ -867,7 +905,133 @@ function AuraMasteryConfig:ToggleResourceEditor(editor, enabled)
 	editor:SetSprite(enabled and "CRB_Basekit:kitBase_HoloOrange_TinyNoGlow" or "CRB_Basekit:kitBase_HoloBlue_TinyNoGlow")
 end
 
+function AuraMasteryConfig:OnImportIcon( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("ClipboardExport"):PasteTextFromClipboard()
+	local iconData = self.configForm:FindChild("ClipboardExport"):GetText()
 
+	
+	loadstring("icon = " .. iconData)()
+	if icon ~= nil and icon.iconName ~= nil then
+		local newIcon = self.auraMastery:AddIcon()
+		newIcon:Load(icon)
+		self:CreateIconItem(newIcon.iconId, newIcon)
+	else
+		Print("Failed to import icon, invalid load data in clipboard.")
+	end
+end
+
+function AuraMasteryConfig:OnExportIcon( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		self.configForm:FindChild("ClipboardExport"):SetText(self:Serialize(icon:GetSaveData()))
+		self.configForm:FindChild("ClipboardExport"):CopyTextToClipboard()
+	end
+end
+
+function AuraMasteryConfig:OnSharingMessageReceived(channel, msg)
+	if msg.Icon ~= nil then
+		if not self.configForm:FindChild("ShareConfirmDialog"):IsShown() then
+			self.configForm:FindChild("ShareConfirmDialog"):SetData(msg.Icon)
+			self.configForm:FindChild("ShareConfirmDialog"):Show(true)
+			self.configForm:FindChild("ShareConfirmDialog"):FindChild("ShareConfirmMessage"):SetText(msg.Sender .. " would like to share the icon '" .. msg.Icon.iconName .. "' with you.\n\nWould you like to accept this icon?")
+		end
+	end
+end
+
+function AuraMasteryConfig:OnAcceptIconShare( wndHandler, wndControl, eMouseButton )
+	local shareConfirmDialog = self.configForm:FindChild("ShareConfirmDialog")
+	local icon = shareConfirmDialog:GetData()
+	if icon ~= nil then
+		local newIcon = self.auraMastery:AddIcon()	
+		newIcon:Load(icon)
+		self:CreateIconItem(newIcon.iconId, newIcon)
+
+		shareConfirmDialog:Show(false)
+		shareConfirmDialog:SetData(nil)
+	end
+end
+
+function AuraMasteryConfig:OnIgnoreIconShare( wndHandler, wndControl, eMouseButton )
+	local shareConfirmDialog = self.configForm:FindChild("ShareConfirmDialog")
+	shareConfirmDialog:Show(false)
+	shareConfirmDialog:SetData(nil)
+end
+
+function AuraMasteryConfig:OnFormHide( wndHandler, wndControl )
+	if wndControl == wndHandler then
+		self.auraMastery.sharingCallback = nil
+		self.configForm:FindChild("ShareForm"):FindChild("AllowShareRequests"):SetCheck(false)
+		self.configForm:FindChild("ShareButton"):SetBGColor("ffffffff")
+	end
+end
+
+function AuraMasteryConfig:OnShareIcon( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("ShareForm"):Show(true)
+end
+
+function AuraMasteryConfig:OnSendIcon( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		local msg = {}
+		msg.Icon = icon:GetSaveData()
+		self.auraMastery:SendCommsMessageToPlayer(self.configForm:FindChild("ShareForm"):FindChild("Name"):GetText(), msg)
+	end
+end
+
+function AuraMasteryConfig:OnSendIconToGroup( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		local msg = {}
+		msg.Icon = icon:GetSaveData()
+		self.auraMastery:SendCommsMessageToGroup(msg)
+	end
+end
+
+function AuraMasteryConfig:OnEnableShareRequests( wndHandler, wndControl, eMouseButton )
+	self.auraMastery.sharingCallback = function(chan, msg) self:OnSharingMessageReceived(chan, msg) end
+	self.configForm:FindChild("ShareButton"):SetBGColor("ffffff00")
+end
+
+function AuraMasteryConfig:OnDisableShareRequests( wndHandler, wndControl, eMouseButton )
+	self.auraMastery.sharingCallback = nil
+	self.configForm:FindChild("ShareButton"):SetBGColor("ffffffff")
+end
+
+function AuraMasteryConfig:Serialize(val, name)
+	local tmp = ""
+    if name then 
+		if type(name) == "number" then
+			tmp = tmp .. "[" .. name .. "]" .. " = "
+		else
+			tmp = tmp .. "['" .. name .. "']" .. " = "
+		end
+	end
+
+    if type(val) == "table" then
+        tmp = tmp .. "{"
+
+        for k, v in pairs(val) do
+            tmp =  tmp .. self:Serialize(v, k) .. ","
+        end
+
+        tmp = tmp .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+
+    return tmp
+end
+
+-- inspect loadstring("icon = " .. Serialize(Apollo.GetAddon("AuraMastery").Icons[1]:GetSaveData()))()
 
 local GeminiPackages = _G["GeminiPackages"]
 GeminiPackages:NewPackage(AuraMasteryConfig, "AuraMastery:Config", 1)

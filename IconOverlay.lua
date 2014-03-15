@@ -12,8 +12,8 @@ setmetatable(IconOverlay, {
 function IconOverlay.new(icon)
 	local self = setmetatable({}, IconOverlay)
 	self.icon = icon
-	self.overlayColor = CColor.new(1, 0, 0, 1)
-	self.overlayStyle = "Linear"
+	self.overlayColor = CColor.new(1, 0, 0, 0.75)
+	self.overlayStyle = "Radial"
 	self.overlayShape = "Solid"
 	self.overlayElement = self.icon.icon:FindChild("IconOverlay")
 	self.overlayElement:SetBarColor(self.overlayColor)

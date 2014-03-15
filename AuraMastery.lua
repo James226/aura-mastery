@@ -66,7 +66,15 @@ function AuraMastery:new(o)
 		OnCritical = {},
 		OnDeflect = {},
 		ActionSet = {},
-		Resources = {}
+		Resources = {},
+		Health = {
+			Player = {},
+			Target = {}
+		},
+		MomentOfOpportunity = {
+			Player = {},
+			Target = {}
+		}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
@@ -131,7 +139,7 @@ function AuraMastery:OnDamageDealt(tData)
 end
 
 function AuraMastery:OnMiss( unitCaster, unitTarget, eMissType )
-	if unitTarget.IsThePlayer then
+	if unitTarget ~= nil and unitTarget.IsThePlayer then
 		if eMissType == GameLib.CodeEnumMissType.Dodge then
 			self.lastDeflect = os.time()
 		end
@@ -175,6 +183,7 @@ function AuraMastery:OnLoad()
 
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
+	self.shareChannel = ICCommLib.JoinChannel("AuraMastery", "OnSharingMessageReceived", self)
 end
 
 function AuraMastery:OnDocLoaded()
@@ -190,7 +199,10 @@ end
 -- AuraMastery Functions
 -----------------------------------------------------------------------------------------------
 function AuraMastery:OnOpenConfig()
-	self.config = self.auraMasteryConfig.new(self, self.xmlDoc)
+	if self.config == nil then
+		self.config = self.auraMasteryConfig.new(self, self.xmlDoc)
+	end
+	self.config:Show()
 end
 
 function AuraMastery:GetSpellIconByName(spellName)
@@ -217,10 +229,14 @@ function AuraMastery:OnUpdate()
 	
 	if unitPlayer ~= nil then
 		self:ProcessBuffs(unitPlayer:GetBuffs(), "Player")
+		self:ProcessHealth(unitPlayer, "Player")
+		self:ProcessMOO(unitPlayer, "Player")
 	end
 	
 	if targetPlayer ~= nil then
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
+		self:ProcessHealth(targetPlayer, "Target")
+		self:ProcessMOO(targetPlayer, "Target")
 	end
 	
 	local abilities = GetAbilitiesList()
@@ -241,30 +257,62 @@ function AuraMastery:OnUpdate()
 	end
 end
 
+local function TableContainsElements(table)
+	for _,_ in pairs(table) do
+		return true
+	end
+	return false
+end
+
+function AuraMastery:ProcessMOO(unit, target)
+	if self.buffWatch["MomentOfOpportunity"][target] ~= nil and TableContainsElements(self.buffWatch["MomentOfOpportunity"][target]) then
+		local timeRemaining = unit:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
+		local result = { TimeRemaining = timeRemaining }
+		for _, watcher in pairs(self.buffWatch["MomentOfOpportunity"][target]) do
+			watcher(result)
+		end
+	end
+end
+
 function AuraMastery:ProcessOnCritical()
-	if os.difftime(os.time(), self.lastCritical) < criticalTime then
-		for _, watcher in pairs(self.buffWatch["OnCritical"]) do
-			watcher()
+	if TableContainsElements(self.buffWatch["OnCritical"]) then
+		if os.difftime(os.time(), self.lastCritical) < criticalTime then
+			for _, watcher in pairs(self.buffWatch["OnCritical"]) do
+				watcher()
+			end
 		end
 	end
 end
 
 function AuraMastery:ProcessOnDeflect()
-	if os.difftime(os.time(), self.lastDeflect) < deflectTime then
-		for _, watcher in pairs(self.buffWatch["OnDeflect"]) do
-			watcher()
+	if TableContainsElements(self.buffWatch["OnDeflect"]) then
+		if os.difftime(os.time(), self.lastDeflect) < deflectTime then
+			for _, watcher in pairs(self.buffWatch["OnDeflect"]) do
+				watcher()
+			end
 		end
 	end
 end
 
 function AuraMastery:ProcessResources()
-	local playerUnit = GameLib.GetPlayerUnit()
-	if playerUnit ~= nil then
-		local resourceId = resourceIds[playerUnit:GetClassId()]
+	if TableContainsElements(self.buffWatch["Resources"]) then
+		local playerUnit = GameLib.GetPlayerUnit()
+		if playerUnit ~= nil then
+			local resourceId = resourceIds[playerUnit:GetClassId()]
 
-		local mana, maxMana, resource, maxResource = playerUnit:GetMana(), playerUnit:GetMaxMana(), playerUnit:GetResource(resourceId), playerUnit:GetMaxResource(resourceId)
-		for _, watcher in pairs(self.buffWatch["Resources"]) do
-			watcher({Mana = mana, MaxMana = maxMana, Resource = resource, MaxResource = maxResource})
+			local mana, maxMana, resource, maxResource = playerUnit:GetMana(), playerUnit:GetMaxMana(), playerUnit:GetResource(resourceId), playerUnit:GetMaxResource(resourceId)
+			for _, watcher in pairs(self.buffWatch["Resources"]) do
+				watcher({Mana = mana, MaxMana = maxMana, Resource = resource, MaxResource = maxResource})
+			end
+		end
+	end
+end
+
+function AuraMastery:ProcessHealth(unit, target)
+	if self.buffWatch["Health"][target] ~= nil and TableContainsElements(self.buffWatch["Health"][target]) then
+		local result = { Health = unit:GetHealth(), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
+		for _, watcher in pairs(self.buffWatch["Health"][target]) do
+			watcher(result)
 		end
 	end
 end
@@ -277,7 +325,7 @@ function AuraMastery:ProcessBuffs(buffs, target)
 			end
 		end
 	end
-	
+		
 	for idx, buff in pairs(buffs.arHarmful) do
 		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
 			for _, watcher in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
@@ -288,14 +336,16 @@ function AuraMastery:ProcessBuffs(buffs, target)
 end
 
 function AuraMastery:ProcessCooldowns(abilities)
-	for k, v in pairs(abilities) do
-		if v.bIsActive and v.nCurrentTier and v.tTiers then
-			local tier = v.tTiers[v.nCurrentTier]
-			if tier then
-				local s = tier.splObject
-				if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
-					for _, watcher in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
-						watcher(s)
+	if TableContainsElements(self.buffWatch["Cooldown"]) then
+		for k, v in pairs(abilities) do
+			if v.bIsActive and v.nCurrentTier and v.tTiers then
+				local tier = v.tTiers[v.nCurrentTier]
+				if tier then
+					local s = tier.splObject
+					if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
+						for _, watcher in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
+							watcher(s)
+						end
 					end
 				end
 			end
@@ -305,7 +355,6 @@ end
 
 function AuraMastery:ProcessInnate()
 	--GameLib.GetClassInnateAbility()
-	--unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
 end
 
 function AuraMastery:OnSpecChanged(newSpec)
@@ -326,6 +375,49 @@ function AuraMastery:OnEnteredCombat(unit, inCombat)
 	end
 end
 
+function AuraMastery:OnSharingMessageReceived(chan, msg)
+	if self.sharingCallback ~= nil then
+		if msg.DestinationType == "player" then
+			local playerUnit = GameLib.GetPlayerUnit()
+			if playerUnit ~= nil and msg.Destination == playerUnit:GetName() then
+				self.sharingCallback(chan, msg)
+			end
+		elseif msg.DestinationType == "group" and GroupLib.GetMemberCount() > 0 then
+			for i = 1, GroupLib.GetMemberCount() do
+				if GroupLib.GetGroupMember(i).strCharacterName == msg.Sender then
+					self.sharingCallback(chan, msg)
+				end
+			end
+		elseif msg.DestinationType == "guild" then
+
+		end
+	end
+end
+
+function AuraMastery:SendCommsMessageToPlayer(player, msg)
+	msg.Destination = player
+	msg.Sender = GameLib.GetPlayerUnit():GetName()
+	msg.DestinationType = "player"
+	self.shareChannel:SendMessage(msg)
+end
+
+function AuraMastery:SendCommsMessageToGroup(msg)
+	msg.Destination = ""
+	msg.Sender = GameLib.GetPlayerUnit():GetName()
+	msg.DestinationType = "group"
+	self.shareChannel:SendMessage(msg)
+end
+
+function AuraMastery:SendCommsMessageToGuild(guild, msg)
+	msg.Destination = {
+		Name = guild:GetName(),
+		Type = guild:GetType()
+	}
+	msg.Sender = GameLib.GetPlayerUnit():GetName()
+	msg.DestinationType = "guild"
+	self.shareChannel:SendMessage(msg)
+end
+
 if _G["AuraMasteryLibs"] == nil then
 	_G["AuraMasteryLibs"] = { }
 end
@@ -337,10 +429,4 @@ _G["AuraMasteryLibs"]["GetAbilitiesList"] = GetAbilitiesList
 -----------------------------------------------------------------------------------------------
 AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
-
----------------------------------------------------------------------------------------------------
--- TriggerDetails Functions
----------------------------------------------------------------------------------------------------
-function AuraMastery:OnResourceStateToggle( wndHandler, wndControl, eMouseButton )
-end
 

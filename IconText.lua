@@ -15,7 +15,7 @@ function IconText.new(icon)
 	self.icon = icon
 	self.textElement = Apollo.LoadForm("AuraMastery.xml", "AM_IconText", icon.icon, self)	
 	self.textAnchor = "OB"
-	self.textFont = "Default"
+	self.textFont = "CRB_FloaterSmall"
 	self.textSize = { height = 40, width = 300 }
 	self:SetFont(self.textFont)
 	self:UpdateTextPosition()
