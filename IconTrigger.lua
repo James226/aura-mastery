@@ -296,6 +296,7 @@ function IconTrigger:ProcessSpell(spell)
 	self.Charges = chargesRemaining
 	self.Time = cdRemaining
 	self.MaxDuration = cdTotal
+	self.Sprite = spell:GetIcon()
 
 	if chargesRemaining > 0 or cdRemaining == 0 then
 		self.isSet = false
@@ -314,6 +315,7 @@ function IconTrigger:ProcessBuff(buff)
 		self.MaxDuration = self.Time
 	end
 	self.Stacks = buff.nCount
+	self.Sprite = buff.splEffect:GetIcon()
 end
 
 function IconTrigger:ProcessEvent(result)

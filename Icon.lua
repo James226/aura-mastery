@@ -317,6 +317,7 @@ function Icon:PostUpdate()
 	local showIcon = nil
 	local playSound = nil
 
+	self.Sprite = nil
 	self.duration = 0
 	self.maxDuration = 0
 	self.Stacks = 0
@@ -371,6 +372,10 @@ function Icon:PostUpdate()
 			if trigger.Charges ~= nil then
 				self.Charges = trigger.Charges
 			end
+
+			if trigger.Sprite ~= nil then
+				self.Sprite = trigger.Sprite
+			end
 		end
 	end
 
@@ -397,7 +402,13 @@ function Icon:PostUpdate()
 end
 
 function Icon:GetSprite()
-	return self.iconSprite == "" and self.defaultIcon or self.iconSprite
+	if self.iconSprite ~= "" then
+		return self.iconSprite
+	elseif self.Sprite ~= nil and self.Sprite ~= "" then
+		return self.Sprite
+	else
+		return self.defaultIcon
+	end
 end
 
 function Icon:InCombatCheck()
