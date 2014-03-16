@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Sprites>
+    <Sprite Name="ColorPicker_Colors" Cycle="1">
+        <Frame Texture="AuraMastery\Sprites\ColorPicker_Colors.png" x0="0" x1="0" x2="64" x3="64" x4="64" x5="64" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="32" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="ColorPicker_Gradient" Cycle="1">
+        <Frame Texture="AuraMastery\Sprites\ColorPicker_Gradient.png" x0="0" x1="0" x2="96" x3="96" x4="96" x5="96" y0="0" y1="0" y2="96" y3="96" y4="96" y5="96" Stretchy="1" HotspotX="48" HotspotY="48" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+</Sprites>
