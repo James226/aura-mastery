@@ -253,6 +253,9 @@ function Icon:Disable()
 end
 
 function Icon:Delete()
+	for _, trigger in pairs(self.Triggers) do
+		trigger:RemoveFromBuffWatch()
+	end
 	self.icon:Destroy()
 end
 

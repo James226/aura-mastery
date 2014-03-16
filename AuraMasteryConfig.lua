@@ -286,7 +286,23 @@ function AuraMasteryConfig:OnIconScale( wndHandler, wndControl, fNewValue, fOldV
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
 	
+	fNewValue = tonumber(string.format("%.1f", fNewValue))
 	icon:SetScale(fNewValue)
+	self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", fNewValue))
+end
+
+function AuraMasteryConfig:OnScaleValueChanged( wndHandler, wndControl, strText )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	local value = tonumber(strText)
+
+	if value == nil then
+		value = tonumber(string.format("%.1f", self.configForm:FindChild("BuffScale"):GetValue()))
+	end
+
+	self.configForm:FindChild("BuffScaleValue"):SetText(tostring(value))
+	icon:SetScale(value)
+	self.configForm:FindChild("BuffScale"):SetValue(value)
 end
 
 function AuraMasteryConfig:OnTabSelected( wndHandler, wndControl, eMouseButton )
@@ -384,6 +400,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		self.configForm:FindChild("BuffPlaySoundWhen"):SetText(icon.playSoundWhen)
 		self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
 		self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
+		self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
 		self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 		self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
 		self.configForm:FindChild("BuffOnlyInCombat"):SetCheck(icon.onlyInCombat)
@@ -715,6 +732,8 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		elseif trigger.Type == "Moment Of Opportunity" then
 			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
 			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+		elseif trigger.Type == "Scriptable" then
+			editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
 		end
 
 		self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
@@ -765,6 +784,7 @@ function AuraMasteryConfig:OnDeleteTrigger( wndHandler, wndControl, eMouseButton
 		local trigger = wndHandler:GetParent():GetData()
 		for triggerId, t in pairs(icon.Triggers) do
 			if trigger == t then
+				trigger:RemoveFromBuffWatch()
 				table.remove(icon.Triggers, triggerId)
 				self:PopulateTriggers(icon)
 				break
@@ -909,14 +929,22 @@ function AuraMasteryConfig:OnImportIcon( wndHandler, wndControl, eMouseButton )
 	self.configForm:FindChild("ClipboardExport"):PasteTextFromClipboard()
 	local iconData = self.configForm:FindChild("ClipboardExport"):GetText()
 
-	
-	loadstring("icon = " .. iconData)()
-	if icon ~= nil and icon.iconName ~= nil then
-		local newIcon = self.auraMastery:AddIcon()
-		newIcon:Load(icon)
-		self:CreateIconItem(newIcon.iconId, newIcon)
+	local iconScript, loadStringError = loadstring("return " .. iconData)
+	if iconScript then
+		local status, result = pcall(iconScript)
+		if status then
+			if result ~= nil and result.iconName ~= nil then
+				local newIcon = self.auraMastery:AddIcon()
+				newIcon:Load(result)
+				self:CreateIconItem(newIcon.iconId, newIcon)
+			else
+				Print("Failed to import icon. Data deserialized but was invalid.")
+			end
+		else
+			Print("Failed to import icon, invalid load data in clipboard: " .. tostring(result))
+		end
 	else
-		Print("Failed to import icon, invalid load data in clipboard.")
+		Print("Failed to import icon, invalid load data in clipboard: " .. tostring(loadStringError))
 	end
 end
 

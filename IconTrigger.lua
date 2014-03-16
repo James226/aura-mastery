@@ -128,6 +128,20 @@ function IconTrigger:SetConfig(editor)
 				Target = editor:FindChild("TargetTarget"):IsChecked()
 			}
 		}
+	elseif self.Type == "Scriptable" then
+		self.TriggerDetails = {
+			Script = editor:FindChild("Script"):GetText()
+		}
+		editor:FindChild("ScriptErrors"):SetText("")
+		local script, loadScriptError = loadstring("local trigger = ...\n" .. self.TriggerDetails.Script)
+		if script ~= nil then
+			local status, result = pcall(script, self)
+			if not status then
+				editor:FindChild("ScriptErrors"):SetText(tostring(result))
+			end
+		else
+			editor:FindChild("ScriptErrors"):SetText("Unable to load script due to a syntax error: " .. tostring(loadScriptError))
+		end
 	end
 
 	self:AddToBuffWatch()
@@ -173,10 +187,11 @@ function IconTrigger:AddBasicToBuffWatch()
 end
 
 function IconTrigger:AddBuffToBuffWatch(target, option)
-	if self.buffWatch[self.Type][target][option] == nil then
-		self.buffWatch[self.Type][target][option] = {}
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType][target][option] == nil then
+		self.buffWatch[triggerType][target][option] = {}
 	end
-	self.buffWatch[self.Type][target][option][tostring(self)] = function(spell) self:ProcessBuff(spell) end
+	self.buffWatch[triggerType][target][option][tostring(self)] = function(spell) self:ProcessBuff(spell) end
 end
 
 function IconTrigger:RemoveFromBuffWatch()
@@ -190,6 +205,15 @@ function IconTrigger:RemoveFromBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:RemoveBuffFromBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
 		end
+	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
+		self:RemoveBasicFromBuffWatch()
+	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
+		if self.TriggerDetails.Target.Player then
+			self:RemoveCooldownFromBuffWatch("Player")
+		end
+		if self.TriggerDetails.Target.Target then
+			self:RemoveCooldownFromBuffWatch("Target")
+		end
 	end
 end
 
@@ -201,14 +225,16 @@ function IconTrigger:RemoveBasicFromBuffWatch()
 end
 
 function IconTrigger:RemoveCooldownFromBuffWatch(option)
-	if self.buffWatch[self.Type][option] ~= nil then
-		self.buffWatch[self.Type][option][tostring(self)] = nil
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType][option] ~= nil then
+		self.buffWatch[triggerType][option][tostring(self)] = nil
 	end
 end
 
 function IconTrigger:RemoveBuffFromBuffWatch(target, option)
-	if self.buffWatch[self.Type][target][option] ~= nil then
-		self.buffWatch[self.Type][target][option][tostring(self)] = nil
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType][target][option] ~= nil then
+		self.buffWatch[triggerType][target][option][tostring(self)] = nil
 	end
 end
 
@@ -221,6 +247,10 @@ function IconTrigger:ResetTrigger()
 end
 
 function IconTrigger:IsSet()
+	if self.Type == "Scriptable" then
+		self:ProcessScriptable()
+	end
+
 	if self.Behaviour == "Pass" then
 		return self.isSet
 	elseif self.Behaviour == "Fail" then
@@ -237,6 +267,16 @@ function IconTrigger:GetSpellCooldown(spell)
 		return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, charges.nChargesRemaining
 	else
 		return spell:GetCooldownRemaining(), spell:GetCooldownTime(), 0
+	end
+end
+
+function IconTrigger:ProcessScriptable()
+	local script = loadstring("local trigger = ...\n" .. self.TriggerDetails.Script)
+	if script ~= nil then
+		local status, result = pcall(script, self)
+		if status then
+			self.isSet = result
+		end
 	end
 end
 
