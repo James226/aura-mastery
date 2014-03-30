@@ -9,7 +9,7 @@ setmetatable(IconTrigger, {
   end,
 })
 
-function IconTrigger.new(buffWatch)
+function IconTrigger.new(icon, buffWatch)
 	local self = setmetatable({}, IconTrigger)
 
 	self.buffWatch = buffWatch
@@ -18,6 +18,8 @@ function IconTrigger.new(buffWatch)
 	self.Type = "Cooldown"
 	self.Behaviour = "Pass"
 	self.TriggerDetails = {}
+	self.TriggerEffects = {}
+	self.Icon = icon
 
 	self.isSet = false
 
@@ -31,6 +33,16 @@ function IconTrigger:Load(saveData)
 		self.Behaviour = saveData.Behaviour or "Pass"
 		self.TriggerDetails = saveData.TriggerDetails
 
+		if saveData.TriggerEffects ~= nil then
+			GeminiPackages:Require('AuraMastery:TriggerEffect', function(TriggerEffect)
+				for _, triggerEffectData in pairs(saveData.TriggerEffects) do
+					local triggerEffect = TriggerEffect.new(self)
+					triggerEffect:Load(triggerEffectData)
+					table.insert(self.TriggerEffects, triggerEffect)
+				end
+			end)
+		end
+
 		self:AddToBuffWatch()
 	end
 end
@@ -41,6 +53,10 @@ function IconTrigger:Save()
 	saveData.Type = self.Type
 	saveData.Behaviour = self.Behaviour
 	saveData.TriggerDetails = self.TriggerDetails
+	saveData.TriggerEffects = {}
+	for _, triggerEffect in pairs(self.TriggerEffects) do
+		table.insert(saveData.TriggerEffects, triggerEffect:Save())
+	end
 	return saveData
 end
 
@@ -50,6 +66,10 @@ function IconTrigger:SetConfig(editor)
 	self.Name = editor:FindChild("TriggerName"):GetText()
 	self.Type = editor:FindChild("TriggerType"):GetText()
 	self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
+	local selectedTriggerEffect = editor:FindChild("TriggerEffectsList"):GetData():GetData()
+	if selectedTriggerEffect ~= nil then
+		selectedTriggerEffect:SetConfig(editor:FindChild("TriggerEffects"))
+	end
 
 	if self.Type == "Action Set" then
 		self.TriggerDetails = {	
@@ -147,16 +167,30 @@ function IconTrigger:SetConfig(editor)
 	self:AddToBuffWatch()
 end
 
+function IconTrigger:RemoveEffect(effect)
+	for triggerId, triggerEffect in pairs(self.TriggerEffects) do
+		if triggerEffect == effect then
+			table.remove(self.TriggerEffects, selectedEffect)
+			break
+		end
+	end
+end
+
 function IconTrigger:AddToBuffWatch()
 	if self.Type == "Cooldown" then
-		self:AddCooldownToBuffWatch(self.TriggerDetails.SpellName)
+		self:AddCooldownToBuffWatch(self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
+		local buffName = self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName
+		if buffName == "" then
+			buffName = self.Icon.iconName
+		end
+
 		if self.TriggerDetails.Target.Player then
-			self:AddBuffToBuffWatch("Player", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+			self:AddBuffToBuffWatch("Player", buffName)
 		end
 		
 		if self.TriggerDetails.Target.Target then
-			self:AddBuffToBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+			self:AddBuffToBuffWatch("Target", buffName)
 		end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
 		self:AddBasicToBuffWatch()
@@ -196,14 +230,19 @@ end
 
 function IconTrigger:RemoveFromBuffWatch()
 	if self.Type == "Cooldown" then
-		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.SpellName)
+		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
+		local buffName = self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName
+		if buffName == "" then
+			buffName = self.Icon.iconName
+		end
+
 		if self.TriggerDetails.Target.Player then
-			self:RemoveBuffFromBuffWatch("Player", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+			self:RemoveBuffFromBuffWatch("Player", buffName)
 		end
 		
 		if self.TriggerDetails.Target.Target then
-			self:RemoveBuffFromBuffWatch("Target", self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName)
+			self:RemoveBuffFromBuffWatch("Target", buffName)
 		end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
 		self:RemoveBasicFromBuffWatch()
@@ -246,11 +285,7 @@ function IconTrigger:ResetTrigger()
 	end
 end
 
-function IconTrigger:IsSet()
-	if self.Type == "Scriptable" then
-		self:ProcessScriptable()
-	end
-
+function IconTrigger:IsPass()
 	if self.Behaviour == "Pass" then
 		return self.isSet
 	elseif self.Behaviour == "Fail" then
@@ -259,6 +294,21 @@ function IconTrigger:IsSet()
 		return true
 	end
 	return false
+end
+
+function IconTrigger:IsSet()
+	if self.Type == "Scriptable" then
+		self:ProcessScriptable()
+	end
+
+	self.isPass = self:IsPass()
+	return self.isPass
+end
+
+function IconTrigger:ProcessEffects()
+	for _, triggerEffect in pairs(self.TriggerEffects) do
+		triggerEffect:Update(self.isPass)
+	end
 end
 
 function IconTrigger:GetSpellCooldown(spell)

@@ -93,10 +93,20 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetMax(100)
 
 	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
+
+	self.configForm:FindChild("NoAurasDialog"):Show(true)
+	self.configForm:FindChild("BuffEditor"):Enable(false)
 	
 	self:CreateControls()
 	self:SelectFirstIcon()
-	
+
+	self.configForm:FindChild("ShareForm"):Show(false)
+	self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
+	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+	self.configForm:FindChild("TriggerEffectsDropdown"):Show(false)
+
+	self.configForm:FindChild("TriggerEffectsDropdownList"):ArrangeChildrenVert()
+
 	GeminiPackages:Require("AuraMastery:IconText", function(iconText)
 		IconText = iconText
 	end)
@@ -139,8 +149,8 @@ end
 function AuraMasteryConfig:OnOK()	
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
-	
-	icon:SetIcon(self.configForm)
+
+		icon:SetIcon(self.configForm)
 	
 	self:UpdateControls()
 end
@@ -229,7 +239,7 @@ end
 function AuraMasteryConfig:OnAddIcon( wndHandler, wndControl, eMouseButton )
 	if wndHandler == wndControl then
 		local icon = self.auraMastery:AddIcon()
-		self:CreateIconItem(icon.iconId, icon)
+		local iconItem = self:CreateIconItem(icon.iconId, icon)
 		local timeText = self:AddIconText(icon)
 		timeText.textAnchor = "OB"
 		timeText.textString = "{time}"
@@ -239,6 +249,7 @@ function AuraMasteryConfig:OnAddIcon( wndHandler, wndControl, eMouseButton )
 		local chargesText = self:AddIconText(icon)
 		timeText.textAnchor = "ITL"
 		timeText.textString = "{charges}"
+		self:SelectIcon(iconItem)
 	end
 end
 
@@ -272,6 +283,10 @@ function AuraMasteryConfig:RemoveIcon(icon)
 	
 	self.auraMastery.Icons[iconId]:Delete()
 	self.auraMastery.Icons[iconId] = nil
+
+	self.configForm:FindChild("NoAurasDialog"):Show(true)
+	self.configForm:FindChild("BuffEditor"):Enable(false)
+
 	self:SelectFirstIcon()
 
 	self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
@@ -393,6 +408,8 @@ function AuraMasteryConfig:OnListItemSelect( wndHandler, wndControl, eMouseButto
 end
 
 function AuraMasteryConfig:SelectIcon(iconItem)
+	self.configForm:FindChild("NoAurasDialog"):Show(false)
+	self.configForm:FindChild("BuffEditor"):Enable(true)
 	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
 	if icon ~= nil then
 		self.configForm:FindChild("BuffId"):SetText(tonumber(iconItem:FindChild("Id"):GetText()))
@@ -494,9 +511,6 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
 		end
 
-		self.configForm:FindChild("ShareForm"):Show(false)
-
-		self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
 		self:PopulateTriggers(icon)
 	end
 end
@@ -647,7 +661,7 @@ function AuraMasteryConfig:PopulateTriggers(icon)
 
 	if firstTrigger then
 		self.configForm:FindChild("TriggerSelectButton"):SetText("")
-		self:SelectTrigger(nil)	
+		self:SelectTrigger(nil)
 	end
 end
 
@@ -704,18 +718,20 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 			editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
 			editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
 		elseif trigger.Type == "Cooldown" then
-			editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+			editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)			
+			editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
 		elseif trigger.Type == "Buff" then
 			editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
+			editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
 			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
 			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
 		elseif trigger.Type == "Debuff" then
 			editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
+			editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
 			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
 			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
 		elseif trigger.Type == "Resources" then
 			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
-
 			self:PopulateValueBasedEditor(trigger, editor, "Mana")
 			self:PopulateValueBasedEditor(trigger, editor, "Resource")
 		elseif trigger.Type == "Health" then
@@ -734,6 +750,19 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		end
 
 		self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+
+		self.configForm:FindChild("TriggerEffectsList"):DestroyChildren()
+		for _, triggerEffect in pairs(trigger.TriggerEffects) do
+			self:AddTriggerEffect(triggerEffect)
+		end
+
+		local effectItems = self.configForm:FindChild("TriggerEffectsList"):GetChildren()
+		if #effectItems > 0 then
+			effectItems[1]:SetCheck(true)
+			self:OnTriggerEffectSelect(effectItems[1], effectItems[1])
+		else
+			self.configForm:FindChild("TriggerEffectContainer"):Show(false)
+		end
 	end
 end
 
@@ -762,7 +791,7 @@ function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
 		local triggerSelectDropdown = self.configForm:FindChild("TriggerSelectDropdown")
 
 		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger) 
-			local trigger = iconTrigger.new(icon.buffWatch)
+			local trigger = iconTrigger.new(icon, icon.buffWatch)
 			trigger.Name = "Trigger " .. tostring(# triggerSelectDropdown:GetChildren() + 1)
 			trigger.TriggerDetails = { SpellName = "" }
 			table.insert(icon.Triggers, trigger)
@@ -852,7 +881,7 @@ function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
 
 		self:InitializeTriggerDetailsWindow(triggerType, self.configForm)
 	else
-		triggerEffects:SetAnchorOffsets(0, 150, 0, triggerEffects:GetHeight())
+		triggerEffects:SetAnchorOffsets(0, 150, 0, 150 + triggerEffects:GetHeight())
 	end
 end
 
@@ -864,6 +893,24 @@ function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEd
 	elseif triggerType == "Health" then
 		self:InitializeResourceEditor(detailsEditor:FindChild("Health"))
 		self:InitializeResourceEditor(detailsEditor:FindChild("Shield"))
+	elseif triggerType == "Cooldown" then
+		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+		local icon = self.auraMastery.Icons[iconId]
+		if icon ~= nil then
+			detailsEditor:FindChild("TriggerDetails"):FindChild("SpellName"):FindChild("Placeholder"):SetText(icon.iconName)
+		end
+	elseif triggerType == "Buff" then
+		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+		local icon = self.auraMastery.Icons[iconId]
+		if icon ~= nil then
+			detailsEditor:FindChild("TriggerDetails"):FindChild("BuffName"):FindChild("Placeholder"):SetText(icon.iconName)
+		end
+	elseif triggerType == "Debuff" then
+		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+		local icon = self.auraMastery.Icons[iconId]
+		if icon ~= nil then
+			detailsEditor:FindChild("TriggerDetails"):FindChild("DebuffName"):FindChild("Placeholder"):SetText(icon.iconName)
+		end
 	end
 end
 
@@ -1066,11 +1113,11 @@ function AuraMasteryConfig:OpenColorPicker(color, callback)
 	self.colorPicker:FindChild("PreviewOld"):SetBGColor(self.originalColor)
 	self.colorPicker:FindChild("PreviewNew"):SetBGColor(self.editingColor)
 
-	self.colorPicker:FindChild("Red"):SetText(string.format("%.f", color.r * 255))
-	self.colorPicker:FindChild("Green"):SetText(string.format("%.f", color.g * 255))
-	self.colorPicker:FindChild("Blue"):SetText(string.format("%.f", color.b * 255))
-	self.colorPicker:FindChild("AlphaText"):SetText(string.format("%.f", color.a * 100))
-	self.colorPicker:FindChild("AlphaSlider"):SetValue(string.format("%.f", color.a * 100))
+	self.colorPicker:FindChild("Red"):SetText(string.format("%.f", math.max(0, color.r * 255)))
+	self.colorPicker:FindChild("Green"):SetText(string.format("%.f", math.max(0, color.g * 255)))
+	self.colorPicker:FindChild("Blue"):SetText(string.format("%.f", math.max(0, color.b * 255)))
+	self.colorPicker:FindChild("AlphaText"):SetText(string.format("%.f", math.max(0, color.a * 100)))
+	self.colorPicker:FindChild("AlphaSlider"):SetValue(string.format("%.f", math.max(0, color.a * 100)))
 	self:UnpackColor()
 end
 
@@ -1189,6 +1236,10 @@ function AuraMasteryConfig:UpdateColorPicker()
 	local colorOffsetX, h = self.colorPicker:FindChild("Color"):FindChild("SelectIndicator"):GetAnchorPoints()
 	local s, v = self.colorPicker:FindChild("Gradient"):FindChild("SelectIndicator"):GetAnchorPoints()
 
+	h = math.max(0, math.min(1, h))
+	s = math.max(0, math.min(1, s))
+	v = math.max(0, math.min(1, v))
+
 	h = (1 - h) * 360
 	v = (1 - v) * 255
 	local r, g, b = ConvertHSVToRGB(h, s, v)
@@ -1297,6 +1348,111 @@ function AuraMasteryConfig:OnHexCodeChanged( wndHandler, wndControl, strText )
 		self:UpdateColor()
 	end
 end
+
+function AuraMasteryConfig:OnPlaceholderEditorChanged( wndHandler, wndControl, strText )
+	if wndHandler == wndControl then
+		wndHandler:FindChild("Placeholder"):Show(strText == "")
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Trigger Effect Functions
+---------------------------------------------------------------------------------------------------
+function AuraMasteryConfig:OnColorChanger( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		local oldColor = wndHandler:FindChild("ColorSample"):GetBGColor()
+		local color = CColor.new(oldColor.r, oldColor.g, oldColor.b, oldColor.a)
+		wndHandler:FindChild("ColorSample"):SetBGColor(color)
+		self:OpenColorPicker(color, function() wndHandler:FindChild("ColorSample"):SetBGColor(color) end)
+	end
+end
+
+function AuraMasteryConfig:OnCheckAddTriggerEffect( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsDropdown"):Show(true)
+	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsList"):Enable(false)
+end
+
+function AuraMasteryConfig:OnUncheckAddTriggerEffect( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsDropdown"):Show(false)
+end
+
+function AuraMasteryConfig:OnTriggerEffectDropdownHidden( wndHandler, wndControl )
+	self.configForm:FindChild("TriggerEffects"):FindChild("AddTriggerEffect"):SetCheck(false)
+	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsList"):Enable(true)
+end
+
+function AuraMasteryConfig:OnAddTriggerEffect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsDropdown"):Show(false)
+	local triggerEffectsList = self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsList")
+	triggerEffectsList:Enable(true)
+
+	GeminiPackages:Require("AuraMastery:TriggerEffect", function(TriggerEffect)
+		local selectedTrigger = self.configForm:FindChild("TriggerEditor"):GetData()
+		if selectedTrigger ~= nil then
+			local triggerEffect = TriggerEffect.new(selectedTrigger, wndHandler:GetText())
+			table.insert(selectedTrigger.TriggerEffects, triggerEffect)
+			self:AddTriggerEffect(triggerEffect)
+		end
+	end)
+end
+
+function AuraMasteryConfig:AddTriggerEffect(triggerEffect)
+	local triggerEffectsList = self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsList")
+	local option = Apollo.LoadForm("AuraMastery.xml", "TriggerEffects.TriggerEffectOption", triggerEffectsList, self)
+	triggerEffectsList:ArrangeChildrenVert()
+	option:SetText(triggerEffect.Type)
+	option:SetData(triggerEffect)
+end
+
+function AuraMasteryConfig:OnRemoveTriggerEffect( wndHandler, wndControl, eMouseButton )
+	local selectedTrigger = self.configForm:FindChild("TriggerEditor"):GetData()
+	if selectedTrigger ~= nil then
+		local selectedEffectItem = self.configForm:FindChild("TriggerEffectsList"):GetData()
+		if selectedEffectItem ~= nil then
+			local selectedEffect = selectedEffectItem:GetData()
+			selectedTrigger:RemoveEffect(selectedEffect)
+			selectedEffectItem:Destroy()
+			self.configForm:FindChild("TriggerEffectsList"):ArrangeChildrenVert()
+		end
+	end
+end
+
+function AuraMasteryConfig:OnTriggerEffectSelect( wndHandler, wndControl, eMouseButton )
+	local triggerEffects = self.configForm:FindChild("TriggerEffects")
+	local triggerEffectEditor = self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectEditor")
+	if triggerEffectEditor ~= nil then
+		triggerEffectEditor:Destroy()
+	end
+	self.configForm:FindChild("TriggerEffectsList"):SetData(wndHandler)
+	triggerEffectEditor = Apollo.LoadForm("AuraMastery.xml", "TriggerEffects." .. wndHandler:GetText(), self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectOptions"), self)
+	if triggerEffectEditor ~= nil then
+		triggerEffectEditor:SetName("TriggerEffectEditor")
+	end
+	local triggerEffect = wndHandler:GetData()
+	if triggerEffect ~= nil then
+		if triggerEffect.When == "Pass" then
+			triggerEffects:FindChild("TriggerEffectOnPass"):SetCheck(true)
+			triggerEffects:FindChild("TriggerEffectOnFail"):SetCheck(false)
+		else
+			triggerEffects:FindChild("TriggerEffectOnPass"):SetCheck(false)
+			triggerEffects:FindChild("TriggerEffectOnFail"):SetCheck(true)
+		end
+		if triggerEffect.Type == "Icon Color" then
+			local color = CColor.new(triggerEffect.EffectDetails.Color.r, triggerEffect.EffectDetails.Color.g, triggerEffect.EffectDetails.Color.b, triggerEffect.EffectDetails.Color.a)
+			triggerEffectEditor:FindChild("IconColor"):FindChild("ColorSample"):SetBGColor(color)
+		elseif triggerEffect.Type == "Activation Border" then
+			for _, border in pairs(triggerEffectEditor:FindChild("BorderSelect"):GetChildren()) do
+				if border:FindChild("Window"):GetSprite() == triggerEffect.EffectDetails.BorderSprite then
+					border:SetCheck(true)
+				else
+					border:SetCheck(false)
+				end
+			end
+		end
+	end
+	triggerEffects:FindChild("TriggerEffectContainer"):Show(true)
+end
+
 
 local GeminiPackages = _G["GeminiPackages"]
 GeminiPackages:NewPackage(AuraMasteryConfig, "AuraMastery:Config", 1)

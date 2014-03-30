@@ -134,7 +134,7 @@ function Icon:Load(saveData)
 		GeminiPackages:Require("AuraMastery:IconTrigger", function(iconTrigger)
 			if saveData.Triggers ~= nil then
 				for _, triggerData in pairs(saveData.Triggers) do
-					local trigger = iconTrigger.new(self.buffWatch)
+					local trigger = iconTrigger.new(self, self.buffWatch)
 					trigger:Load(triggerData)
 					table.insert(self.Triggers, trigger)
 				end
@@ -142,13 +142,13 @@ function Icon:Load(saveData)
 
 			if saveData.iconType ~= nil then
 				if saveData.criticalRequired ~= nil and saveData.criticalRequired then
-					local trigger = iconTrigger.new(self.buffWatch)
+					local trigger = iconTrigger.new(self, self.buffWatch)
 					trigger.Name = "OnCritical"
 					trigger.Type = "On Critical"
 					table.insert(self.Triggers, trigger)
 				end
 
-				local trigger = iconTrigger.new(self.buffWatch)
+				local trigger = iconTrigger.new(self, self.buffWatch)
 				self:ConvertTriggerFromOldFormat(trigger, saveData)
 				table.insert(self.Triggers, trigger)
 			end
@@ -379,7 +379,9 @@ function Icon:PostUpdate()
 		end
 	end
 
-	if self:InCombatCheck() and (showIcon or self.showWhen == "Always") then
+	local showIcon = self:InCombatCheck() and (showIcon or self.showWhen == "Always")
+
+	if showIcon then
 		self.icon:Show(true)
 		self.icon:SetSprite(self:GetSprite())
 		self.icon:SetBGColor(self.iconColor)
@@ -398,6 +400,13 @@ function Icon:PostUpdate()
 	
 	if self.iconOverlay ~= nil then
 		self.iconOverlay:Update()
+	end
+
+	if showIcon then
+		for i = #self.Triggers, 1, -1 do
+			local trigger = self.Triggers[i]
+			trigger:ProcessEffects()
+		end
 	end
 end
 
@@ -443,6 +452,10 @@ function Icon:SetScale(scale)
 	self.iconScale = scale
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
 	self.icon:SetAnchorOffsets(left, top, left + (self.iconScale * self.defaultSize.width),  top + (self.iconScale * self.defaultSize.height))
+end
+
+function Icon:SetIconColor(color)
+	self.icon:SetBGColor(color)
 end
 
 if _G["AuraMasteryLibs"] == nil then
