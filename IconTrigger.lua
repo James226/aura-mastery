@@ -62,7 +62,6 @@ end
 
 function IconTrigger:SetConfig(editor)
 	self:RemoveFromBuffWatch()
-
 	self.Name = editor:FindChild("TriggerName"):GetText()
 	self.Type = editor:FindChild("TriggerType"):GetText()
 	self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
@@ -163,14 +162,13 @@ function IconTrigger:SetConfig(editor)
 			editor:FindChild("ScriptErrors"):SetText("Unable to load script due to a syntax error: " .. tostring(loadScriptError))
 		end
 	end
-
 	self:AddToBuffWatch()
 end
 
 function IconTrigger:RemoveEffect(effect)
 	for triggerId, triggerEffect in pairs(self.TriggerEffects) do
 		if triggerEffect == effect then
-			table.remove(self.TriggerEffects, selectedEffect)
+			table.remove(self.TriggerEffects, triggerId)
 			break
 		end
 	end
@@ -178,19 +176,20 @@ end
 
 function IconTrigger:AddToBuffWatch()
 	if self.Type == "Cooldown" then
-		self:AddCooldownToBuffWatch(self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName)
+		self.currentSpell = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName
+		self:AddCooldownToBuffWatch(self.currentSpell)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
-		local buffName = self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName
-		if buffName == "" then
-			buffName = self.Icon.iconName
+		self.buffName = self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName
+		if self.buffName == "" then
+			self.buffName = self.Icon.iconName
 		end
 
 		if self.TriggerDetails.Target.Player then
-			self:AddBuffToBuffWatch("Player", buffName)
+			self:AddBuffToBuffWatch("Player", self.buffName)
 		end
 		
 		if self.TriggerDetails.Target.Target then
-			self:AddBuffToBuffWatch("Target", buffName)
+			self:AddBuffToBuffWatch("Target", self.buffName)
 		end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
 		self:AddBasicToBuffWatch()
@@ -230,19 +229,14 @@ end
 
 function IconTrigger:RemoveFromBuffWatch()
 	if self.Type == "Cooldown" then
-		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName)
+		self:RemoveCooldownFromBuffWatch(self.currentSpell)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
-		local buffName = self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName
-		if buffName == "" then
-			buffName = self.Icon.iconName
-		end
-
 		if self.TriggerDetails.Target.Player then
-			self:RemoveBuffFromBuffWatch("Player", buffName)
+			self:RemoveBuffFromBuffWatch("Player", self.buffName)
 		end
 		
 		if self.TriggerDetails.Target.Target then
-			self:RemoveBuffFromBuffWatch("Target", buffName)
+			self:RemoveBuffFromBuffWatch("Target", self.buffName)
 		end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
 		self:RemoveBasicFromBuffWatch()
@@ -308,6 +302,12 @@ end
 function IconTrigger:ProcessEffects()
 	for _, triggerEffect in pairs(self.TriggerEffects) do
 		triggerEffect:Update(self.isPass)
+	end
+end
+
+function IconTrigger:StopEffects()
+	for _, triggerEffect in pairs(self.TriggerEffects) do
+		triggerEffect:EndTimed()
 	end
 end
 

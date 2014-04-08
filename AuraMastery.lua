@@ -131,7 +131,7 @@ function AuraMastery:OnAbilityBookChange()
 end
 
 function AuraMastery:OnDamageDealt(tData)
-	if tData.unitCaster ~= nil and tData.unitCaster.IsThePlayer then
+	if tData.unitCaster ~= nil and tData.unitCaster == GameLib.GetPlayerUnit() then
 		if tData.eCombatResult == GameLib.CodeEnumCombatResult.Critical then
 			self.lastCritical = os.time()
 		end
@@ -139,7 +139,7 @@ function AuraMastery:OnDamageDealt(tData)
 end
 
 function AuraMastery:OnMiss( unitCaster, unitTarget, eMissType )
-	if unitTarget ~= nil and unitTarget.IsThePlayer then
+	if unitTarget ~= nil and unitTarget == GameLib.GetPlayerUnit() then
 		if eMissType == GameLib.CodeEnumMissType.Dodge then
 			self.lastDeflect = os.time()
 		end

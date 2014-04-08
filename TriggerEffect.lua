@@ -17,6 +17,8 @@ function TriggerEffect.new(trigger, effectType)
 	self.triggerStarted = true
 	self.triggerTime = 0
 
+	self:SetDefaultConfig()
+
 	self:Init()
 	return self
 end
@@ -28,7 +30,7 @@ function TriggerEffect:SetDefaultConfig()
 		}
 	elseif self.Type == "Activation Border" then
 		self.EffectDetails = {
-			BorderSprite = "CRB_ActionBarIconSprites:sprActionBar_YellowBorder"
+			BorderSprite = "sprActionBar_YellowBorder"
 		}
 	end
 end
@@ -67,11 +69,10 @@ function TriggerEffect:SetConfig(configWnd)
 
 	if self.Type == "Icon Color" then
 		self.EffectDetails = {
-			Color = configWnd:FindChild("IconColor"):FindChild("ColorSample"):GetBGColor():ToTable()
+			Color = configWnd:FindChild("TriggerEffectEditor"):FindChild("IconColor"):FindChild("ColorSample"):GetBGColor():ToTable()
 		}
 	elseif self.Type == "Activation Border" then
 		for _, border in pairs(configWnd:FindChild("BorderSelect"):GetChildren()) do
-			Print(border:GetName())
 			if border:IsChecked() then
 				self.EffectDetails = {
 					BorderSprite = border:FindChild("Window"):GetSprite()

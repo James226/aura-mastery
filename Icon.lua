@@ -407,6 +407,11 @@ function Icon:PostUpdate()
 			local trigger = self.Triggers[i]
 			trigger:ProcessEffects()
 		end
+	else
+		for i = #self.Triggers, 1, -1 do
+			local trigger = self.Triggers[i]
+			trigger:StopEffects()
+		end
 	end
 end
 

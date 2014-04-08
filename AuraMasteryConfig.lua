@@ -1388,9 +1388,9 @@ function AuraMasteryConfig:OnAddTriggerEffect( wndHandler, wndControl, eMouseBut
 
 	GeminiPackages:Require("AuraMastery:TriggerEffect", function(TriggerEffect)
 		local selectedTrigger = self.configForm:FindChild("TriggerEditor"):GetData()
-		if selectedTrigger ~= nil then
+		if selectedTrigger ~= nil then	
 			local triggerEffect = TriggerEffect.new(selectedTrigger, wndHandler:GetText())
-			table.insert(selectedTrigger.TriggerEffects, triggerEffect)
+			table.insert(selectedTrigger.TriggerEffects, triggerEffect)			
 			self:AddTriggerEffect(triggerEffect)
 		end
 	end)
@@ -1404,6 +1404,26 @@ function AuraMasteryConfig:AddTriggerEffect(triggerEffect)
 	option:SetData(triggerEffect)
 end
 
+function AuraMasteryConfig:GetNextEffect(selectedEffectItem)
+	local currentEffect, lastEffect
+	local found
+	for id, effect in pairs(self.configForm:FindChild("TriggerEffectsList"):GetChildren()) do
+		lastEffect = currentEffect
+		currentEffect = effect
+		if found then
+			return effect
+		end
+		if selectedEffectItem == effect then
+			found = true
+		end
+	end
+	
+	if selectedEffectItem == currentEffect then
+		return lastEffect
+	else
+		return nil
+	end
+end
 function AuraMasteryConfig:OnRemoveTriggerEffect( wndHandler, wndControl, eMouseButton )
 	local selectedTrigger = self.configForm:FindChild("TriggerEditor"):GetData()
 	if selectedTrigger ~= nil then
@@ -1411,8 +1431,16 @@ function AuraMasteryConfig:OnRemoveTriggerEffect( wndHandler, wndControl, eMouse
 		if selectedEffectItem ~= nil then
 			local selectedEffect = selectedEffectItem:GetData()
 			selectedTrigger:RemoveEffect(selectedEffect)
+			local nextEffect = self:GetNextEffect(selectedEffectItem)
 			selectedEffectItem:Destroy()
-			self.configForm:FindChild("TriggerEffectsList"):ArrangeChildrenVert()
+			local numEffects = #self.configForm:FindChild("TriggerEffectsList"):GetChildren()
+			if numEffects > 0 then
+				self.configForm:FindChild("TriggerEffectsList"):ArrangeChildrenVert()
+				nextEffect:SetCheck(true)
+				self:OnTriggerEffectSelect(nextEffect, nextEffect, 1)
+			else
+				triggerEffects:FindChild("TriggerEffectContainer"):Show(true)
+			end
 		end
 	end
 end
