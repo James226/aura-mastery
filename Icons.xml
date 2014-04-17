@@ -27,4 +27,13 @@
     <Sprite Name="icon_HexBladeLeft" Cycle="1">
         <Frame Texture="AuraMastery\Icons\HexBladeLeft.png" x0="0" x1="0" x2="1000" x3="1000" x4="1000" x5="1000" y0="0" y1="0" y2="1000" y3="1000" y4="1000" y5="1000" Stretchy="1" HotspotX="500" HotspotY="500" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
     </Sprite>
+    <Sprite Name="icon_HexBlades" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\HexBlades.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Round" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Round.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Circle" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Circle.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
 </Sprites>
