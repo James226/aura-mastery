@@ -23,7 +23,10 @@ AuraMastery.spriteIcons = {
 	Heart = "icon_Heart",
 	Lightning = "icon_Lightning",
 	Paw = "icon_Paw",
-	HexBladeLeft = "icon_HexBladeLeft"
+	HexBladeLeft = "icon_HexBladeLeft",
+	HexBlades = "icon_HexBlades",
+	Round = "icon_Round",
+	Circle = "icon_Circle"
 }
 
 local criticalTime = 5
