@@ -285,21 +285,24 @@ function Icon:SetIcon(configWnd)
 	self.iconOverlay:SetConfig(configWnd)
 	
 	self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
-	
+
 	self.actionSets = {
 		configWnd:FindChild("BuffActionSet1"):IsChecked(),
 		configWnd:FindChild("BuffActionSet2"):IsChecked(),
 		configWnd:FindChild("BuffActionSet3"):IsChecked(),
 		configWnd:FindChild("BuffActionSet4"):IsChecked()
 	}
-	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 
 	self:UpdateDefaultIcon()
 
 	local editor = configWnd:FindChild("TriggerEditor")
-	local trigger = editor:GetData()
-	trigger:SetConfig(editor)
+	if editor ~= nil then
+		local trigger = editor:GetData()
+		if trigger ~= nil then
+			trigger:SetConfig(editor)
+		end
+	end
 end
 
 function Icon:GetName()

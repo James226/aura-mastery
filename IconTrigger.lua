@@ -65,11 +65,11 @@ function IconTrigger:SetConfig(editor)
 	self.Name = editor:FindChild("TriggerName"):GetText()
 	self.Type = editor:FindChild("TriggerType"):GetText()
 	self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
-	local selectedTriggerEffect = editor:FindChild("TriggerEffectsList"):GetData():GetData()
-	if selectedTriggerEffect ~= nil then
-		selectedTriggerEffect:SetConfig(editor:FindChild("TriggerEffects"))
+	local selectedTriggerEffectItem = editor:FindChild("TriggerEffectsList"):GetData()
+	if selectedTriggerEffectItem ~= nil then
+		selectedTriggerEffect:GetData():SetConfig(editor:FindChild("TriggerEffects"))
 	end
-
+	
 	if self.Type == "Action Set" then
 		self.TriggerDetails = {	
 			ActionSets = {
