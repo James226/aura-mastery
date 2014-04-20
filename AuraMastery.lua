@@ -251,7 +251,7 @@ function AuraMastery:OnUpdate()
 	self:ProcessOnDeflect()
 	self:ProcessResources()
 	
-	--self:ProcessInnate()
+	self:ProcessInnate()
 	
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
@@ -357,7 +357,16 @@ function AuraMastery:ProcessCooldowns(abilities)
 end
 
 function AuraMastery:ProcessInnate()
-	--GameLib.GetClassInnateAbility()
+	if TableContainsElements(self.buffWatch["Cooldown"]) then
+		for i = 1, GameLib.GetClassInnateAbilitySpells().nSpellCount * 2, 2 do
+			local s = GameLib.GetClassInnateAbilitySpells().tSpells[i]
+			if self.buffWatch["Cooldown"][s:GetName()] ~= nil then
+				for _, watcher in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
+					watcher(s)
+				end
+			end
+		end
+	end
 end
 
 function AuraMastery:OnSpecChanged(newSpec)
