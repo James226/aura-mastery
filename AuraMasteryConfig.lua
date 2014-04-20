@@ -146,11 +146,11 @@ end
 -----------------------------------------------------------------------------------------------
 -- AuraMasteryForm Functions
 -----------------------------------------------------------------------------------------------
-function AuraMasteryConfig:OnOK()	
+function AuraMasteryConfig:OnOK()
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
 
-		icon:SetIcon(self.configForm)
+	icon:SetIcon(self.configForm)
 	
 	self:UpdateControls()
 end
@@ -1465,6 +1465,8 @@ function AuraMasteryConfig:OnTriggerEffectSelect( wndHandler, wndControl, eMouse
 			triggerEffects:FindChild("TriggerEffectOnPass"):SetCheck(false)
 			triggerEffects:FindChild("TriggerEffectOnFail"):SetCheck(true)
 		end
+		triggerEffects:FindChild("TriggerEffectIsTimed"):SetCheck(triggerEffect.isTimed)
+		triggerEffects:FindChild("TriggerEffectTimerLength"):SetText(triggerEffect.timerLength)
 		if triggerEffect.Type == "Icon Color" then
 			local color = CColor.new(triggerEffect.EffectDetails.Color.r, triggerEffect.EffectDetails.Color.g, triggerEffect.EffectDetails.Color.b, triggerEffect.EffectDetails.Color.a)
 			triggerEffectEditor:FindChild("IconColor"):FindChild("ColorSample"):SetBGColor(color)

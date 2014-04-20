@@ -66,10 +66,10 @@ function IconTrigger:SetConfig(editor)
 	self.Type = editor:FindChild("TriggerType"):GetText()
 	self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
 	local selectedTriggerEffectItem = editor:FindChild("TriggerEffectsList"):GetData()
-	if selectedTriggerEffectItem ~= nil then
-		selectedTriggerEffect:GetData():SetConfig(editor:FindChild("TriggerEffects"))
+	if selectedTriggerEffectItem ~= nil and selectedTriggerEffectItem:GetData() ~= nil then
+		selectedTriggerEffectItem:GetData():SetConfig(editor:FindChild("TriggerEffects"))
 	end
-	
+
 	if self.Type == "Action Set" then
 		self.TriggerDetails = {	
 			ActionSets = {
@@ -342,7 +342,6 @@ end
 
 function IconTrigger:ProcessSpell(spell)
 	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
-
 	self.Charges = chargesRemaining
 	self.Time = cdRemaining
 	self.MaxDuration = cdTotal

@@ -180,7 +180,6 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
-
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
 	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)
 
@@ -218,6 +217,19 @@ function AuraMastery:GetSpellIconByName(spellName)
 		end
 	end
 	return ""
+end
+
+function AuraMastery:GetSpellByName(spellName)
+	local matches = {}
+	local abilities = GetAbilitiesList()
+	if abilities ~= nil then
+		for _, ability in pairs(abilities) do
+			if ability.strName == spellName then
+				table.insert(matches, ability)
+			end
+		end
+	end
+	return matches
 end
 
 function AuraMastery:OnUpdate()

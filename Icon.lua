@@ -445,6 +445,11 @@ function Icon:GetSpellIconByName(spellName)
 			end
 		end
 	end
+	for _, s in pairs(GameLib.GetClassInnateAbilitySpells().tSpells) do
+		if s:GetName() == spellName then
+			return s:GetIcon()
+		end
+	end
 	return ""
 end
 

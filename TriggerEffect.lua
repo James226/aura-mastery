@@ -16,6 +16,8 @@ function TriggerEffect.new(trigger, effectType)
 	self.When = "Pass"
 	self.triggerStarted = true
 	self.triggerTime = 0
+	self.isTimed = false
+	self.timerLength = 0
 
 	self:SetDefaultConfig()
 
@@ -40,6 +42,14 @@ function TriggerEffect:Load(saveData)
 		self.Type = saveData.Type
 		self.EffectDetails = saveData.EffectDetails
 		self.When = saveData.When
+		
+		if saveData.isTimed ~= nil then
+			self.isTimed = saveData.isTimed
+		end
+		if saveData.timerLength ~= nil then
+			self.timerLength = saveData.timerLength
+		end
+
 		self:Init()
 	end
 end
@@ -56,6 +66,8 @@ function TriggerEffect:Save()
 	local saveData = { }
 	saveData.Type = self.Type
 	saveData.When = self.When
+	saveData.isTimed = self.isTimed
+	saveData.timerLength = self.timerLength
 	saveData.EffectDetails = self.EffectDetails
 	return saveData
 end
@@ -66,6 +78,9 @@ function TriggerEffect:SetConfig(configWnd)
 	else
 		self.When = "Pass"
 	end
+
+	self.isTimed = configWnd:FindChild("TriggerEffectIsTimed"):IsChecked()
+	self.timerLength = tonumber(configWnd:FindChild("TriggerEffectTimerLength"):GetText())
 
 	if self.Type == "Icon Color" then
 		self.EffectDetails = {
@@ -86,23 +101,17 @@ end
 
 function TriggerEffect:Update(triggerPassed)
 	if (self.When == "Pass" and triggerPassed) or (self.When == "Fail" and not triggerPassed) then
-		if self.Type == "Icon Color" then
-			self:UpdateIconColor()
-		elseif self.Type == "Flash" or self.Type == "Activation Border" then
+		if self.isTimed then
 			self:UpdateTimed()
+		else
+			self:UpdateEffect()
 		end
 	else
-		if self.Type == "Flash" or self.Type == "Activation Border" then
-			if self.Type == "Activation Border" then
-				self:StopActivationBorder()
-			end
+		self:StopEffect()
+		if self.isTimed then
 			self:EndTimed()
 		end
 	end
-end
-
-function TriggerEffect:UpdateIconColor()
-	self.Trigger.Icon:SetIconColor(self.EffectDetails.Color)
 end
 
 function TriggerEffect:UpdateTimed()
@@ -111,17 +120,31 @@ function TriggerEffect:UpdateTimed()
 		self.triggerTime = os.clock()
 	end
 
-	if os.clock() - self.triggerTime < 5 then
-		if self.Type == "Flash" then
-			self:UpdateFlash()
-		elseif self.Type == "Activation Border" then
-			self:UpdateActivationBorder()
-		end
+	if os.clock() - self.triggerTime < self.timerLength then
+		self:UpdateEffect()
 	else
-		if self.Type == "Activation Border" then
-			self:StopActivationBorder()
-		end
+		self:StopEffect()
 	end
+end
+
+function TriggerEffect:UpdateEffect()
+	if self.Type == "Icon Color" then
+			self:UpdateIconColor()
+	elseif self.Type == "Flash" then
+		self:UpdateFlash()
+	elseif self.Type == "Activation Border" then
+		self:UpdateActivationBorder()
+	end
+end
+
+function TriggerEffect:StopEffect()
+	if self.Type == "Activation Border" then
+		self:StopActivationBorder()
+	end
+end
+
+function TriggerEffect:UpdateIconColor()
+	self.Trigger.Icon:SetIconColor(self.EffectDetails.Color)
 end
 
 function TriggerEffect:UpdateFlash()
