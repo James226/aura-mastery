@@ -36,4 +36,70 @@
     <Sprite Name="icon_Circle" Cycle="1">
         <Frame Texture="AuraMastery\Icons\Circle.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
     </Sprite>
+    <Sprite Name="icon_Bandage" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Bandage.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Boom" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Boom.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Boop" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Boop.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Bounce" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Bounce.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Go" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Go.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_PraiseTheRngGods" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\PraiseTheRngGods.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Surprise" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Surprise.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Swirl" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Swirl.png" x0="0" x1="0" x2="100" x3="100" x4="100" x5="100" y0="0" y1="0" y2="100" y3="100" y4="100" y5="100" Stretchy="1" HotspotX="50" HotspotY="50" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Bla1" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Bla1.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Block1" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Block1.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_BoomHud" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\BoomHud.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Butterflies" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Butterflies.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Charging1" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Charging1.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Charging2" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Charging2.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Charging3" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Charging3.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Charging4" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Charging4.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Charging5" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Charging5.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Esper2" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Esper2.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_EsperWhoosh" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\EsperWhoosh.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Leafy1" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Leafy1.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_RadicalHeart" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\RadicalHeart.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
+    <Sprite Name="icon_Stalker1" Cycle="1">
+        <Frame Texture="AuraMastery\Icons\Stalker1.png" x0="0" x1="0" x2="256" x3="256" x4="256" x5="256" y0="0" y1="0" y2="256" y3="256" y4="256" y5="256" Stretchy="1" HotspotX="128" HotspotY="128" Duration="1.000" StartColor="ffffffff" EndColor="ffffffff"/>
+    </Sprite>
 </Sprites>

@@ -26,7 +26,29 @@ AuraMastery.spriteIcons = {
 	HexBladeLeft = "icon_HexBladeLeft",
 	HexBlades = "icon_HexBlades",
 	Round = "icon_Round",
-	Circle = "icon_Circle"
+	Circle = "icon_Circle",
+	Bandage = "icon_Bandage",
+	Boom = "icon_Boom",
+	Boop = "icon_Boop",
+	Bounce = "icon_Bounce",
+	Go = "icon_Go",
+	PraiseTheRngGods = "icon_PraiseTheRngGods",
+	Surprise = "icon_Surprise",
+	Swirl = "icon_Swirl",
+	Block1 = "icon_Block1",
+	Bla1 = "icon_Bla1",
+	BoomHud = "icon_BoomHud",
+	Butterflies = "icon_Butterflies",
+	Charging1 = "icon_Charging1",
+	Charging2 = "icon_Charging2",
+	Charging3 = "icon_Charging3",
+	Charging4 = "icon_Charging4",
+	Charging5 = "icon_Charging5",
+	Esper2 = "icon_Esper2",
+	EsperWhoosh = "icon_EsperWhoosh",
+	Leafy1 = "icon_Leafy1",
+	RadicalHeart = "icon_RadicalHeart",
+	Stalker1 = "icon_Stalker1",
 }
 
 local criticalTime = 5
@@ -453,4 +475,5 @@ _G["AuraMasteryLibs"]["GetAbilitiesList"] = GetAbilitiesList
 -----------------------------------------------------------------------------------------------
 AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
+
 

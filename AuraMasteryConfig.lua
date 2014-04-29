@@ -325,12 +325,41 @@ function AuraMasteryConfig:OnScaleValueChanged( wndHandler, wndControl, strText 
 	self.configForm:FindChild("BuffScale"):SetValue(value)
 end
 
+function AuraMasteryConfig:OnShownChanged( wndHandler, wndControl )
+	local shownVal = wndHandler:GetText()
+	local shownMsg = ""
+	if shownVal == "Always" then
+		shownMsg = "This aura will always be shown."
+	elseif shownVal == "All" then
+		shownMsg = "This aura will be shown when all triggers pass."
+	elseif shownVal == "Any" then
+		shownMsg = "This aura will be shown when any trigger passes."
+	elseif shownVal == "None" then
+		shownMsg = "This aura will be shown when all triggers fail."
+	end
+
+	self.configForm:FindChild("ShownDesc"):SetText(shownMsg)
+end
+
+function AuraMasteryConfig:OnPlaySoundChanged( wndHandler, wndControl )
+	local playSoundVal = wndHandler:GetText()
+	local playSoundDesc = ""
+	if playSoundVal == "All" then
+		playSoundDesc = "This sound will be played when all triggers pass."
+	elseif playSoundVal == "Any" then
+		playSoundDesc = "This sound will be played when any trigger passes."
+	elseif playSoundVal == "None" then
+		playSoundDesc = "This sound will be played when all triggers fail."
+	end
+
+	self.configForm:FindChild("PlaySoundDesc"):SetText(playSoundDesc)
+end
+
 function AuraMasteryConfig:OnTabSelected( wndHandler, wndControl, eMouseButton )
 	self.configForm:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(true)
 	
 	if wndHandler:GetText() == "Appearance" then
-		Apollo.RegisterTimerHandler("AuraMastery_IconPreview", "OnIconPreview", self)
-		Apollo.CreateTimer("AuraMastery_IconPreview", 0.1, true)
+		self.timer = ApolloTimer.Create(0.1, true, "OnIconPreview", self)
 	end
 end
 
@@ -338,7 +367,7 @@ function AuraMasteryConfig:OnTabUnselected( wndHandler, wndControl, eMouseButton
 	self.configForm:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(false)
 	
 	if wndHandler:GetText() == "Appearance" then
-		Apollo.StopTimer("AuraMastery_IconPreview")
+		self.timer:Stop()
 	end
 end
 
@@ -720,16 +749,28 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		elseif trigger.Type == "Cooldown" then
 			editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)			
 			editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
+			editor:FindChild("ChargesEnabled"):SetCheck(trigger.TriggerDetails.Charges.Enabled)
+			editor:FindChild("Charges"):Enable(trigger.TriggerDetails.Charges.Enabled)
+			editor:FindChild("Charges"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Charges.Operator)
+			editor:FindChild("Charges"):FindChild("ChargesValue"):SetTextRaw(trigger.TriggerDetails.Charges.Value)
 		elseif trigger.Type == "Buff" then
 			editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
 			editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
 			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
 			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+			editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
+			editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
+			editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
+			editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
 		elseif trigger.Type == "Debuff" then
 			editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
 			editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
 			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
 			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+			editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
+			editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
+			editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
+			editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
 		elseif trigger.Type == "Resources" then
 			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
 			self:PopulateValueBasedEditor(trigger, editor, "Mana")
@@ -772,13 +813,13 @@ function AuraMasteryConfig:PopulateValueBasedEditor(trigger, editor, resourceTyp
 	if trigger.TriggerDetails[resourceType] ~= nil then
 		editor:FindChild(resourceType .. "Enabled"):SetCheck(true)
 		self:ToggleResourceEditor(resourceEditor, true)
-		resourceEditor:FindChild("Operator"):SetText(trigger.TriggerDetails[resourceType].Operator)
+		resourceEditor:FindChild("Operator"):SetTextRaw(trigger.TriggerDetails[resourceType].Operator)
 		resourceEditor:FindChild("Value"):SetText(trigger.TriggerDetails[resourceType].Value)
 		resourceEditor:FindChild("Percent"):SetCheck(trigger.TriggerDetails[resourceType].Percent)
 	else
 		editor:FindChild(resourceType .. "Enabled"):SetCheck(false)
 		self:ToggleResourceEditor(resourceEditor, false)
-		resourceEditor:FindChild("Operator"):SetText(">")
+		resourceEditor:FindChild("Operator"):SetTextRaw(">")
 		resourceEditor:FindChild("Value"):SetText("")
 		resourceEditor:FindChild("Percent"):SetCheck(false)
 	end
@@ -899,18 +940,21 @@ function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEd
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("SpellName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
+		self:InitializeResourceEditor(detailsEditor)
 	elseif triggerType == "Buff" then
 		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 		local icon = self.auraMastery.Icons[iconId]
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("BuffName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
+		self:InitializeResourceEditor(detailsEditor)
 	elseif triggerType == "Debuff" then
 		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 		local icon = self.auraMastery.Icons[iconId]
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("DebuffName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
+		self:InitializeResourceEditor(detailsEditor)
 	end
 end
 
@@ -1481,6 +1525,18 @@ function AuraMasteryConfig:OnTriggerEffectSelect( wndHandler, wndControl, eMouse
 		end
 	end
 	triggerEffects:FindChild("TriggerEffectContainer"):Show(true)
+end
+
+function AuraMasteryConfig:OnCooldownChargesToggle( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		wndHandler:GetParent():FindChild("Charges"):Enable(wndHandler:IsChecked())
+	end
+end
+
+function AuraMasteryConfig:OnTriggerDetailsStacksToggle( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		wndHandler:GetParent():FindChild("Stacks"):Enable(wndHandler:IsChecked())
+	end
 end
 
 

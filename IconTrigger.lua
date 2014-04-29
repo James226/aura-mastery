@@ -33,6 +33,24 @@ function IconTrigger:Load(saveData)
 		self.Behaviour = saveData.Behaviour or "Pass"
 		self.TriggerDetails = saveData.TriggerDetails
 
+		if self.Type == "Buff" or self.Type == "Debuff" then
+			if not self.TriggerDetails.Stacks then
+				self.TriggerDetails.Stacks = {
+					Enabled = false,
+					Operator = "==",
+					Value = 0
+				}
+			end
+		elseif self.Type == "Cooldown" then
+			if not self.TriggerDetails.Charges then
+				self.TriggerDetails.Charges = {
+					Enabled = false,
+					Operator = "==",
+					Value = 0
+				}
+			end
+		end
+
 		if saveData.TriggerEffects ~= nil then
 			GeminiPackages:Require('AuraMastery:TriggerEffect', function(TriggerEffect)
 				for _, triggerEffectData in pairs(saveData.TriggerEffects) do
@@ -81,7 +99,12 @@ function IconTrigger:SetConfig(editor)
 		}
 	elseif self.Type == "Cooldown" then
 		self.TriggerDetails = {
-			SpellName = editor:FindChild("SpellName"):GetText()
+			SpellName = editor:FindChild("SpellName"):GetText(),
+			Charges = {
+				Enabled = editor:FindChild("ChargesEnabled"):IsChecked(),
+				Operator = editor:FindChild("Charges"):FindChild("Operator"):GetText(),
+				Value = tonumber(editor:FindChild("Charges"):FindChild("ChargesValue"):GetText())
+			}
 		}
 	elseif self.Type == "Buff" then
 		self.TriggerDetails = {
@@ -89,6 +112,11 @@ function IconTrigger:SetConfig(editor)
 			Target = {
 				Player = editor:FindChild("TargetPlayer"):IsChecked(),
 				Target = editor:FindChild("TargetTarget"):IsChecked()
+			},
+			Stacks = {
+				Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
+				Operator = editor:FindChild("Stacks"):FindChild("Operator"):GetText(),
+				Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
 			}
 		}
 	elseif self.Type == "Debuff" then
@@ -97,6 +125,11 @@ function IconTrigger:SetConfig(editor)
 			Target = {
 				Player = editor:FindChild("TargetPlayer"):IsChecked(),
 				Target = editor:FindChild("TargetTarget"):IsChecked()
+			},
+			Stacks = {
+				Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
+				Operator = editor:FindChild("Stacks"):FindChild("Operator"):GetText(),
+				Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
 			}
 		}
 	elseif self.Type == "Resources" then
@@ -347,7 +380,8 @@ function IconTrigger:ProcessSpell(spell)
 	self.MaxDuration = cdTotal
 	self.Sprite = spell:GetIcon()
 
-	if chargesRemaining > 0 or cdRemaining == 0 then
+	if (cdRemaining == 0
+	 	and (not self.TriggerDetails.Charges.Enabled and chargesRemaining > 0) or self.TriggerDetails.Charges.Enabled and self:IsOperatorSatisfied(chargesRemaining, self.TriggerDetails.Charges.Operator, self.TriggerDetails.Charges.Value)) then
 		self.isSet = false
 		if cdRemaining == 0 then
 			self.Time = 0
@@ -358,13 +392,15 @@ function IconTrigger:ProcessSpell(spell)
 end
 
 function IconTrigger:ProcessBuff(buff)
-	self.isSet = true
-	self.Time = buff.fTimeRemaining
-	if self.MaxDuration == nil or self.MaxDuration < self.Time then
-		self.MaxDuration = self.Time
+	if not self.TriggerDetails.Stacks.Enabled or self:IsOperatorSatisfied(buff.nCount, self.TriggerDetails.Stacks.Operator, self.TriggerDetails.Stacks.Value) then
+		self.isSet = true
+		self.Time = buff.fTimeRemaining
+		if self.MaxDuration == nil or self.MaxDuration < self.Time then
+			self.MaxDuration = self.Time
+		end
+		self.Stacks = buff.nCount
+		self.Sprite = buff.splEffect:GetIcon()
 	end
-	self.Stacks = buff.nCount
-	self.Sprite = buff.splEffect:GetIcon()
 end
 
 function IconTrigger:ProcessEvent(result)
@@ -433,6 +469,22 @@ function IconTrigger:ProcessMOO(result)
 		end
 	else
 		self.MaxDuration = nil
+	end
+end
+
+function IconTrigger:IsOperatorSatisfied(value, operator, compValue)
+	if operator == "==" then
+		return value == compValue
+	elseif operator == "!=" then
+		return value ~= compValue
+	elseif operator == ">" then
+		return value > compValue
+	elseif operator == "<" then
+		return value < compValue
+	elseif operator == ">=" then
+		return value >= compValue
+	elseif operator == "<=" then
+		return value <= compValue
 	end
 end
 
