@@ -280,6 +280,7 @@ function AuraMastery:OnUpdate()
 	if abilities then
 		self:ProcessCooldowns(abilities)
 	end
+	self:ProcessPetSpells()
 
 	self:ProcessOnCritical()
 	self:ProcessOnDeflect()
@@ -390,6 +391,24 @@ function AuraMastery:ProcessCooldowns(abilities)
 	end
 end
 
+function AuraMastery:ProcessPetSpells()
+	if TableContainsElements(self.buffWatch["Cooldown"]) then
+		if self.buffWatch["Cooldown"]["[Bot Ability] Blitz"] ~= nil then
+			local blitzSpell = GameLib.GetSpell(35501)
+			for _, watcher in pairs(self.buffWatch["Cooldown"][blitzSpell:GetName()]) do
+				watcher(blitzSpell)
+			end
+		end
+
+		if self.buffWatch["Cooldown"]["[Bot Ability] Barrage"] ~= nil then
+			local barrageSpell = GameLib.GetSpell(51365)
+			for _, watcher in pairs(self.buffWatch["Cooldown"][barrageSpell:GetName()]) do
+				watcher(barrageSpell)
+			end
+		end
+	end
+end
+
 function AuraMastery:ProcessInnate()
 	if TableContainsElements(self.buffWatch["Cooldown"]) then
 		for i = 1, GameLib.GetClassInnateAbilitySpells().nSpellCount * 2, 2 do
@@ -473,7 +492,5 @@ _G["AuraMasteryLibs"]["GetAbilitiesList"] = GetAbilitiesList
 -----------------------------------------------------------------------------------------------
 -- AuraMastery Instance
 -----------------------------------------------------------------------------------------------
-AuraMasteryInst = AuraMastery:new()
+local AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
-
-

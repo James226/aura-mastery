@@ -80,119 +80,161 @@ end
 
 function IconTrigger:SetConfig(editor)
 	self:RemoveFromBuffWatch()
-	self.Name = editor:FindChild("TriggerName"):GetText()
-	self.Type = editor:FindChild("TriggerType"):GetText()
-	self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
-	local selectedTriggerEffectItem = editor:FindChild("TriggerEffectsList"):GetData()
-	if selectedTriggerEffectItem ~= nil and selectedTriggerEffectItem:GetData() ~= nil then
-		selectedTriggerEffectItem:GetData():SetConfig(editor:FindChild("TriggerEffects"))
-	end
+	if self.Icon.SimpleMode then
+		self.Type = string.sub(editor:FindChild("AuraType"):GetData():GetName(), 10)
+		self.Name = self.Type .. ":" .. self.Icon.iconName
 
-	if self.Type == "Action Set" then
-		self.TriggerDetails = {	
-			ActionSets = {
-				editor:FindChild("ActionSet1"):IsChecked(),
-				editor:FindChild("ActionSet2"):IsChecked(),
-				editor:FindChild("ActionSet3"):IsChecked(),
-				editor:FindChild("ActionSet4"):IsChecked()
+		if self.Type == "Cooldown" then
+			self.TriggerDetails = {
+				SpellName = self.Icon.iconName,
+				Charges = {
+					Enabled = false,
+					Operator = "==",
+					Value = 0
+				}
 			}
-		}
-	elseif self.Type == "Cooldown" then
-		self.TriggerDetails = {
-			SpellName = editor:FindChild("SpellName"):GetText(),
-			Charges = {
-				Enabled = editor:FindChild("ChargesEnabled"):IsChecked(),
-				Operator = editor:FindChild("Charges"):FindChild("Operator"):GetText(),
-				Value = tonumber(editor:FindChild("Charges"):FindChild("ChargesValue"):GetText())
+		elseif self.Type == "Buff" then
+			self.TriggerDetails = {
+				BuffName = self.Icon.iconName,
+				Target = {
+					Player = editor:FindChild("AuraBuffUnit_Player"):IsChecked(),
+					Target = editor:FindChild("AuraBuffUnit_Target"):IsChecked()
+				},
+				Stacks = {
+					Enabled = false,
+					Operator = "==",
+					Value = 0
+				}
 			}
-		}
-	elseif self.Type == "Buff" then
-		self.TriggerDetails = {
-			BuffName = editor:FindChild("BuffName"):GetText(),
-			Target = {
-				Player = editor:FindChild("TargetPlayer"):IsChecked(),
-				Target = editor:FindChild("TargetTarget"):IsChecked()
-			},
-			Stacks = {
-				Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
-				Operator = editor:FindChild("Stacks"):FindChild("Operator"):GetText(),
-				Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
-			}
-		}
-	elseif self.Type == "Debuff" then
-		self.TriggerDetails = {
-			DebuffName = editor:FindChild("DebuffName"):GetText(),
-			Target = {
-				Player = editor:FindChild("TargetPlayer"):IsChecked(),
-				Target = editor:FindChild("TargetTarget"):IsChecked()
-			},
-			Stacks = {
-				Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
-				Operator = editor:FindChild("Stacks"):FindChild("Operator"):GetText(),
-				Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
-			}
-		}
-	elseif self.Type == "Resources" then
-		self.TriggerDetails = { }
-		if editor:FindChild("ManaEnabled"):IsChecked() then
-			local resourceEditor = editor:FindChild("Mana")
-			self.TriggerDetails.Mana = {
-				Operator = resourceEditor:FindChild("Operator"):GetText(),
-				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
-				Percent = resourceEditor:FindChild("Percent"):IsChecked()
+		elseif self.Type == "Debuff" then
+			self.TriggerDetails = {
+				DebuffName = self.Icon.iconName,
+				Target = {
+					Player = editor:FindChild("AuraBuffUnit_Player"):IsChecked(),
+					Target = editor:FindChild("AuraBuffUnit_Target"):IsChecked()
+				},
+				Stacks = {
+					Enabled = false,
+					Operator = "==",
+					Value = 0
+				}
 			}
 		end
-		if editor:FindChild("ResourceEnabled"):IsChecked() then
-			local resourceEditor = editor:FindChild("Resource")
-			self.TriggerDetails.Resource = {
-				Operator = resourceEditor:FindChild("Operator"):GetText(),
-				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
-				Percent = resourceEditor:FindChild("Percent"):IsChecked()
-			}
+	else
+		self.Name = editor:FindChild("TriggerName"):GetText()
+		self.Type = editor:FindChild("TriggerType"):GetText()
+		self.Behaviour = editor:FindChild("TriggerBehaviour"):GetText()
+		local selectedTriggerEffectItem = editor:FindChild("TriggerEffectsList"):GetData()
+		if selectedTriggerEffectItem ~= nil and selectedTriggerEffectItem:GetData() ~= nil then
+			selectedTriggerEffectItem:GetData():SetConfig(editor:FindChild("TriggerEffects"))
 		end
-	elseif self.Type == "Health" then
-		self.TriggerDetails = { 
-			Target = {
-				Player = editor:FindChild("TargetPlayer"):IsChecked(),
-				Target = editor:FindChild("TargetTarget"):IsChecked()
+
+		if self.Type == "Action Set" then
+			self.TriggerDetails = {	
+				ActionSets = {
+					editor:FindChild("ActionSet1"):IsChecked(),
+					editor:FindChild("ActionSet2"):IsChecked(),
+					editor:FindChild("ActionSet3"):IsChecked(),
+					editor:FindChild("ActionSet4"):IsChecked()
+				}
 			}
-		}
-		if editor:FindChild("HealthEnabled"):IsChecked() then
-			local resourceEditor = editor:FindChild("Health")
-			self.TriggerDetails.Health = {
-				Operator = resourceEditor:FindChild("Operator"):GetText(),
-				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
-				Percent = resourceEditor:FindChild("Percent"):IsChecked()
+		elseif self.Type == "Cooldown" then
+			self.TriggerDetails = {
+				SpellName = editor:FindChild("SpellName"):GetText(),
+				Charges = {
+					Enabled = editor:FindChild("ChargesEnabled"):IsChecked(),
+					Operator = editor:FindChild("Charges"):FindChild("Operator"):GetText(),
+					Value = tonumber(editor:FindChild("Charges"):FindChild("ChargesValue"):GetText())
+				}
 			}
-		end
-		if editor:FindChild("ShieldEnabled"):IsChecked() then
-			local resourceEditor = editor:FindChild("Shield")
-			self.TriggerDetails.Shield = {
-				Operator = resourceEditor:FindChild("Operator"):GetText(),
-				Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
-				Percent = resourceEditor:FindChild("Percent"):IsChecked()
+		elseif self.Type == "Buff" then
+			self.TriggerDetails = {
+				BuffName = editor:FindChild("BuffName"):GetText(),
+				Target = {
+					Player = editor:FindChild("TargetPlayer"):IsChecked(),
+					Target = editor:FindChild("TargetTarget"):IsChecked()
+				},
+				Stacks = {
+					Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
+					Operator = editor:FindChild("Stacks"):FindChild("Operator"):GetText(),
+					Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
+				}
 			}
-		end
-	elseif self.Type == "Moment Of Opportunity" then
-		self.TriggerDetails = { 
-			Target = {
-				Player = editor:FindChild("TargetPlayer"):IsChecked(),
-				Target = editor:FindChild("TargetTarget"):IsChecked()
+		elseif self.Type == "Debuff" then
+			self.TriggerDetails = {
+				DebuffName = editor:FindChild("DebuffName"):GetText(),
+				Target = {
+					Player = editor:FindChild("TargetPlayer"):IsChecked(),
+					Target = editor:FindChild("TargetTarget"):IsChecked()
+				},
+				Stacks = {
+					Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
+					Operator = editor:FindChild("Stacks"):FindChild("Operator"):GetText(),
+					Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
+				}
 			}
-		}
-	elseif self.Type == "Scriptable" then
-		self.TriggerDetails = {
-			Script = editor:FindChild("Script"):GetText()
-		}
-		editor:FindChild("ScriptErrors"):SetText("")
-		local script, loadScriptError = loadstring("local trigger = ...\n" .. self.TriggerDetails.Script)
-		if script ~= nil then
-			local status, result = pcall(script, self)
-			if not status then
-				editor:FindChild("ScriptErrors"):SetText(tostring(result))
+		elseif self.Type == "Resources" then
+			self.TriggerDetails = { }
+			if editor:FindChild("ManaEnabled"):IsChecked() then
+				local resourceEditor = editor:FindChild("Mana")
+				self.TriggerDetails.Mana = {
+					Operator = resourceEditor:FindChild("Operator"):GetText(),
+					Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+					Percent = resourceEditor:FindChild("Percent"):IsChecked()
+				}
 			end
-		else
-			editor:FindChild("ScriptErrors"):SetText("Unable to load script due to a syntax error: " .. tostring(loadScriptError))
+			if editor:FindChild("ResourceEnabled"):IsChecked() then
+				local resourceEditor = editor:FindChild("Resource")
+				self.TriggerDetails.Resource = {
+					Operator = resourceEditor:FindChild("Operator"):GetText(),
+					Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+					Percent = resourceEditor:FindChild("Percent"):IsChecked()
+				}
+			end
+		elseif self.Type == "Health" then
+			self.TriggerDetails = { 
+				Target = {
+					Player = editor:FindChild("TargetPlayer"):IsChecked(),
+					Target = editor:FindChild("TargetTarget"):IsChecked()
+				}
+			}
+			if editor:FindChild("HealthEnabled"):IsChecked() then
+				local resourceEditor = editor:FindChild("Health")
+				self.TriggerDetails.Health = {
+					Operator = resourceEditor:FindChild("Operator"):GetText(),
+					Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+					Percent = resourceEditor:FindChild("Percent"):IsChecked()
+				}
+			end
+			if editor:FindChild("ShieldEnabled"):IsChecked() then
+				local resourceEditor = editor:FindChild("Shield")
+				self.TriggerDetails.Shield = {
+					Operator = resourceEditor:FindChild("Operator"):GetText(),
+					Value = tonumber(resourceEditor:FindChild("Value"):GetText()) or 0,
+					Percent = resourceEditor:FindChild("Percent"):IsChecked()
+				}
+			end
+		elseif self.Type == "Moment Of Opportunity" then
+			self.TriggerDetails = { 
+				Target = {
+					Player = editor:FindChild("TargetPlayer"):IsChecked(),
+					Target = editor:FindChild("TargetTarget"):IsChecked()
+				}
+			}
+		elseif self.Type == "Scriptable" then
+			self.TriggerDetails = {
+				Script = editor:FindChild("Script"):GetText()
+			}
+			editor:FindChild("ScriptErrors"):SetText("")
+			local script, loadScriptError = loadstring("local trigger = ...\n" .. self.TriggerDetails.Script)
+			if script ~= nil then
+				local status, result = pcall(script, self)
+				if not status then
+					editor:FindChild("ScriptErrors"):SetText(tostring(result))
+				end
+			else
+				editor:FindChild("ScriptErrors"):SetText("Unable to load script due to a syntax error: " .. tostring(loadScriptError))
+			end
 		end
 	end
 	self:AddToBuffWatch()
@@ -347,9 +389,9 @@ end
 function IconTrigger:GetSpellCooldown(spell)
 	local charges = spell:GetAbilityCharges()
 	if charges and charges.nChargesMax > 0 then
-		return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, charges.nChargesRemaining
+		return charges.fRechargePercentRemaining * charges.fRechargeTime, charges.fRechargeTime, charges.nChargesRemaining, charges.nChargesMax
 	else
-		return spell:GetCooldownRemaining(), spell:GetCooldownTime(), 0
+		return spell:GetCooldownRemaining(), spell:GetCooldownTime(), 0, 0
 	end
 end
 
@@ -374,20 +416,22 @@ function IconTrigger:ProcessOptionEvent(result)
 end
 
 function IconTrigger:ProcessSpell(spell)
-	local cdRemaining, cdTotal, chargesRemaining = self:GetSpellCooldown(spell)
+	local cdRemaining, cdTotal, chargesRemaining, chargesMax = self:GetSpellCooldown(spell)
 	self.Charges = chargesRemaining
-	self.Time = cdRemaining
-	self.MaxDuration = cdTotal
-	self.Sprite = spell:GetIcon()
-
-	if (cdRemaining == 0
-	 	and (not self.TriggerDetails.Charges.Enabled and chargesRemaining > 0) or self.TriggerDetails.Charges.Enabled and self:IsOperatorSatisfied(chargesRemaining, self.TriggerDetails.Charges.Operator, self.TriggerDetails.Charges.Value)) then
-		self.isSet = false
-		if cdRemaining == 0 then
-			self.Time = 0
+	if not (self.Time and self.Time > cdRemaining) then
+		self.Time = cdRemaining
+		self.MaxDuration = math.max(cdRemaining, cdTotal)
+		self.MaxCharges = chargesMax
+		self.Sprite = spell:GetIcon()
+		if ((not self.TriggerDetails.Charges.Enabled) and (cdRemaining == 0 or chargesRemaining > 0))
+			or (self.TriggerDetails.Charges.Enabled and self:IsOperatorSatisfied(chargesRemaining, self.TriggerDetails.Charges.Operator, self.TriggerDetails.Charges.Value)) then
+			self.isSet = false
+			if cdRemaining == 0 then
+				self.Time = 0
+			end
+		else
+			self.isSet = true
 		end
-	else
-		self.isSet = true
 	end
 end
 

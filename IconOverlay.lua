@@ -58,9 +58,14 @@ function IconOverlay:UpdateOverlaySprite()
 end
 
 function IconOverlay:SetConfig(configWnd)
-	self.overlayShape = (configWnd:FindChild("IconOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow") and "Icon" or "Solid"
-	self.overlayColor = configWnd:FindChild("OverlayColor"):FindChild("OverlayColorSample"):GetBGColor()	
-	self.overlayStyle = (configWnd:FindChild("RadialOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow" and "Radial" or "Linear")
+	if self.icon.SimpleMode then
+		self.overlayShape = self.icon.iconSprite == "" and "Solid" or "Icon"
+		self.overlayStyle = "Linear"
+	else
+		self.overlayShape = (configWnd:FindChild("IconOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow") and "Icon" or "Solid"
+		self.overlayColor = configWnd:FindChild("OverlayColor"):FindChild("OverlayColorSample"):GetBGColor()	
+		self.overlayStyle = (configWnd:FindChild("RadialOverlay"):GetSprite() == "kitBase_HoloOrange_TinyNoGlow" and "Radial" or "Linear")
+	end
 	
 	self:UpdateOverlaySprite()
 end

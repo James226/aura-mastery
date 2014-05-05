@@ -57,6 +57,7 @@ function Icon.new(buffWatch, configForm)
 
 	self.Stacks = 0
 	self.Charges = 0
+	self.MaxCharges = 0
 
 	self.showWhen = "Always"
 	self.playSoundWhen = "None"
@@ -65,6 +66,8 @@ function Icon.new(buffWatch, configForm)
 	
 	self.soundPlayed = true
 	self.isInCombat = false
+
+	self.SimpleMode = true
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
@@ -129,6 +132,12 @@ function Icon:Load(saveData)
 		self.playSoundWhen = saveData.playSoundWhen or "None"
 
 		self.enabled = saveData.iconEnabled == nil or saveData.iconEnabled
+
+		if saveData.SimpleMode == nil then
+			self.SimpleMode = false
+		else
+			self.SimpleMode = saveData.SimpleMode
+		end
 
 		
 		GeminiPackages:Require("AuraMastery:IconTrigger", function(iconTrigger)
@@ -214,6 +223,7 @@ function Icon:GetSaveData()
 	saveData.iconSprite = self.iconSprite
 	saveData.iconEnabled = self.enabled
 	saveData.actionSets = self.actionSets
+	saveData.SimpleMode = self.SimpleMode
 	
 	saveData.iconText = {}
 	for iconTextId, iconText in pairs(self.iconText) do
@@ -260,49 +270,81 @@ function Icon:Delete()
 end
 
 function Icon:SetIcon(configWnd)
-	self.iconName = configWnd:FindChild("BuffName"):GetText()
-	self.showWhen = configWnd:FindChild("BuffShowWhen"):GetText()
-	self.playSoundWhen = configWnd:FindChild("BuffPlaySoundWhen"):GetText()
-	self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
-	self.onlyInCombat = configWnd:FindChild("BuffOnlyInCombat"):IsChecked()
-	
-	self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
-	
-	self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
-	self.icon:SetStyle("Border", self.iconBorder)
-	
-	if configWnd:FindChild("SoundSelect"):FindChild("SelectedSound") ~= nil then
-		self.iconSound = tonumber(configWnd:FindChild("SoundSelect"):FindChild("SelectedSound"):GetText())
+	if self.SimpleMode then
+		self.iconName = configWnd:FindChild("AuraSpellNameList"):GetData():GetText()
+		self.onlyInCombat = configWnd:FindChild("AuraOnlyInCombat"):IsChecked()
+		self.actionSets = {
+			configWnd:FindChild("AuraActionSet1"):IsChecked(),
+			configWnd:FindChild("AuraActionSet2"):IsChecked(),
+			configWnd:FindChild("AuraActionSet3"):IsChecked(),
+			configWnd:FindChild("AuraActionSet4"):IsChecked()
+		}
+		self.iconSound = configWnd:FindChild("AuraSoundSelect"):GetData():GetData()
+		self.showWhen = configWnd:FindChild("AuraAlwaysShow"):IsChecked() and "Always" or "All"
+		local selectedSprite = configWnd:FindChild("AuraIconSelect"):GetData()
+		if selectedSprite:GetName() == "AuraSprite_Default" then
+			self.iconSprite = ""
+		else
+			self.iconSprite = selectedSprite:FindChild("SpriteItemIcon"):GetSprite()
+		end
+
+		self.iconOverlay:SetConfig(configWnd)
+		if #self.Triggers == 0 then
+			GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger) 
+				local trigger = iconTrigger.new(self, self.buffWatch)
+				trigger.Name = "Trigger 1"
+				trigger.TriggerDetails = { SpellName = "" }
+				table.insert(self.Triggers, trigger)
+				trigger:SetConfig(configWnd)
+			end)
+		else
+			self.Triggers[1]:SetConfig(configWnd)
+		end
 	else
-		self.iconSound = nil
-	end
-	self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
-	
-	for iconTextId, iconText in pairs(self.iconText) do
-		iconText:SetConfig(configWnd:FindChild("TextList"):GetChildren()[iconTextId])
-	end
-	
-	self.iconOverlay:SetConfig(configWnd)
-	
-	self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
+		self.iconName = configWnd:FindChild("BuffName"):GetText()
+		self.showWhen = configWnd:FindChild("BuffShowWhen"):GetText()
+		self.playSoundWhen = configWnd:FindChild("BuffPlaySoundWhen"):GetText()
+		self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
+		self.onlyInCombat = configWnd:FindChild("BuffOnlyInCombat"):IsChecked()
+		
+		self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
+		
+		self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
+		self.icon:SetStyle("Border", self.iconBorder)
+		
+		if configWnd:FindChild("SoundSelect"):FindChild("SelectedSound") ~= nil then
+			self.iconSound = tonumber(configWnd:FindChild("SoundSelect"):FindChild("SelectedSound"):GetText())
+		else
+			self.iconSound = nil
+		end
+		self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
+		
+		for iconTextId, iconText in pairs(self.iconText) do
+			iconText:SetConfig(configWnd:FindChild("TextList"):GetChildren()[iconTextId])
+		end
+		
+		self.iconOverlay:SetConfig(configWnd)
+		
+		self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
 
-	self.actionSets = {
-		configWnd:FindChild("BuffActionSet1"):IsChecked(),
-		configWnd:FindChild("BuffActionSet2"):IsChecked(),
-		configWnd:FindChild("BuffActionSet3"):IsChecked(),
-		configWnd:FindChild("BuffActionSet4"):IsChecked()
-	}
-	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
+		self.actionSets = {
+			configWnd:FindChild("BuffActionSet1"):IsChecked(),
+			configWnd:FindChild("BuffActionSet2"):IsChecked(),
+			configWnd:FindChild("BuffActionSet3"):IsChecked(),
+			configWnd:FindChild("BuffActionSet4"):IsChecked()
+		}
 
-	self:UpdateDefaultIcon()
-
-	local editor = configWnd:FindChild("TriggerEditor")
-	if editor ~= nil then
-		local trigger = editor:GetData()
-		if trigger ~= nil then
-			trigger:SetConfig(editor)
+		local editor = configWnd:FindChild("TriggerEditor")
+		if editor ~= nil then
+			local trigger = editor:GetData()
+			if trigger ~= nil then
+				trigger:SetConfig(editor)
+			end
 		end
 	end
+
+	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
+	self:UpdateDefaultIcon()
 end
 
 function Icon:GetName()
@@ -325,6 +367,7 @@ function Icon:PostUpdate()
 	self.maxDuration = 0
 	self.Stacks = 0
 	self.Charges = 0
+	self.MaxCharges = 0
 
 	for i = #self.Triggers, 1, -1 do
 		local trigger = self.Triggers[i]
@@ -374,6 +417,10 @@ function Icon:PostUpdate()
 
 			if trigger.Charges ~= nil then
 				self.Charges = trigger.Charges
+			end
+
+			if trigger.MaxCharges ~= nil then
+				self.MaxCharges = trigger.MaxCharges
 			end
 
 			if trigger.Sprite ~= nil then

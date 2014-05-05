@@ -34,8 +34,7 @@ function AuraMasteryConfig:Init()
 		tab:Show(false)
 	end
 	self.shareChannel = ICCommLib.JoinChannel("AuraMastery", "OnShareMsg", nil)
-	self.configForm:FindChild("GeneralTabButton"):SetCheck(true)
-	self.configForm:FindChild("BuffEditor"):FindChild("GeneralTab"):Show(true)	
+	self:SelectTab("General")
 		
 	self.configForm:FindChild("BuffShowWhen"):AddItem("Always", "", 1)
 	self.configForm:FindChild("BuffShowWhen"):AddItem("All", "", 2)
@@ -106,6 +105,8 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("TriggerEffectsDropdown"):Show(false)
 
 	self.configForm:FindChild("TriggerEffectsDropdownList"):ArrangeChildrenVert()
+
+	self:PopulateAuraSpellNameList()
 
 	GeminiPackages:Require("AuraMastery:IconText", function(iconText)
 		IconText = iconText
@@ -325,50 +326,64 @@ function AuraMasteryConfig:OnScaleValueChanged( wndHandler, wndControl, strText 
 	self.configForm:FindChild("BuffScale"):SetValue(value)
 end
 
-function AuraMasteryConfig:OnShownChanged( wndHandler, wndControl )
-	local shownVal = wndHandler:GetText()
-	local shownMsg = ""
-	if shownVal == "Always" then
-		shownMsg = "This aura will always be shown."
-	elseif shownVal == "All" then
-		shownMsg = "This aura will be shown when all triggers pass."
-	elseif shownVal == "Any" then
-		shownMsg = "This aura will be shown when any trigger passes."
-	elseif shownVal == "None" then
-		shownMsg = "This aura will be shown when all triggers fail."
-	end
-
-	self.configForm:FindChild("ShownDesc"):SetText(shownMsg)
+function AuraMasteryConfig:OnShownChanged( wndHandler, wndControl, selectedIndex )
+	self:SetShownDescription(selectedIndex)
 end
 
-function AuraMasteryConfig:OnPlaySoundChanged( wndHandler, wndControl )
-	local playSoundVal = wndHandler:GetText()
+function AuraMasteryConfig:SetShownDescription(selectedIndex)
+	local shownMsg = ""
+	if selectedIndex == 1 then
+		shownMsg = "This aura will always be shown."
+	elseif selectedIndex == 2 then
+		shownMsg = "This aura will be shown when all triggers pass."
+	elseif selectedIndex == 3 then
+		shownMsg = "This aura will be shown when any trigger passes."
+	elseif selectedIndex == 4 then
+		shownMsg = "This aura will be shown when all triggers fail."
+	end
+	self.configForm:FindChild("ShownDescription"):SetText(shownMsg)
+end
+
+function AuraMasteryConfig:OnPlaySoundChanged( wndHandler, wndControl, selectedIndex )
+	self:SetPlayWhenDescription(selectedIndex)
+end
+
+function AuraMasteryConfig:SetPlayWhenDescription(selectedIndex)
 	local playSoundDesc = ""
-	if playSoundVal == "All" then
+	if selectedIndex == 1 then
 		playSoundDesc = "This sound will be played when all triggers pass."
-	elseif playSoundVal == "Any" then
+	elseif selectedIndex == 2 then
 		playSoundDesc = "This sound will be played when any trigger passes."
-	elseif playSoundVal == "None" then
+	elseif selectedIndex == 3 then
 		playSoundDesc = "This sound will be played when all triggers fail."
 	end
 
-	self.configForm:FindChild("PlaySoundDesc"):SetText(playSoundDesc)
+	self.configForm:FindChild("PlaySoundDescription"):SetText(playSoundDesc)
 end
 
 function AuraMasteryConfig:OnTabSelected( wndHandler, wndControl, eMouseButton )
-	self.configForm:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(true)
-	
+	self:SelectTab(wndHandler:GetText())
+
 	if wndHandler:GetText() == "Appearance" then
 		self.timer = ApolloTimer.Create(0.1, true, "OnIconPreview", self)
 	end
 end
 
-function AuraMasteryConfig:OnTabUnselected( wndHandler, wndControl, eMouseButton )
-	self.configForm:FindChild("BuffEditor"):FindChild(wndHandler:GetText() .. "Tab"):Show(false)
-	
+function AuraMasteryConfig:OnTabUnselected( wndHandler, wndControl, eMouseButton )	
 	if wndHandler:GetText() == "Appearance" then
 		self.timer:Stop()
 	end
+end
+
+function AuraMasteryConfig:SelectTab(tabName)
+	if self.currentTab ~= nil then
+		self.configForm:FindChild(self.currentTab .. "TabButton"):SetCheck(false)
+		self.configForm:FindChild("BuffEditor"):FindChild(self.currentTab .. "Tab"):Show(false)
+	end
+
+	self.currentTab = tabName
+	self.configForm:FindChild("BuffEditor"):FindChild(tabName .. "Tab"):Show(true)
+	self.configForm:FindChild(tabName .. "TabButton"):SetCheck(true)
 end
 
 function AuraMasteryConfig:OnIconPreview()
@@ -442,105 +457,209 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
 	if icon ~= nil then
 		self.configForm:FindChild("BuffId"):SetText(tonumber(iconItem:FindChild("Id"):GetText()))
-		self.configForm:FindChild("BuffName"):SetText(icon.iconName)
-		self.configForm:FindChild("BuffShowWhen"):SetText(icon.showWhen)
-		self.configForm:FindChild("BuffPlaySoundWhen"):SetText(icon.playSoundWhen)
-		self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
-		self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
-		self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
-		self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
-		self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
-		self.configForm:FindChild("BuffOnlyInCombat"):SetCheck(icon.onlyInCombat)
-		self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
-		self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
-		self.selectedColor = icon.iconColor
-		self.selectedOverlayColor = icon.iconOverlay.overlayColor
-		
-		self.configForm:FindChild("BuffActionSet1"):SetCheck(icon.actionSets[1])
-		self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
-		self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
-		self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
 
-		self:OnColorUpdate()
-		
-		for _, spriteIcon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
-			if (icon.iconSprite == "" and spriteIcon:FindChild("SpriteItemText"):GetText() == "Spell Icon") or spriteIcon:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
-				self:SelectSpriteIcon(spriteIcon)
-				break
-			end
-		end
-		
 		if self.selectedIcon ~= nil then
 			self.selectedIcon:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 		end
 		self.selectedIcon = iconItem
 		self.selectedIcon:SetBGColor(ApolloColor.new(1, 0, 1, 1))
-		
-		if self.selectedSound ~= nil then
-			self.selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
-		end
-		
-		for _, sound in pairs(self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetChildren()) do
-			if tonumber(sound:FindChild("Id"):GetText()) == icon.iconSound then
-				self.selectedSound = sound
-				self.selectedSound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
-				
-				local left, top, right, bottom = sound:GetAnchorOffsets()
-				self.configForm:FindChild("SoundSelect"):SetVScrollPos(top)
-				break
+
+		if icon.SimpleMode then
+			self:SelectTab("Simple")
+			self.configForm:FindChild("GeneralTabButton"):Show(false)
+			self.configForm:FindChild("TriggersTabButton"):Show(false)
+			self.configForm:FindChild("AppearanceTabButton"):Show(false)
+			self.configForm:FindChild("TextTabButton"):Show(false)
+			self.configForm:FindChild("SimpleTabButton"):Show(true)
+
+			self.configForm:FindChild("AuraEnabled"):SetCheck(icon.enabled)
+			self.configForm:FindChild("AuraOnlyInCombat"):SetCheck(icon.onlyInCombat)
+			self.configForm:FindChild("AuraActionSet1"):SetCheck(icon.actionSets[1])
+			self.configForm:FindChild("AuraActionSet2"):SetCheck(icon.actionSets[2])
+			self.configForm:FindChild("AuraActionSet3"):SetCheck(icon.actionSets[3])
+			self.configForm:FindChild("AuraActionSet4"):SetCheck(icon.actionSets[4])
+			self.configForm:FindChild("AuraAlwaysShow"):SetCheck(icon.showWhen == "Always")
+			self.configForm:FindChild("AuraSpriteScaleSlider"):SetValue(icon.iconScale)
+			self.configForm:FindChild("AuraSpriteScaleText"):SetText(string.format("%.1f", icon.iconScale))
+			self.configForm:FindChild("AuraSpellNameFilter"):SetText(icon.iconName)
+			self:SetAuraSpellNameFilter(icon.iconName)
+			self.configForm:FindChild("AuraSpellName_FilterOption"):SetCheck(true)
+			self.configForm:FindChild("AuraSpellNameList"):SetData(self.configForm:FindChild("AuraSpellName_FilterOption"))
+			self.configForm:FindChild("AuraSprite_Default"):FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
+			local spellList = self.configForm:FindChild("AuraSpellNameList")
+			for _, spell in pairs(spellList:GetChildren()) do
+				if spell:GetName() == "AuraSpellName_FilterOption" then
+					spell:SetCheck(true)
+				else
+					spell:SetCheck(false)
+				end
 			end
-		end
-		
-		
-		for textEditorId, textEditor in pairs(self.iconTextEditor) do
-			textEditor:Destroy()
-			self.iconTextEditor[textEditorId] = nil
-		end
-		
-		for iconTextId, iconText in pairs(icon.iconText) do
-			self:AddIconTextEditor()
-			
-			local textEditor = self.configForm:FindChild("TextList"):GetChildren()[iconTextId]
-			
-			for _, anchor in pairs(textEditor:FindChild("AnchorSelector"):GetChildren()) do
-				anchor:SetCheck(false)
+
+			local simpleTab = self.configForm:FindChild("SimpleTab")
+			for _, auraType in pairs(simpleTab:FindChild("AuraType"):GetChildren()) do
+				auraType:SetCheck(false)
 			end
-			local selectedTextAnchor = textEditor:FindChild("AnchorPosition_" .. icon.iconText[iconTextId].textAnchor)
-			if selectedTextAnchor ~= nil then
-				selectedTextAnchor:SetCheck(true)
+
+			if #icon.Triggers == 0 then
+				simpleTab:FindChild("AuraType_Cooldown"):SetCheck(true)
+				self.configForm:FindChild("AuraBuffDetails"):Show(false)
+				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_Cooldown"))
+			else
+				simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type):SetCheck(true)				
+				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type))
+				if icon.Triggers[1].Type == "Buff" or icon.Triggers[1].Type == "Debuff" then
+					self.configForm:FindChild("AuraBuffDetails"):Show(true)
+					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(icon.Triggers[1].TriggerDetails.Target.Player)
+					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(icon.Triggers[1].TriggerDetails.Target.Target)
+				else
+					self.configForm:FindChild("AuraBuffDetails"):Show(false)
+					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(false)
+					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(false)					
+				end
+			end
+
+			local soundSelect = self.configForm:FindChild("AuraSoundSelect")
+			if soundSelect:GetData() ~= nil then
+				soundSelect:GetData():SetCheck(false)
 			end
 			
-			for _, font in pairs(textEditor:FindChild("FontSelector"):GetChildren()) do
-				if font:GetText() == icon.iconText[iconTextId].textFont then
-					self:SelectFont(font)
-					local left, top, right, bottom = font:GetAnchorOffsets()
-					textEditor:FindChild("FontSelector"):SetVScrollPos(top)
+			for _, sound in pairs(self.configForm:FindChild("AuraSoundSelect"):GetChildren()) do
+				if tonumber(sound:GetData()) == icon.iconSound then
+					sound:SetCheck(true)
+					soundSelect:SetData(sound)
+					
+					local left, top, right, bottom = sound:GetAnchorOffsets()
+					soundSelect:SetVScrollPos(top)
 					break
 				end
 			end
-			textEditor:FindChild("FontColorSample"):SetBGColor(icon.iconText[iconTextId].textFontColor)
-			textEditor:FindChild("FontSample"):SetTextColor(icon.iconText[iconTextId].textFontColor)
-			textEditor:FindChild("TextString"):SetText(icon.iconText[iconTextId].textString)
-		end
-			
-		self.configForm:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
-		if icon.iconOverlay.overlayShape == "Icon" then
-			self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-			self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-		else
-			self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-			self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-		end
-		
-		if icon.iconOverlay.overlayStyle == "Radial" then
-			self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-			self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-		else
-			self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-			self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-		end
 
-		self:PopulateTriggers(icon)
+			local spriteSelect = self.configForm:FindChild("AuraIconSelect")
+			if spriteSelect:GetData() ~= nil then
+				spriteSelect:GetData():SetCheck(false)
+			end
+
+			if icon.iconSprite == "" then
+				self.configForm:FindChild("AuraSprite_Default"):SetCheck(true)
+				self.configForm:FindChild("AuraIconSelect"):SetData(self.configForm:FindChild("AuraSprite_Default"))
+			else
+				for _, sprite in pairs(self.configForm:FindChild("AuraIconSelect"):GetChildren()) do
+					if sprite:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
+						sprite:SetCheck(true)
+						spriteSelect:SetData(sprite)
+						
+						local left, top, right, bottom = sprite:GetAnchorOffsets()
+						spriteSelect:SetVScrollPos(top)
+						break
+					end
+				end
+			end
+		else
+			self:SelectTab("General")
+			self.configForm:FindChild("GeneralTabButton"):Show(true)
+			self.configForm:FindChild("TriggersTabButton"):Show(true)
+			self.configForm:FindChild("AppearanceTabButton"):Show(true)
+			self.configForm:FindChild("TextTabButton"):Show(true)
+			self.configForm:FindChild("SimpleTabButton"):Show(false)
+
+			self.configForm:FindChild("BuffName"):SetText(icon.iconName)
+			self.configForm:FindChild("BuffShowWhen"):SelectItemByText(icon.showWhen)
+			self:SetShownDescription(self.configForm:FindChild("BuffShowWhen"):GetSelectedIndex() + 1)
+			self.configForm:FindChild("BuffPlaySoundWhen"):SelectItemByText(icon.playSoundWhen)
+			self:SetPlayWhenDescription(self.configForm:FindChild("BuffPlaySoundWhen"):GetSelectedIndex() + 1)
+			self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
+			self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
+			self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
+			self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
+			self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
+			self.configForm:FindChild("BuffOnlyInCombat"):SetCheck(icon.onlyInCombat)
+			self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
+			self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
+			self.selectedColor = icon.iconColor
+			self.selectedOverlayColor = icon.iconOverlay.overlayColor
+			
+			self.configForm:FindChild("BuffActionSet1"):SetCheck(icon.actionSets[1])
+			self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
+			self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
+			self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
+
+			self:OnColorUpdate()
+			
+			for _, spriteIcon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
+				if (icon.iconSprite == "" and spriteIcon:FindChild("SpriteItemText"):GetText() == "Spell Icon") or spriteIcon:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
+					self:SelectSpriteIcon(spriteIcon)
+					break
+				end
+			end
+			
+			
+			
+			if self.selectedSound ~= nil then
+				self.selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
+			end
+			
+			for _, sound in pairs(self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetChildren()) do
+				if tonumber(sound:FindChild("Id"):GetText()) == icon.iconSound then
+					self.selectedSound = sound
+					self.selectedSound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+					
+					local left, top, right, bottom = sound:GetAnchorOffsets()
+					self.configForm:FindChild("SoundSelect"):SetVScrollPos(top)
+					break
+				end
+			end
+			
+			
+			for textEditorId, textEditor in pairs(self.iconTextEditor) do
+				textEditor:Destroy()
+				self.iconTextEditor[textEditorId] = nil
+			end
+			
+			for iconTextId, iconText in pairs(icon.iconText) do
+				self:AddIconTextEditor()
+				
+				local textEditor = self.configForm:FindChild("TextList"):GetChildren()[iconTextId]
+				
+				for _, anchor in pairs(textEditor:FindChild("AnchorSelector"):GetChildren()) do
+					anchor:SetCheck(false)
+				end
+				local selectedTextAnchor = textEditor:FindChild("AnchorPosition_" .. icon.iconText[iconTextId].textAnchor)
+				if selectedTextAnchor ~= nil then
+					selectedTextAnchor:SetCheck(true)
+				end
+				
+				for _, font in pairs(textEditor:FindChild("FontSelector"):GetChildren()) do
+					if font:GetText() == icon.iconText[iconTextId].textFont then
+						self:SelectFont(font)
+						local left, top, right, bottom = font:GetAnchorOffsets()
+						textEditor:FindChild("FontSelector"):SetVScrollPos(top)
+						break
+					end
+				end
+				textEditor:FindChild("FontColorSample"):SetBGColor(icon.iconText[iconTextId].textFontColor)
+				textEditor:FindChild("FontSample"):SetTextColor(icon.iconText[iconTextId].textFontColor)
+				textEditor:FindChild("TextString"):SetText(icon.iconText[iconTextId].textString)
+			end
+				
+			self.configForm:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
+			if icon.iconOverlay.overlayShape == "Icon" then
+				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+			else
+				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+			end
+			
+			if icon.iconOverlay.overlayStyle == "Radial" then
+				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+			else
+				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+			end
+
+			self:PopulateTriggers(icon)
+		end
 	end
 end
 
@@ -1537,6 +1656,153 @@ function AuraMasteryConfig:OnTriggerDetailsStacksToggle( wndHandler, wndControl,
 	if wndHandler == wndControl then
 		wndHandler:GetParent():FindChild("Stacks"):Enable(wndHandler:IsChecked())
 	end
+end
+
+---------------------------------------------------------------------------------------------------
+---- Simple Tab
+---------------------------------------------------------------------------------------------------
+function AuraMasteryConfig:OnAuraTypeSelect( wndHandler, wndControl, eMouseButton )
+	local auraType = string.sub(wndHandler:GetName(), 10)
+	wndHandler:GetParent():SetData(wndHandler)
+	if auraType == "Buff" or auraType == "Debuff" then
+		self.configForm:FindChild("AuraBuffDetails"):Show(true)
+	else
+		self.configForm:FindChild("AuraBuffDetails"):Show(false)
+	end
+end
+
+function AuraMasteryConfig:PopulateAuraSpellNameList()
+	local spellNameList = self.configForm:FindChild("AuraSpellNameList")
+
+	local filterOption = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSpellName_Template", spellNameList, self)
+	filterOption:SetName("AuraSpellName_FilterOption")
+	filterOption:SetText("")
+
+	for _, ability in pairs(self:GetAbilitiesList()) do
+		local abilityOption = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSpellName_Template", spellNameList, self)
+		abilityOption:SetText(ability.strName)
+		abilityOption:SetData(ability)
+	end
+	spellNameList:ArrangeChildrenVert()
+
+	local spriteList = self.configForm:FindChild("AuraIconSelect")
+	
+	local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSprite_Template", spriteList, self)
+	spriteItem:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(self.configForm:FindChild("BuffName"):GetText()))
+	spriteItem:SetName("AuraSprite_Default")
+	spriteItem:FindChild("SpriteItemText"):SetText("Spell Icon")
+
+	for spriteName, spriteIcon in pairs(self.auraMastery.spriteIcons) do
+		local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSprite_Template", spriteList, self)
+		spriteItem:FindChild("SpriteItemIcon"):SetSprite(spriteIcon)
+		spriteItem:FindChild("SpriteItemText"):SetText(spriteName)
+	end
+	spriteList:ArrangeChildrenTiles()
+
+	local soundList = self.configForm:FindChild("AuraSoundSelect")
+	
+	local soundItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSound_Template", soundList, self)
+	soundItem:SetData(-1)
+	soundItem:SetText("None")
+			
+	for sound, soundNo in pairs(Sound) do
+		if type(soundNo) == "number" then
+			local soundItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSound_Template", soundList, self)
+			soundItem:SetData(soundNo)
+			soundItem:SetText(sound)
+		end
+	end
+	soundList:ArrangeChildrenVert()
+end
+
+function AuraMasteryConfig:OnAuraSpellNameFilterChanged( wndHandler, wndControl, filterText )
+	self:SetAuraSpellNameFilter(filterText)
+end
+
+function AuraMasteryConfig:SetAuraSpellNameFilter(filterText)
+	if filterText ~= "" then
+		self.configForm:FindChild("AuraSpellNameFilter"):FindChild("Placeholder"):Show(false)
+	else
+		self.configForm:FindChild("AuraSpellNameFilter"):FindChild("Placeholder"):Show(true)
+	end
+
+	local spellNameList = self.configForm:FindChild("AuraSpellNameList")
+	for _, abilityOption in pairs(spellNameList:GetChildren()) do
+		if abilityOption:GetName() == "AuraSpellName_FilterOption" then
+			abilityOption:SetText(filterText)
+		elseif abilityOption:GetText():lower():find(filterText:lower()) ~= nil then
+			abilityOption:Show(true)
+		else
+			abilityOption:Show(false)
+		end
+	end
+	spellNameList:ArrangeChildrenVert()
+
+	if self.configForm:FindChild("AuraSpellName_FilterOption"):IsChecked() then
+		self.configForm:FindChild("AuraSprite_Default"):FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(filterText))
+	end
+end
+
+function AuraMasteryConfig:OnGenerateAuraSpellTooltip(wndHandler, wndControl)
+	if wndControl == wndHandler then
+		splTarget = wndControl:GetData()
+		test = splTarget
+		local currentTier = splTarget.nCurrentTier
+		splObject = splTarget.tTiers[currentTier].Spell.CodeEnumCastResult.ItemObjectiveComplete
+
+		Tooltip.GetSpellTooltipForm(self, wndHandler, GameLib.GetSpell(splObject:GetId()), false)
+	end
+end
+
+function AuraMasteryConfig:OnAuraSoundSelected( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		Sound.Play(wndHandler:GetData())
+		wndHandler:GetParent():SetData(wndHandler)
+	end
+end
+
+function AuraMasteryConfig:OnAuraScaleChanged( wndHandler, wndControl, fNewValue, fOldValue )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	
+	fNewValue = tonumber(string.format("%.1f", fNewValue))
+	icon:SetScale(fNewValue)
+	wndHandler:GetParent():FindChild("AuraSpriteScaleText"):SetText(fNewValue)
+end
+
+function AuraMasteryConfig:OnAuraScaleTextChanged( wndHandler, wndControl, strText )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+	local value = tonumber(strText)
+	local scaleSlider = wndHandler:GetParent():FindChild("AuraSpriteScaleSlider")
+	if value == nil then
+		value = tonumber(string.format("%.1f", scaleSlider:GetValue()))
+	end
+
+	wndHandler:SetText(tostring(value))
+	icon:SetScale(value)
+	scaleSlider:SetValue(value)
+end
+
+function AuraMasteryConfig:OnAuraSpellNameSelect( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		wndHandler:GetParent():SetData(wndHandler)
+		self.configForm:FindChild("AuraSprite_Default"):FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(wndHandler:GetText()))
+	end
+end
+
+function AuraMasteryConfig:OnAuraSpriteSelect( wndHandler, wndControl, eMouseButton )
+	if wndHandler == wndControl then
+		wndHandler:GetParent():SetData(wndHandler)
+	end
+end
+
+function AuraMasteryConfig:OnAdvancedMode( wndHandler, wndControl, eMouseButton )
+	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+
+	icon.SimpleMode = false
+	self:SelectIcon(self.selectedIcon)
 end
 
 

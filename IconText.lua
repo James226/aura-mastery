@@ -67,9 +67,9 @@ function IconText:GetTagText(tag)
 	if tag == "time" then
 		return self:GetTimeText()
 	elseif tag == 'charges' then
-		return self.icon.Charges > 0 and tostring(self.icon.Charges) or ""
+		return self.icon.MaxCharges > 0 and self.icon.Charges > 0 and tostring(self.icon.Charges) or ""
 	elseif tag == 'stacks' then
-		return self.icon.Stacks > 0 and tostring(self.icon.Stacks) or ""
+		return self.icon.Stacks > 1 and tostring(self.icon.Stacks) or ""
 	end
 	return '{' .. tag .. '}'
 end
