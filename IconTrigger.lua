@@ -23,6 +23,8 @@ function IconTrigger.new(icon, buffWatch)
 
 	self.isSet = false
 
+	self.lastKeypress = 0
+
 	return self
 end
 
@@ -235,6 +237,12 @@ function IconTrigger:SetConfig(editor)
 			else
 				editor:FindChild("ScriptErrors"):SetText("Unable to load script due to a syntax error: " .. tostring(loadScriptError))
 			end
+		elseif self.Type == "Keybind" then
+			self.TriggerDetails = {
+				Key = editor:FindChild("KeybindTracker_Key"):GetText(),
+				Duration = tonumber(editor:FindChild("KeybindTracker_Duration"):GetText())
+			}
+			editor:FindChild("KeybindTracker_Duration"):SetText(tostring(self.TriggerDetails.Duration))
 		end
 	end
 	self:AddToBuffWatch()
@@ -275,6 +283,8 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddCooldownToBuffWatch("Target")
 		end
+	elseif self.Type == "Keybind" then
+		self:AddCooldownToBuffWatch(string.byte(self.TriggerDetails.Key, 1))
 	end
 end
 
@@ -322,6 +332,8 @@ function IconTrigger:RemoveFromBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:RemoveCooldownFromBuffWatch("Target")
 		end
+	elseif self.Type == "Keybind" then
+		self:RemoveCooldownFromBuffWatch(string.byte(self.TriggerDetails.Key, 1))
 	end
 end
 
@@ -368,6 +380,8 @@ end
 function IconTrigger:IsSet()
 	if self.Type == "Scriptable" then
 		self:ProcessScriptable()
+	elseif self.Type == "Keybind" then
+		self.isSet = os.difftime(os.time(), self.lastKeybind) < self.TriggerDetails.Duration
 	end
 
 	self.isPass = self:IsPass()
@@ -412,6 +426,8 @@ function IconTrigger:ProcessOptionEvent(result)
 		self:ProcessHealth(result)
 	elseif self.Type == "Moment Of Opportunity" then
 		self:ProcessMOO(result)
+	elseif self.Type == "Keybind" then
+		self:ProcessKeybind(result)
 	end
 end
 
@@ -514,6 +530,10 @@ function IconTrigger:ProcessMOO(result)
 	else
 		self.MaxDuration = nil
 	end
+end
+
+function IconTrigger:ProcessKeybind(iKey)
+	self.lastKeypress = os.time()
 end
 
 function IconTrigger:IsOperatorSatisfied(value, operator, compValue)

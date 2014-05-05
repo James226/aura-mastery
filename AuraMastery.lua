@@ -202,6 +202,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
+	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
 	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)
 
@@ -417,6 +418,16 @@ function AuraMastery:ProcessInnate()
 				for _, watcher in pairs(self.buffWatch["Cooldown"][s:GetName()]) do
 					watcher(s)
 				end
+			end
+		end
+	end
+end
+
+function AuraMastery:OnSystemKeyDown(iKey)
+	if TableContainsElements(self.buffWatch["Keybind"]) then
+		if self.buffWatch["Keybind"][iKey] ~= nil then
+			for _, watcher in pairs(self.buffWatch["Keybind"][iKey]) do
+				watcher(iKey)
 			end
 		end
 	end

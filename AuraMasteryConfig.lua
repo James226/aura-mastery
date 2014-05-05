@@ -907,6 +907,9 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
 		elseif trigger.Type == "Scriptable" then
 			editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
+		elseif trigger.Type == "Keybind" then
+			editor:FindChild("KeybindTracker_Key"):SetText(trigger.TriggerDetails.Key)
+			editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
 		end
 
 		self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
