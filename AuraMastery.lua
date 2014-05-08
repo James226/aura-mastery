@@ -99,7 +99,8 @@ function AuraMastery:new(o)
 		MomentOfOpportunity = {
 			Player = {},
 			Target = {}
-		}
+		},
+		Keybind = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1

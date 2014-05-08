@@ -381,7 +381,12 @@ function IconTrigger:IsSet()
 	if self.Type == "Scriptable" then
 		self:ProcessScriptable()
 	elseif self.Type == "Keybind" then
-		self.isSet = os.difftime(os.time(), self.lastKeybind) < self.TriggerDetails.Duration
+		local timeSinceKeypress = (Apollo.GetTickCount() - self.lastKeypress) / 1000
+		self.isSet = timeSinceKeypress < self.TriggerDetails.Duration
+		if self.isSet then
+			self.Time = self.TriggerDetails.Duration - timeSinceKeypress
+			self.MaxDuration = self.TriggerDetails.Duration
+		end
 	end
 
 	self.isPass = self:IsPass()
@@ -533,7 +538,7 @@ function IconTrigger:ProcessMOO(result)
 end
 
 function IconTrigger:ProcessKeybind(iKey)
-	self.lastKeypress = os.time()
+	self.lastKeypress = Apollo.GetTickCount()
 end
 
 function IconTrigger:IsOperatorSatisfied(value, operator, compValue)
