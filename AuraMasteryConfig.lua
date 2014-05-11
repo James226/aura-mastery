@@ -106,8 +106,6 @@ function AuraMasteryConfig:Init()
 
 	self.configForm:FindChild("TriggerEffectsDropdownList"):ArrangeChildrenVert()
 
-	self:PopulateAuraSpellNameList()
-
 	GeminiPackages:Require("AuraMastery:IconText", function(iconText)
 		IconText = iconText
 	end)
@@ -188,6 +186,7 @@ function AuraMasteryConfig:CreateControls()
 	for i, icon in pairs(self.auraMastery.Icons) do
 		self:CreateIconItem(icon.iconId, icon)
 	end
+	self:PopulateAuraSpellNameList()
 end
 
 function AuraMasteryConfig:CreateIconItem(i, icon)
@@ -1749,7 +1748,6 @@ end
 function AuraMasteryConfig:OnGenerateAuraSpellTooltip(wndHandler, wndControl)
 	if wndControl == wndHandler then
 		splTarget = wndControl:GetData()
-		test = splTarget
 		local currentTier = splTarget.nCurrentTier
 		splObject = splTarget.tTiers[currentTier].Spell.CodeEnumCastResult.ItemObjectiveComplete
 

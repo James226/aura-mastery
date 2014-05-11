@@ -158,7 +158,7 @@ end
 
 function AuraMastery:OnDamageDealt(tData)
 	if tData.unitCaster ~= nil and tData.unitCaster == GameLib.GetPlayerUnit() then
-		if tData.eCombatResult == GameLib.CodeEnumCombatResult.Critical then
+		if not tData.bPeriodic and tData.eCombatResult == GameLib.CodeEnumCombatResult.Critical then
 			self.lastCritical = os.time()
 		end
 	end
