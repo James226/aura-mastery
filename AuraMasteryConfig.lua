@@ -458,10 +458,10 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		self.configForm:FindChild("BuffId"):SetText(tonumber(iconItem:FindChild("Id"):GetText()))
 
 		if self.selectedIcon ~= nil then
-			self.selectedIcon:SetBGColor(ApolloColor.new(1, 1, 1, 1))
+			self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.16, 0.24, 1))
 		end
 		self.selectedIcon = iconItem
-		self.selectedIcon:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+		self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.5, 0.61, 1))
 		self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 		if icon.SimpleMode then
 			self:SelectTab("Simple")
