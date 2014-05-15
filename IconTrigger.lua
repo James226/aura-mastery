@@ -223,6 +223,10 @@ function IconTrigger:SetConfig(editor)
 					Target = editor:FindChild("TargetTarget"):IsChecked()
 				}
 			}
+		elseif self.Type == "Limited Action Set Checker" then
+			self.TriggerDetails = {
+				AbilityName = editor:FindChild("AbilityName"):GetText()
+			}
 		elseif self.Type == "Scriptable" then
 			self.TriggerDetails = {
 				Script = editor:FindChild("Script"):GetText()
@@ -285,6 +289,9 @@ function IconTrigger:AddToBuffWatch()
 		end
 	elseif self.Type == "Keybind" then
 		self:AddCooldownToBuffWatch(string.byte(self.TriggerDetails.Key, 1))
+	elseif self.Type == "Limited Action Set Checker" then
+		self.currentSpell = self.TriggerDetails.AbilityName == "" and self.Icon.iconName or self.TriggerDetails.AbilityName
+		self:AddCooldownToBuffWatch(self.currentSpell)
 	end
 end
 
@@ -313,7 +320,7 @@ function IconTrigger:AddBuffToBuffWatch(target, option)
 end
 
 function IconTrigger:RemoveFromBuffWatch()
-	if self.Type == "Cooldown" then
+	if self.Type == "Cooldown" or self.Type == "Limited Action Set Checker" then
 		self:RemoveCooldownFromBuffWatch(self.currentSpell)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
 		if self.TriggerDetails.Target.Player then
@@ -361,7 +368,7 @@ end
 function IconTrigger:ResetTrigger()
 	self.Stacks = nil
 	self.Time = nil
-	if self.Type ~= "Action Set" then
+	if self.Type ~= "Action Set" and self.Type ~= "Limited Action Set Checker" then
 		self.isSet = false
 	end
 end
@@ -433,6 +440,8 @@ function IconTrigger:ProcessOptionEvent(result)
 		self:ProcessMOO(result)
 	elseif self.Type == "Keybind" then
 		self:ProcessKeybind(result)
+	elseif self.Type == "Limited Action Set Checker" then
+		self:ProcessLASChange(result)
 	end
 end
 
@@ -539,6 +548,10 @@ end
 
 function IconTrigger:ProcessKeybind(iKey)
 	self.lastKeypress = Apollo.GetTickCount()
+end
+
+function IconTrigger:ProcessLASChange(result)
+	self.isSet = result
 end
 
 function IconTrigger:IsOperatorSatisfied(value, operator, compValue)

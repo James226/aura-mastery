@@ -100,7 +100,8 @@ function AuraMastery:new(o)
 			Player = {},
 			Target = {}
 		},
-		Keybind = {}
+		Keybind = {},
+		LimitedActionSetChecker = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
@@ -150,10 +151,15 @@ function AuraMastery:OnLoadIcons(tData)
 end
 
 function AuraMastery:OnAbilityBookChange()
+	Apollo.CreateTimer("AuraMastery_CacheTimer", 0.1, false)
+end
+
+function AuraMastery:UpdateAbilityBook()
 	abilitiesList = AbilityBook.GetAbilitiesList()
 	for _, icon in pairs(self.Icons) do
 		icon:UpdateDefaultIcon()
 	end
+	self:OnLASChanged()
 end
 
 function AuraMastery:OnDamageDealt(tData)
@@ -174,6 +180,7 @@ end
 
 function AuraMastery:OnCharacterCreated()
 	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
+	self:UpdateAbilityBook()
 end
 
 function AuraMastery:AddIcon()
@@ -204,8 +211,8 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
-	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "OnAbilityBookChange", self)
-	Apollo.CreateTimer("AuraMastery_CacheTimer", 3, false)
+	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "UpdateAbilityBook", self)
+	self:OnAbilityBookChange()
 
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
@@ -441,6 +448,29 @@ function AuraMastery:OnSpecChanged(newSpec)
 
 	for _, watcher in pairs(self.buffWatch["ActionSet"]) do
 		watcher(newSpec)
+	end
+end
+
+function AuraMastery:OnLASChanged()
+	local lasSpellIds = ActionSetLib.GetCurrentActionSet()
+    if lasSpellIds then
+    	local lasSpellNames = {}
+    	for _, spellId in pairs(lasSpellIds) do
+	    	if spellId ~= 0 then
+	    		for _, ability in pairs(GetAbilitiesList()) do
+	    			if ability.nId == spellId then
+	    				lasSpellNames[ability.strName] = true
+	    				break
+	    			end
+	    		end
+	    	end
+    	end
+
+		for spellName, watchList in pairs(self.buffWatch["LimitedActionSetChecker"]) do
+			for _, watcher in pairs(watchList) do
+				watcher(lasSpellNames[spellName] == true)
+			end
+		end
 	end
 end
 

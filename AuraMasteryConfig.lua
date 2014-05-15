@@ -909,6 +909,11 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		elseif trigger.Type == "Keybind" then
 			editor:FindChild("KeybindTracker_Key"):SetText(trigger.TriggerDetails.Key)
 			editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
+		elseif trigger.Type == "Limited Action Set Checker" then
+			editor:FindChild("AbilityName"):SetText(trigger.TriggerDetails.AbilityName)
+			if trigger.TriggerDetails.AbilityName ~= "" then
+				editor:FindChild("AbilityName"):FindChild("Placeholder"):Show(false, false)
+			end
 		end
 
 		self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
@@ -1076,6 +1081,12 @@ function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEd
 			detailsEditor:FindChild("TriggerDetails"):FindChild("DebuffName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
 		self:InitializeResourceEditor(detailsEditor)
+	elseif triggerType == "Limited Action Set Checker" then
+		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+		local icon = self.auraMastery.Icons[iconId]
+		if icon ~= nil then
+			detailsEditor:FindChild("TriggerDetails"):FindChild("AbilityName"):FindChild("Placeholder"):SetText(icon.iconName)
+		end
 	end
 end
 
