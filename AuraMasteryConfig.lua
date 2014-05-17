@@ -361,7 +361,7 @@ function AuraMasteryConfig:SetPlayWhenDescription(selectedIndex)
 end
 
 function AuraMasteryConfig:OnTabSelected( wndHandler, wndControl, eMouseButton )
-	self:SelectTab(wndHandler:GetText())
+	self:SelectTab(wndHandler:GetName():sub(0, -10))
 
 	if wndHandler:GetText() == "Appearance" then
 		self.timer = ApolloTimer.Create(0.1, true, "OnIconPreview", self)
@@ -1025,10 +1025,10 @@ function AuraMasteryConfig:OnTriggerMoveDown( wndHandler, wndControl, eMouseButt
 end
 
 function AuraMasteryConfig:OnTriggerType( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
-	self.configForm:FindChild("TriggerType"):SetText(wndHandler:GetText())
+	self.configForm:FindChild("TriggerType"):SetText(wndHandler:GetName():sub(12))
 	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
 
-	self:PopulateTriggerDetails(wndHandler:GetText())
+	self:PopulateTriggerDetails(wndHandler:GetName():sub(12))
 end
 
 function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
@@ -1114,7 +1114,7 @@ function AuraMasteryConfig:OnTriggerTypeDropdownHidden( wndHandler, wndControl )
 end
 
 function AuraMasteryConfig:OnTriggerBehaviour( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
-	self.configForm:FindChild("TriggerBehaviour"):SetText(wndHandler:GetText())
+	self.configForm:FindChild("TriggerBehaviour"):SetText(wndHandler:GetName():sub(17))
 	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
 end
 
