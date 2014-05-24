@@ -67,7 +67,7 @@ function Icon.new(buffWatch, configForm)
 	self.soundPlayed = true
 	self.isInCombat = false
 
-	self.SimpleMode = true
+	self.SimpleMode = false
 		
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
@@ -334,7 +334,7 @@ function Icon:SetIcon(configWnd)
 			configWnd:FindChild("BuffActionSet4"):IsChecked()
 		}
 
-		local editor = configWnd:FindChild("TriggerEditor")
+		local editor = configWnd:FindChild("TriggerWindow")
 		if editor ~= nil then
 			local trigger = editor:GetData()
 			if trigger ~= nil then
@@ -433,7 +433,7 @@ function Icon:PostUpdate()
 
 	if showIcon then
 		self.icon:Show(true)
-		self.icon:SetSprite(self:GetSprite())
+		self:SetSprite(self:GetSprite())
 		self.icon:SetBGColor(self.iconColor)
 	else
 		self.icon:Show(false)
@@ -462,6 +462,13 @@ function Icon:PostUpdate()
 			local trigger = self.Triggers[i]
 			trigger:StopEffects()
 		end
+	end
+end
+
+function Icon:SetSprite(sprite)
+	if self.currentSprite ~= sprite then
+		self.icon:SetSprite(sprite)
+		self.currentSprite = sprite
 	end
 end
 

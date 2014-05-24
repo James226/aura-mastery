@@ -50,26 +50,18 @@ function AuraMasteryConfig:Init()
 	local nextItem = 0
 	
 	local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
-	soundItem:SetAnchorPoints(0, 0, 1, 0)
-	soundItem:SetAnchorOffsets(0, nextItem, 0, nextItem + 40) 
-	nextItem = nextItem + 40
 
 	soundItem:FindChild("Id"):SetText(-1)
 	soundItem:FindChild("Label"):SetText("None")
-
 			
 	for sound, soundNo in pairs(Sound) do
 		if type(soundNo) == "number" then
 			local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
-			soundItem:SetAnchorPoints(0, 0, 1, 0)
-			soundItem:SetAnchorOffsets(0, nextItem, 0, nextItem + 40)
-			nextItem = nextItem + 40
-
 			soundItem:FindChild("Id"):SetText(soundNo)
 			soundItem:FindChild("Label"):SetText(sound)
 		end
 	end
-	soundList:SetAnchorOffsets(0, 0, -15, nextItem)
+	soundList:ArrangeChildrenVert()
 	
 	local soundSelectHeight = self.configForm:FindChild("SoundSelect"):GetHeight()
 	self.configForm:FindChild("SoundSelect"):SetVScrollInfo(nextItem - soundSelectHeight, soundSelectHeight, soundSelectHeight)
@@ -95,7 +87,8 @@ function AuraMasteryConfig:Init()
 
 	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
 
-	self.configForm:FindChild("NoAurasDialog"):Show(true)
+	self.configForm:FindChild("SimpleTabButton"):Show(false)
+	self.configForm:FindChild("NoAurasTab"):Show(true)
 	self.configForm:FindChild("BuffEditor"):Enable(false)
 	
 	self:CreateControls()
@@ -153,6 +146,7 @@ function AuraMasteryConfig:OnOK()
 	icon:SetIcon(self.configForm)
 	self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 	self:UpdateControls()
+	self:PopulateTriggers(icon)
 end
 
 function AuraMasteryConfig:OnCancel()
@@ -176,7 +170,7 @@ function AuraMasteryConfig:LoadSpriteIcons()
 	spriteIcons = {}
     for n in pairs(self.auraMastery.spriteIcons) do table.insert(spriteIcons, n) end
     table.sort(spriteIcons)
-    
+
 	for i, spriteName in pairs(spriteIcons) do
 		local spriteIcon = self.auraMastery.spriteIcons[spriteName]
 		local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SpriteItem", spriteList, self)
@@ -194,6 +188,7 @@ function AuraMasteryConfig:CreateControls()
 		self:CreateIconItem(icon.iconId, icon)
 	end
 	self:PopulateAuraSpellNameList()
+	self:PopulateAuraNameList()
 end
 
 function AuraMasteryConfig:CreateIconItem(i, icon)
@@ -205,6 +200,18 @@ function AuraMasteryConfig:CreateIconItem(i, icon)
 	icon:SetConfigElement(iconItem)
 	iconList:ArrangeChildrenVert()
 	return iconItem
+end
+
+function AuraMasteryConfig:PopulateAuraNameList()
+	local spellNameList = self.configForm:FindChild("AuraNameList")
+	spellNameList:DestroyChildren()
+
+	for _, ability in pairs(self:GetAbilitiesList()) do
+		local abilityOption = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.GeneralTab.AuraSpellName.AuraNameList.AuraNameButton", spellNameList, self)
+		abilityOption:SetText(ability.strName)
+		abilityOption:SetData(ability)
+	end
+	spellNameList:ArrangeChildrenVert()
 end
 
 function AuraMasteryConfig:UpdateControls()
@@ -257,6 +264,7 @@ function AuraMasteryConfig:OnAddIcon( wndHandler, wndControl, eMouseButton )
 		timeText.textAnchor = "ITL"
 		timeText.textString = "{charges}"
 		self:SelectIcon(iconItem)
+		self:OnAddTrigger()
 	end
 end
 
@@ -285,18 +293,20 @@ function AuraMasteryConfig:AddIcon()
 end
 
 function AuraMasteryConfig:RemoveIcon(icon)
+	local iconList = icon:GetParent()
 	local iconId = tonumber(icon:FindChild("Id"):GetText())
 	icon:Destroy()
+	iconList:ArrangeChildrenVert()
+
+	self.selectedIcon = nil
 	
 	self.auraMastery.Icons[iconId]:Delete()
 	self.auraMastery.Icons[iconId] = nil
 
-	self.configForm:FindChild("NoAurasDialog"):Show(true)
+	self.configForm:FindChild("NoAurasTab"):Show(true)
 	self.configForm:FindChild("BuffEditor"):Enable(false)
 
 	self:SelectFirstIcon()
-
-	self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
 end
 
 function AuraMasteryConfig:NumIcons()
@@ -406,6 +416,8 @@ end
 
 function AuraMasteryConfig:OnSpellNameChanged( wndHandler, wndControl, strText )
 	self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(strText))
+	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
+	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
 end
 
 function AuraMasteryConfig:OnOverlaySelection( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
@@ -457,7 +469,7 @@ function AuraMasteryConfig:OnListItemSelect( wndHandler, wndControl, eMouseButto
 end
 
 function AuraMasteryConfig:SelectIcon(iconItem)
-	self.configForm:FindChild("NoAurasDialog"):Show(false)
+	self.configForm:FindChild("NoAurasTab"):Show(false)
 	self.configForm:FindChild("BuffEditor"):Enable(true)
 	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
 	if icon ~= nil then
@@ -469,6 +481,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		self.selectedIcon = iconItem
 		self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.5, 0.61, 1))
 		self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
+
 		if icon.SimpleMode then
 			self:SelectTab("Simple")
 			self.configForm:FindChild("GeneralTabButton"):Show(false)
@@ -559,13 +572,16 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				end
 			end
 		else
-			self:SelectTab("General")
+			if self.currentTab == "Simple" then
+				self:SelectTab("General")
+			end
 			self.configForm:FindChild("GeneralTabButton"):Show(true)
 			self.configForm:FindChild("AppearanceTabButton"):Show(true)
 			self.configForm:FindChild("TextTabButton"):Show(true)
 			self.configForm:FindChild("SimpleTabButton"):Show(false)
 
 			self.configForm:FindChild("BuffName"):SetText(icon.iconName)
+			self:SetAuraNameFilter(icon.iconName)
 			self.configForm:FindChild("BuffShowWhen"):SelectItemByText(icon.showWhen)
 			self:SetShownDescription(self.configForm:FindChild("BuffShowWhen"):GetSelectedIndex() + 1)
 			self.configForm:FindChild("BuffPlaySoundWhen"):SelectItemByText(icon.playSoundWhen)
@@ -607,7 +623,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 					self.selectedSound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
 					
 					local left, top, right, bottom = sound:GetAnchorOffsets()
-					self.configForm:FindChild("SoundSelect"):SetVScrollPos(top)
+					self.configForm:FindChild("SoundSelectList"):SetVScrollPos(top)
 					break
 				end
 			end
@@ -827,7 +843,7 @@ function AuraMasteryConfig:AddTriggerDropdown(triggerSelectDropdown, trigger)
 end
 
 function AuraMasteryConfig:OnCheckTriggerSelectButton( wndHandler, wndControl, eMouseButton )
-	self.configForm:FindChild("TriggerEditor"):Enable(false)
+	self.configForm:FindChild("TriggerWindow"):Enable(false)
 	self.configForm:FindChild("TriggerSelectDropdown"):Show(true)
 	self.configForm:FindChild("TriggerSelectDropdown"):BringToFront()
 end
@@ -838,7 +854,7 @@ end
 
 function AuraMasteryConfig:OnTriggerSelectDropdownHidden( wndHandler, wndControl )
 	self.configForm:FindChild("TriggerSelectButton"):SetCheck(false)
-	self.configForm:FindChild("TriggerEditor"):Enable(true)
+	self.configForm:FindChild("TriggerWindow"):Enable(true)
 end
 
 function AuraMasteryConfig:OnTriggerSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
@@ -852,9 +868,11 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 	local editor = self.configForm:FindChild("TriggerWindow")
 
 	if triggerDropdownItem == nil then
-		editor:Show(false)
+		editor:FindChild("TriggerEditor"):Show(false)
+		editor:FindChild("GeneralTriggerControls"):Show(false)
 	else
-		editor:Show(true)
+		editor:FindChild("TriggerEditor"):Show(true)
+		editor:FindChild("GeneralTriggerControls"):Show(true)
 		local trigger = triggerDropdownItem:GetData()
 		editor:SetData(trigger)
 		self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
@@ -1045,7 +1063,6 @@ function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
 	end
 
 	local triggerEffects = self.configForm:FindChild("TriggerEffects")
-
 	local detailsEditor = Apollo.LoadForm("AuraMastery.xml", "TriggerDetails." .. triggerType, editor, self)
 	if detailsEditor ~= nil then
 		detailsEditor:SetName("TriggerDetails")
@@ -1565,17 +1582,20 @@ function AuraMasteryConfig:OnTriggerEffectDropdownHidden( wndHandler, wndControl
 end
 
 function AuraMasteryConfig:OnAddTriggerEffect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+	Print(1)
 	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsDropdown"):Show(false)
 	local triggerEffectsList = self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsList")
 	triggerEffectsList:Enable(true)
-
+	Print(2)
 	GeminiPackages:Require("AuraMastery:TriggerEffect", function(TriggerEffect)
-		local selectedTrigger = self.configForm:FindChild("TriggerEditor"):GetData()
+		Print(3)
+		local selectedTrigger = self.configForm:FindChild("TriggerWindow"):GetData()
 		if selectedTrigger ~= nil then	
 			local triggerEffect = TriggerEffect.new(selectedTrigger, wndHandler:GetText())
 			table.insert(selectedTrigger.TriggerEffects, triggerEffect)			
 			self:AddTriggerEffect(triggerEffect)
 		end
+		Print(4)
 	end)
 end
 
@@ -1608,7 +1628,7 @@ function AuraMasteryConfig:GetNextEffect(selectedEffectItem)
 	end
 end
 function AuraMasteryConfig:OnRemoveTriggerEffect( wndHandler, wndControl, eMouseButton )
-	local selectedTrigger = self.configForm:FindChild("TriggerEditor"):GetData()
+	local selectedTrigger = self.configForm:FindChild("TriggerWindow"):GetData()
 	if selectedTrigger ~= nil then
 		local selectedEffectItem = self.configForm:FindChild("TriggerEffectsList"):GetData()
 		if selectedEffectItem ~= nil then
@@ -1763,6 +1783,28 @@ function AuraMasteryConfig:SetAuraSpellNameFilter(filterText)
 	end
 end
 
+function AuraMasteryConfig:OnAuraNameFilterChanged( wndHandler, wndControl, filterText )
+	self:SetAuraNameFilter(filterText)
+end
+
+function AuraMasteryConfig:SetAuraNameFilter(filterText)
+	if filterText ~= "" then
+		self.configForm:FindChild("BuffName"):FindChild("Placeholder"):Show(false)
+	else
+		self.configForm:FindChild("BuffName"):FindChild("Placeholder"):Show(true)
+	end
+
+	local spellNameList = self.configForm:FindChild("AuraNameList")
+	for _, abilityOption in pairs(spellNameList:GetChildren()) do
+		if abilityOption:GetText():lower():find(filterText:lower()) ~= nil then
+			abilityOption:Show(true)
+		else
+			abilityOption:Show(false)
+		end
+	end
+	spellNameList:ArrangeChildrenVert()
+end
+
 function AuraMasteryConfig:OnGenerateAuraSpellTooltip(wndHandler, wndControl)
 	if wndControl == wndHandler then
 		splTarget = wndControl:GetData()
@@ -1808,6 +1850,11 @@ function AuraMasteryConfig:OnAuraSpellNameSelect( wndHandler, wndControl, eMouse
 		wndHandler:GetParent():SetData(wndHandler)
 		self.configForm:FindChild("AuraSprite_Default"):FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(wndHandler:GetText()))
 	end
+end
+
+function AuraMasteryConfig:OnAuraNameSelect( wndHandler, wndControl, eMouseButton )
+	wndHandler:GetParent():GetParent():FindChild("BuffName"):SetText(wndHandler:GetText())
+	self:OnSpellNameChanged(nil, nil, wndHandler:GetText())
 end
 
 function AuraMasteryConfig:OnAuraSpriteSelect( wndHandler, wndControl, eMouseButton )
