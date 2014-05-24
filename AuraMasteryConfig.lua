@@ -172,8 +172,13 @@ function AuraMasteryConfig:LoadSpriteIcons()
 	
 	local iconsPerRow = math.floor(spriteList:GetWidth() / 110)
 	local currentPos = 1
-	
-	for spriteName, spriteIcon in pairs(self.auraMastery.spriteIcons) do
+
+	spriteIcons = {}
+    for n in pairs(self.auraMastery.spriteIcons) do table.insert(spriteIcons, n) end
+    table.sort(spriteIcons)
+    
+	for i, spriteName in pairs(spriteIcons) do
+		local spriteIcon = self.auraMastery.spriteIcons[spriteName]
 		local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SpriteItem", spriteList, self)
 		spriteItem:FindChild("SpriteItemIcon"):SetSprite(spriteIcon)
 		spriteItem:FindChild("SpriteItemText"):SetText(spriteName)
