@@ -1582,20 +1582,16 @@ function AuraMasteryConfig:OnTriggerEffectDropdownHidden( wndHandler, wndControl
 end
 
 function AuraMasteryConfig:OnAddTriggerEffect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
-	Print(1)
 	self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsDropdown"):Show(false)
 	local triggerEffectsList = self.configForm:FindChild("TriggerEffects"):FindChild("TriggerEffectsList")
 	triggerEffectsList:Enable(true)
-	Print(2)
 	GeminiPackages:Require("AuraMastery:TriggerEffect", function(TriggerEffect)
-		Print(3)
 		local selectedTrigger = self.configForm:FindChild("TriggerWindow"):GetData()
 		if selectedTrigger ~= nil then	
 			local triggerEffect = TriggerEffect.new(selectedTrigger, wndHandler:GetText())
 			table.insert(selectedTrigger.TriggerEffects, triggerEffect)			
 			self:AddTriggerEffect(triggerEffect)
 		end
-		Print(4)
 	end)
 end
 
