@@ -26,6 +26,7 @@ end
 
 function AuraMasteryConfig:Show()
 	self.configForm:FindChild("ShareConfirmDialog"):Show(false)
+	self.timer = ApolloTimer.Create(0.1, true, "OnIconPreview", self)
 	self.configForm:Show(true)
 end
 
@@ -90,6 +91,7 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("RadialOverlay"):FindChild("ProgressBar"):SetProgress(75)
 	
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetMax(100)
+	self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetMax(100)
 
 	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
 
@@ -138,8 +140,7 @@ function AuraMasteryConfig:OnOpenConfig()
 	if self.configForm == nil then
 		Print("Not Loaded")
 	end
-	self.configForm:Show(true)
-
+	self:Show()
 end
 
 -----------------------------------------------------------------------------------------------
@@ -155,6 +156,7 @@ function AuraMasteryConfig:OnOK()
 end
 
 function AuraMasteryConfig:OnCancel()
+	self.timer:Stop()
 	self.configForm:Show(false) -- hide the window
 end
 
@@ -362,16 +364,9 @@ end
 
 function AuraMasteryConfig:OnTabSelected( wndHandler, wndControl, eMouseButton )
 	self:SelectTab(wndHandler:GetName():sub(0, -10))
-
-	if wndHandler:GetText() == "Appearance" then
-		self.timer = ApolloTimer.Create(0.1, true, "OnIconPreview", self)
-	end
 end
 
 function AuraMasteryConfig:OnTabUnselected( wndHandler, wndControl, eMouseButton )	
-	if wndHandler:GetText() == "Appearance" then
-		self.timer:Stop()
-	end
 end
 
 function AuraMasteryConfig:SelectTab(tabName)
@@ -388,11 +383,13 @@ end
 function AuraMasteryConfig:OnIconPreview()
 	self.currentSampleNum = (self.currentSampleNum + 2) % 100
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetProgress(self.currentSampleNum)
+	self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetProgress(self.currentSampleNum)
 end
 
 function AuraMasteryConfig:OnColorUpdate()
 	self.configForm:FindChild("BuffColorSample"):SetBGColor(self.selectedColor)
 	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetBGColor(self.selectedColor)
+	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetBGColor(self.selectedColor)
 	for _, icon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
 		icon:FindChild("SpriteItemIcon"):SetBGColor(self.selectedColor)
 	end
@@ -423,10 +420,12 @@ function AuraMasteryConfig:OnOverlaySelection( wndHandler, wndControl, eMouseBut
 			self.configForm:FindChild("LinearOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 			self.configForm:FindChild("RadialOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
 			self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", false)
+			self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", false)
 		elseif overlaySelection == "Radial" then
 			self.configForm:FindChild("LinearOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
 			self.configForm:FindChild("RadialOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 			self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", true)
+			self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", true)
 		end
 	end    
 end
@@ -435,6 +434,8 @@ function AuraMasteryConfig:OnOverlayColorUpdate()
 	self.configForm:FindChild("OverlayColorSample"):SetBGColor(self.selectedOverlayColor)
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetBGColor(self.selectedOverlayColor)
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetBarColor(self.selectedOverlayColor)
+	self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetBGColor(self.selectedOverlayColor)
+	self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetBarColor(self.selectedOverlayColor)
 end
 
 function AuraMasteryConfig:OnOverlayColorSelect( wndHandler, wndControl, eMouseButton )
@@ -466,7 +467,6 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		if icon.SimpleMode then
 			self:SelectTab("Simple")
 			self.configForm:FindChild("GeneralTabButton"):Show(false)
-			self.configForm:FindChild("TriggersTabButton"):Show(false)
 			self.configForm:FindChild("AppearanceTabButton"):Show(false)
 			self.configForm:FindChild("TextTabButton"):Show(false)
 			self.configForm:FindChild("SimpleTabButton"):Show(true)
@@ -556,7 +556,6 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		else
 			self:SelectTab("General")
 			self.configForm:FindChild("GeneralTabButton"):Show(true)
-			self.configForm:FindChild("TriggersTabButton"):Show(true)
 			self.configForm:FindChild("AppearanceTabButton"):Show(true)
 			self.configForm:FindChild("TextTabButton"):Show(true)
 			self.configForm:FindChild("SimpleTabButton"):Show(false)
@@ -714,6 +713,7 @@ function AuraMasteryConfig:SelectSpriteIcon(spriteIcon)
 	self.selectedSprite:SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 	self.selectedSprite:SetText("")
 	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
+	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
 end
 
 function AuraMasteryConfig:AddIconTextEditor()
@@ -814,7 +814,7 @@ end
 
 function AuraMasteryConfig:AddTriggerDropdown(triggerSelectDropdown, trigger)
 	local numChildren = # triggerSelectDropdown:GetChildren()
-	local triggerDropdownItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.TriggersTab.TriggerSelectDropdown.TriggerItem", triggerSelectDropdown, self)
+	local triggerDropdownItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.GeneralTab.TriggersPane.TriggerSelectDropdown.TriggerItem", triggerSelectDropdown, self)
 	triggerDropdownItem:SetAnchorOffsets(10, 10 + numChildren * 45, -10, 10 + numChildren * 45 + 45)
 	triggerDropdownItem:FindChild("TriggerName"):SetText(trigger.Name)
 	triggerDropdownItem:SetData(trigger)
@@ -844,7 +844,7 @@ function AuraMasteryConfig:OnTriggerSelect( wndHandler, wndControl, eMouseButton
 end
 
 function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
-	local editor = self.configForm:FindChild("TriggerEditor")
+	local editor = self.configForm:FindChild("TriggerWindow")
 
 	if triggerDropdownItem == nil then
 		editor:Show(false)
@@ -854,6 +854,7 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		editor:SetData(trigger)
 		self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
 		editor:FindChild("TriggerName"):SetText(trigger.Name)
+		editor:FindChild("TriggerName"):FindChild("Placeholder"):Show(trigger.Name == "")
 		editor:FindChild("TriggerType"):SetText(trigger.Type)
 		editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
 
@@ -1043,12 +1044,12 @@ function AuraMasteryConfig:PopulateTriggerDetails(triggerType)
 	local detailsEditor = Apollo.LoadForm("AuraMastery.xml", "TriggerDetails." .. triggerType, editor, self)
 	if detailsEditor ~= nil then
 		detailsEditor:SetName("TriggerDetails")
-		detailsEditor:SetAnchorOffsets(0, 150, 0, 150 + detailsEditor:GetHeight())
-		triggerEffects:SetAnchorOffsets(0, 150 + detailsEditor:GetHeight(), 0, 150 + detailsEditor:GetHeight() + triggerEffects:GetHeight())
+		detailsEditor:SetAnchorOffsets(0, 10, 0, 10 + detailsEditor:GetHeight())
+		triggerEffects:SetAnchorOffsets(0, 10 + detailsEditor:GetHeight(), 0, 10 + detailsEditor:GetHeight() + triggerEffects:GetHeight())
 
 		self:InitializeTriggerDetailsWindow(triggerType, self.configForm)
 	else
-		triggerEffects:SetAnchorOffsets(0, 150, 0, 150 + triggerEffects:GetHeight())
+		triggerEffects:SetAnchorOffsets(0, 10, 0, 10 + triggerEffects:GetHeight())
 	end
 end
 
