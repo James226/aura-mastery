@@ -150,7 +150,7 @@ function AuraMasteryConfig:OnOK()
 	local icon = self.auraMastery.Icons[iconId]
 
 	icon:SetIcon(self.configForm)
-	
+	self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 	self:UpdateControls()
 end
 
@@ -462,7 +462,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 		end
 		self.selectedIcon = iconItem
 		self.selectedIcon:SetBGColor(ApolloColor.new(1, 0, 1, 1))
-
+		self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 		if icon.SimpleMode then
 			self:SelectTab("Simple")
 			self.configForm:FindChild("GeneralTabButton"):Show(false)
@@ -1146,6 +1146,7 @@ function AuraMasteryConfig:ToggleResourceEditor(editor, enabled)
 end
 
 function AuraMasteryConfig:OnImportIcon( wndHandler, wndControl, eMouseButton )
+	self.configForm:FindChild("ClipboardExport"):SetText("")
 	self.configForm:FindChild("ClipboardExport"):PasteTextFromClipboard()
 	local iconData = self.configForm:FindChild("ClipboardExport"):GetText()
 

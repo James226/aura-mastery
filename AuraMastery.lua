@@ -115,7 +115,6 @@ function AuraMastery:new(o)
     return o
 end
 
-
 function AuraMastery:Init()
     Apollo.RegisterAddon(self)
 end
@@ -536,3 +535,5 @@ _G["AuraMasteryLibs"]["GetAbilitiesList"] = GetAbilitiesList
 -----------------------------------------------------------------------------------------------
 local AuraMasteryInst = AuraMastery:new()
 AuraMasteryInst:Init()
+
+return AuraMastery
