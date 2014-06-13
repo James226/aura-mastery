@@ -233,6 +233,30 @@ AuraMastery.spriteIcons = {
 	Happymonster = "IconSprites:Icon_Windows_UI_CRB_FieldStudy_Playful"
 }
 
+local blitzSpellIds = {
+	35501,
+	56334,
+	56335,
+	56336,
+	56337,
+	56338,
+	56339,
+	56340,
+	56341
+}
+
+local barrageSpellIds = {
+	51365,
+	56267,
+	56284,
+	56269,
+	56286,
+	56271,
+	56288,
+	56273,
+	56290
+}
+
 local criticalTime = 5
 local deflectTime = 4
 
@@ -581,19 +605,24 @@ function AuraMastery:ProcessCooldowns(abilities)
 	end
 end
 
+function AuraMastery:ProcessPetSpell(spellId)
+	local spell = GameLib.GetSpell(spellId)
+	for _, watcher in pairs(self.buffWatch["Cooldown"][spell:GetName()]) do
+		watcher(spell)
+	end
+end
+
 function AuraMastery:ProcessPetSpells()
 	if TableContainsElements(self.buffWatch["Cooldown"]) then
 		if self.buffWatch["Cooldown"]["[Bot Ability] Blitz"] ~= nil then
-			local blitzSpell = GameLib.GetSpell(35501)
-			for _, watcher in pairs(self.buffWatch["Cooldown"][blitzSpell:GetName()]) do
-				watcher(blitzSpell)
+			for _, spellId in pairs(blitzSpellIds) do
+				self:ProcessPetSpell(spellId)
 			end
 		end
 
 		if self.buffWatch["Cooldown"]["[Bot Ability] Barrage"] ~= nil then
-			local barrageSpell = GameLib.GetSpell(51365)
-			for _, watcher in pairs(self.buffWatch["Cooldown"][barrageSpell:GetName()]) do
-				watcher(barrageSpell)
+			for _, spellId in pairs(barrageSpellIds) do
+				self:ProcessPetSpell(spellId)
 			end
 		end
 	end

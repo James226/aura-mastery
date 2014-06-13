@@ -51,6 +51,16 @@ function IconTrigger:Load(saveData)
 					Value = 0
 				}
 			end
+		elseif self.Type == "Keybind" then
+			if self.TriggerDetails.Key ~= nil then
+				self.TriggerDetails.Input = {
+					Key = self.TriggerDetails.Key,
+					Shift = false,
+					Control = false,
+					Alt = false
+				}
+				self.TriggerDetails.Key = nil
+			end
 		end
 
 		if saveData.TriggerEffects ~= nil then
@@ -243,7 +253,7 @@ function IconTrigger:SetConfig(editor)
 			end
 		elseif self.Type == "Keybind" then
 			self.TriggerDetails = {
-				Key = editor:FindChild("KeybindTracker_Key"):GetText(),
+				Input = editor:FindChild("KeybindTracker_KeySelect"):GetData(),
 				Duration = tonumber(editor:FindChild("KeybindTracker_Duration"):GetText())
 			}
 			editor:FindChild("KeybindTracker_Duration"):SetText(tostring(self.TriggerDetails.Duration))
@@ -288,7 +298,7 @@ function IconTrigger:AddToBuffWatch()
 			self:AddCooldownToBuffWatch("Target")
 		end
 	elseif self.Type == "Keybind" then
-		self:AddCooldownToBuffWatch(string.byte(self.TriggerDetails.Key, 1))
+		self:AddCooldownToBuffWatch(self.TriggerDetails.Input.Key)
 	elseif self.Type == "Limited Action Set Checker" then
 		self.currentSpell = self.TriggerDetails.AbilityName == "" and self.Icon.iconName or self.TriggerDetails.AbilityName
 		self:AddCooldownToBuffWatch(self.currentSpell)
@@ -340,7 +350,7 @@ function IconTrigger:RemoveFromBuffWatch()
 			self:RemoveCooldownFromBuffWatch("Target")
 		end
 	elseif self.Type == "Keybind" then
-		self:RemoveCooldownFromBuffWatch(string.byte(self.TriggerDetails.Key, 1))
+		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.Input.Key)
 	end
 end
 
@@ -547,6 +557,11 @@ function IconTrigger:ProcessMOO(result)
 end
 
 function IconTrigger:ProcessKeybind(iKey)
+	if (self.TriggerDetails.Input.Shift and not Apollo.IsShiftKeyDown()) or
+		(self.TriggerDetails.Input.Control and not Apollo.IsControlKeyDown()) or
+		(self.TriggerDetails.Input.Alt and not Apollo.IsAltKeyDown()) then
+		return
+	end
 	self.lastKeypress = Apollo.GetTickCount()
 end
 

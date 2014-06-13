@@ -11,6 +11,61 @@ setmetatable(AuraMasteryConfig, {
   end,
 })
 
+local keys = {}
+keys[45] = "INS"
+keys[46] = "DEL"
+keys[36] = "HOME"
+keys[35] = "END"
+keys[33] = "PGUP"
+keys[34] = "PGDN"
+keys[112] = "F1"
+keys[113] = "F2"
+keys[114] = "F3"
+keys[115] = "F4"
+keys[116] = "F5"
+keys[117] = "F6"
+keys[118] = "F7"
+keys[119] = "F8"
+keys[120] = "F9"
+keys[121] = "F10"
+keys[122] = "F11"
+keys[123] = "F12"
+keys[96] = "N0"
+keys[97] = "N1"
+keys[98] = "N2"
+keys[99] = "N3"
+keys[100] = "N4"
+keys[101] = "N5"
+keys[102] = "N6"
+keys[103] = "N7"
+keys[104] = "N8"
+keys[105] = "N9"
+keys[110] = "N."
+keys[111] = "N/"
+keys[191] = "/"
+keys[106] = "N*"
+keys[109] = "N-"
+keys[107] = "N+"
+keys[13] = "ENTER"
+keys[223] = "`"
+keys[219] = "["
+keys[221] = "]"
+keys[186] = ";"
+keys[192] = "'"
+keys[222] = "#"
+keys[188] = ","
+keys[190] = "."
+keys[220] = "\\"
+keys[189] = "-"
+keys[187] = "+"
+keys[145] = "SCLK"
+keys[19] = "PAUSE"
+keys[37] = "LEFT"
+keys[38] = "UP"
+keys[39] = "RIGHT"
+keys[40] = "DOWN"
+keys[27] = "ESC"
+
 function AuraMasteryConfig.new(auraMastery, xmlDoc)
 	local self = setmetatable({}, AuraMasteryConfig)
 	self.auraMastery = auraMastery
@@ -931,7 +986,7 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		elseif trigger.Type == "Scriptable" then
 			editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
 		elseif trigger.Type == "Keybind" then
-			editor:FindChild("KeybindTracker_Key"):SetText(trigger.TriggerDetails.Key)
+			self:SetKeybindInput(trigger.TriggerDetails.Input)
 			editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
 		elseif trigger.Type == "Limited Action Set Checker" then
 			editor:FindChild("AbilityName"):SetText(trigger.TriggerDetails.AbilityName)
@@ -1867,6 +1922,58 @@ function AuraMasteryConfig:OnAdvancedMode( wndHandler, wndControl, eMouseButton 
 	self:SelectIcon(self.selectedIcon)
 end
 
+function AuraMasteryConfig:OnKeybindKeySelect( wndHandler, wndControl, eMouseButton )
+	Apollo.RegisterEventHandler("SystemKeyDown", "OnKeybindKeySet", self)
+	wndControl:SetFocus()
+	wndControl:ClearFocus()
+end
+
+function AuraMasteryConfig:OnKeybindKeySet(iKey)
+	if iKey ~= 16 and iKey ~= 17 then
+		Apollo.RemoveEventHandler("SystemKeyDown", self)
+		local keyText = ""
+		local input = {
+			Key = iKey,
+			Shift = false,
+			Control = false,
+			Alt = false
+		}
+		if Apollo.IsShiftKeyDown() then
+			input.Shift = true
+		end
+		if Apollo.IsControlKeyDown() then
+			input.Control = true
+		end
+		if Apollo.IsAltKeyDown() then
+			input.Alt = true
+		end
+		self:SetKeybindInput(input)
+	end
+end
+
+function AuraMasteryConfig:SetKeybindInput(input)
+	local keyText = ""
+	if input.Shift then
+		keyText = keyText .. "Shift+"
+	end
+	if input.Control then
+		keyText = keyText .. "CTRL+"
+	end
+	if input.Alt then
+		keyText = keyText .. "Alt+"
+	end
+
+	if (input.Key >= 48 and input.Key <= 57) or (input.Key >= 65 and input.Key <= 90) then
+		keyText = keyText .. string.char(input.Key)
+	elseif keys[input.Key] ~= nil then
+		keyText = keyText .. tostring(keys[input.Key])
+	else
+		keyText = keyText .. tostring(input.Key)
+	end
+	local keySelect = self.configForm:FindChild("KeybindTracker_KeySelect")
+	keySelect:SetText(keyText)
+	keySelect:SetData(input)
+end
 
 local GeminiPackages = _G["GeminiPackages"]
 GeminiPackages:NewPackage(AuraMasteryConfig, "AuraMastery:Config", 1)
