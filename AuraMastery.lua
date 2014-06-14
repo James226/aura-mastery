@@ -317,7 +317,8 @@ function AuraMastery:new(o)
 	self.lastCritical = 0
 	self.lastDeflect = 0
 	self.Icons = {}
-	
+	self.BotSpellIds = {}
+
     return o
 end
 
@@ -352,6 +353,7 @@ function AuraMastery:OnLoadIcons(tData)
 		local newIcon = self:AddIcon()
 		newIcon:Load(icon)
 	end
+
 	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 end
 
@@ -418,10 +420,38 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "UpdateAbilityBook", self)
 	self:OnAbilityBookChange()
+	self:LoadBotSpellIds()
 
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
 	self.shareChannel = ICCommLib.JoinChannel("AuraMastery", "OnSharingMessageReceived", self)
+end
+
+function AuraMastery:LoadBotSpellIds()
+	-- Smokeskin: Find all the botspells and match them to icons (there are spells with the same name but different icon and they cause bugs)
+	-- this array of spell names and their icon is the only place actual values need to be entered
+	local BotSpellIcons = {
+		["[Bot Ability] Barrage"] =  "Icon_SkillEngineer_Pet_Ability_Barrage",
+		["[Bot Ability] Blitz"] =  "Icon_SkillEngineer_Pet_Ability_Blitz",
+		["[Bot Ability] Shield Boost"] =  "ClientSprites:Icon_SkillEngineer_Pet_Ability_Shield_Restore",
+		["[Bot Ability] Strobe"] =  "Icon_SkillEngineer_Pet_Ability_Strobe",
+	}
+
+	for tName, _ in pairs(BotSpellIcons) do
+		self.BotSpellIds[tName] = {}
+	end
+
+	for i = 1, 99999, 1 do
+		tSpell = GameLib.GetSpell(i)
+		tName = tSpell:GetName()
+		tIcon =  tSpell:GetIcon()
+
+		for bName, bIcon in pairs(BotSpellIcons) do
+			if bName == tName and bIcon == tIcon then
+				table.insert(self.BotSpellIds[bName], i)
+			end
+		end
+	end
 end
 
 function AuraMastery:OnDocLoaded()
@@ -614,15 +644,15 @@ end
 
 function AuraMastery:ProcessPetSpells()
 	if TableContainsElements(self.buffWatch["Cooldown"]) then
-		if self.buffWatch["Cooldown"]["[Bot Ability] Blitz"] ~= nil then
-			for _, spellId in pairs(blitzSpellIds) do
-				self:ProcessPetSpell(spellId)
-			end
-		end
-
-		if self.buffWatch["Cooldown"]["[Bot Ability] Barrage"] ~= nil then
-			for _, spellId in pairs(barrageSpellIds) do
-				self:ProcessPetSpell(spellId)
+		-- Smokeskin: Check if a botspell is on the buffwatch, and if so add all its IDs to watcher
+		for bName, Ids in pairs(self.BotSpellIds) do
+			if self.buffWatch["Cooldown"][bName] ~= nil then
+				for ind, BotSpellId in pairs(Ids) do
+					local BotSpell = GameLib.GetSpell(BotSpellId)
+					for _, watcher in pairs(self.buffWatch["Cooldown"][bName]) do
+						watcher(BotSpell)
+					end
+				end
 			end
 		end
 	end
