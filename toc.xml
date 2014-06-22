@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="Caedo" APIVersion="8" Name="AuraMastery" Description="Aura Mastery is a Buff / Debuff / Cooldown tracker useful for tracking those important abilities!" Version="1.6.0">
+<Addon Author="Caedo" APIVersion="8" Name="AuraMastery" Description="Aura Mastery is a Buff / Debuff / Cooldown tracker useful for tracking those important abilities!" Version="1.6.2">
     <Script Name="Libs/GeminiPackages.lua"/>
     <Script Name="AuraMasteryConfig.lua"/>
     <Script Name="Icon.lua"/>

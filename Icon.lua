@@ -368,6 +368,7 @@ function Icon:PostUpdate()
 	self.Stacks = 0
 	self.Charges = 0
 	self.MaxCharges = 0
+	self.LastUnsetSprite = nil
 
 	for i = #self.Triggers, 1, -1 do
 		local trigger = self.Triggers[i]
@@ -426,6 +427,10 @@ function Icon:PostUpdate()
 			if trigger.Sprite ~= nil then
 				self.Sprite = trigger.Sprite
 			end
+		else
+			if trigger.Sprite ~= nil then
+				self.LastUnsetSprite = trigger.Sprite
+			end
 		end
 	end
 
@@ -477,6 +482,8 @@ function Icon:GetSprite()
 		return self.iconSprite
 	elseif self.Sprite ~= nil and self.Sprite ~= "" then
 		return self.Sprite
+	elseif self.LastUnsetSprite ~= nil and self.LastUnsetSprite ~= "" then
+		return self.LastUnsetSprite
 	else
 		return self.defaultIcon
 	end

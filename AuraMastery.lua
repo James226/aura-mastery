@@ -233,30 +233,6 @@ AuraMastery.spriteIcons = {
 	Happymonster = "IconSprites:Icon_Windows_UI_CRB_FieldStudy_Playful"
 }
 
-local blitzSpellIds = {
-	35501,
-	56334,
-	56335,
-	56336,
-	56337,
-	56338,
-	56339,
-	56340,
-	56341
-}
-
-local barrageSpellIds = {
-	51365,
-	56267,
-	56284,
-	56269,
-	56286,
-	56271,
-	56288,
-	56273,
-	56290
-}
-
 local criticalTime = 5
 local deflectTime = 4
 
@@ -307,7 +283,8 @@ function AuraMastery:new(o)
 			Target = {}
 		},
 		Keybind = {},
-		LimitedActionSetChecker = {}
+		LimitedActionSetChecker = {},
+		Gadget = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
@@ -435,6 +412,25 @@ function AuraMastery:LoadBotSpellIds()
 		["[Bot Ability] Blitz"] =  "Icon_SkillEngineer_Pet_Ability_Blitz",
 		["[Bot Ability] Shield Boost"] =  "ClientSprites:Icon_SkillEngineer_Pet_Ability_Shield_Restore",
 		["[Bot Ability] Strobe"] =  "Icon_SkillEngineer_Pet_Ability_Strobe",
+
+			--Assault
+		["Wild Barrage"] = "Icon_SkillSpellslinger_wild_barrage",
+		["Charged Shot"] = "Icon_SkillSpellslinger_charged_shot",
+		["Chill"] = "Icon_SkillSpellslinger_cone_of_frost",
+		["Rapid Fire"] = "Icon_SkillSpellslinger_rapid_fire",
+		["Arcane Missiles"] = "Icon_SkillSpellslinger_magic_missile",
+		["True Shot"] = "Icon_SkillSpellslinger_Trueshot",
+		["Flame Burst"] = "Icon_SkillSpellslinger_flame_burst",
+			--Support
+		["Runes of Protection"] = "Icon_SkillSpellslinger_distortion",
+		["Vitality Burst"] = "Icon_SkillSpellslinger_vitality_burst",
+		["Astral Infusion"] = "Icon_SkillSpellslinger_arcane_infusion",
+		["Dual Fire"] = "Icon_SkillSpellslinger_dual_fire",
+		["Voidspring"] = "Icon_SkillSpellslinger_call_the_void",
+		["Regenerative Pulse"] = "Icon_SkillSpellslinger_regenerative_pulse",
+		["Sustain"] = "Icon_SkillSpellslinger_sustain",
+		["Healing Salve"] = "Icon_SkillSpellslinger_healing_salve",
+		["Healing Torrent"] = "Icon_SkillSpellslinger_healing_torrent",
 	}
 
 	for tName, _ in pairs(BotSpellIcons) do
@@ -529,6 +525,7 @@ function AuraMastery:OnUpdate()
 	self:ProcessOnCritical()
 	self:ProcessOnDeflect()
 	self:ProcessResources()
+	self:ProcessGadget()
 	
 	self:ProcessInnate()
 	
@@ -630,6 +627,17 @@ function AuraMastery:ProcessCooldowns(abilities)
 						end
 					end
 				end
+			end
+		end
+	end
+end
+
+function AuraMastery:ProcessGadget()
+	if TableContainsElements(self.buffWatch["Gadget"]) then
+		local gadgetSpell = GameLib.GetGadgetAbility()
+		if gadgetSpell ~= nil then
+			for _, watcher in pairs(self.buffWatch["Gadget"]) do
+				watcher(gadgetSpell)
 			end
 		end
 	end

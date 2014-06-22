@@ -1373,6 +1373,7 @@ function AuraMasteryConfig:OpenColorPicker(color, callback)
 	self.colorPicker:FindChild("Blue"):SetText(string.format("%.f", math.max(0, color.b * 255)))
 	self.colorPicker:FindChild("AlphaText"):SetText(string.format("%.f", math.max(0, color.a * 100)))
 	self.colorPicker:FindChild("AlphaSlider"):SetValue(string.format("%.f", math.max(0, color.a * 100)))
+
 	self:UnpackColor()
 end
 
@@ -1511,7 +1512,7 @@ function AuraMasteryConfig:UpdateColorPicker()
 	self:UpdateColor()
 end
 
-function AuraMasteryConfig:	UnpackColor()
+function AuraMasteryConfig:UnpackColor()
 	local r = math.min(255, math.max(0, tonumber(self.colorPicker:FindChild("Red"):GetText()) or 0))
 	local g = math.min(255, math.max(0, tonumber(self.colorPicker:FindChild("Green"):GetText()) or 0))
 	local b = math.min(255, math.max(0, tonumber(self.colorPicker:FindChild("Blue"):GetText()) or 0))

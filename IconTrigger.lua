@@ -254,9 +254,17 @@ function IconTrigger:SetConfig(editor)
 		elseif self.Type == "Keybind" then
 			self.TriggerDetails = {
 				Input = editor:FindChild("KeybindTracker_KeySelect"):GetData(),
-				Duration = tonumber(editor:FindChild("KeybindTracker_Duration"):GetText())
+				Duration = tonumber(editor:FindChild("KeybindTracker_Duration"):GetText()) or 1
 			}
 			editor:FindChild("KeybindTracker_Duration"):SetText(tostring(self.TriggerDetails.Duration))
+		elseif self.Type == "Gadget" then
+			self.TriggerDetails = {
+				Charges = {
+					Enabled = false,
+					Operator = "==",
+					Value = 0
+				}
+			}
 		end
 	end
 	self:AddToBuffWatch()
@@ -288,7 +296,7 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.buffName)
 		end
-	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
+	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:AddBasicToBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
 		if self.TriggerDetails.Target.Player then
@@ -340,7 +348,7 @@ function IconTrigger:RemoveFromBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:RemoveBuffFromBuffWatch("Target", self.buffName)
 		end
-	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" then
+	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:RemoveBasicFromBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
 		if self.TriggerDetails.Target.Player then
@@ -458,11 +466,11 @@ end
 function IconTrigger:ProcessSpell(spell)
 	local cdRemaining, cdTotal, chargesRemaining, chargesMax = self:GetSpellCooldown(spell)
 	self.Charges = chargesRemaining
+	self.Sprite = spell:GetIcon()
 	if not (self.Time and self.Time > cdRemaining) then
 		self.Time = cdRemaining
 		self.MaxDuration = math.max(cdRemaining, cdTotal)
 		self.MaxCharges = chargesMax
-		self.Sprite = spell:GetIcon()
 		if ((not self.TriggerDetails.Charges.Enabled) and (cdRemaining == 0 or chargesRemaining > 0))
 			or (self.TriggerDetails.Charges.Enabled and self:IsOperatorSatisfied(chargesRemaining, self.TriggerDetails.Charges.Operator, self.TriggerDetails.Charges.Value)) then
 			self.isSet = false
@@ -492,6 +500,8 @@ function IconTrigger:ProcessEvent(result)
 		self.isSet = self.TriggerDetails.ActionSets[result]
 	elseif self.Type == "Resources" then
 		return self:ProcessResources(result)
+	elseif self.Type == "Gadget" then
+		self:ProcessSpell(result)
 	else
 		self.isSet = true
 	end
