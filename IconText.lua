@@ -70,6 +70,19 @@ function IconText:GetTagText(tag)
 		return self.icon.MaxCharges > 0 and self.icon.Charges > 0 and tostring(self.icon.Charges) or ""
 	elseif tag == 'stacks' then
 		return self.icon.Stacks > 1 and tostring(self.icon.Stacks) or ""
+	elseif tag:sub(1, 9) == 'resource.' then
+		if self.icon.Resources ~= nil then
+			local resourceType = tag:sub(10)
+			if resourceType == 'primary' then
+				return tostring(self.icon.Resources.Resource)
+			elseif resourceType == 'focus' then
+				return tostring(self.icon.Resources.Mana)
+			end
+		else
+			return 'Add Resource Trigger'
+		end
+	else
+		Print(tag:sub(1, 9))
 	end
 	return '{' .. tag .. '}'
 end

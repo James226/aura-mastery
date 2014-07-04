@@ -516,6 +516,8 @@ function IconTrigger:ProcessResources(result)
 	if self.TriggerDetails["Resource"] ~= nil then
 		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Resource, result.Resource, result.MaxResource)
 	end
+
+	self.Resources = result
 end
 
 function IconTrigger:ProcessHealth(result)

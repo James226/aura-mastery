@@ -419,6 +419,10 @@ function Icon:PostUpdate()
 			if trigger.Charges ~= nil then
 				self.Charges = trigger.Charges
 			end
+			
+			if trigger.Resources ~= nil then
+				self.Resources = trigger.Resources
+			end
 
 			if trigger.MaxCharges ~= nil then
 				self.MaxCharges = trigger.MaxCharges
