@@ -440,7 +440,8 @@ function Icon:PostUpdate()
 
 	local showIcon = self:InCombatCheck() and (showIcon or self.showWhen == "Always")
 
-	if showIcon then
+	local isMoveable = self.icon:IsStyleOn("Moveable")
+	if showIcon or isMoveable then
 		self.icon:Show(true)
 		self:SetSprite(self:GetSprite())
 		self.icon:SetBGColor(self.iconColor)
@@ -520,10 +521,12 @@ end
 
 function Icon:Unlock()
 	self.icon:SetStyle("Moveable", true)
+	self.icon:FindChild("UnlockedIcon"):Show(true)
 end
 
 function Icon:Lock()
 	self.icon:SetStyle("Moveable", false)
+	self.icon:FindChild("UnlockedIcon"):Show(false)
 end
 
 function Icon:SetScale(scale)
