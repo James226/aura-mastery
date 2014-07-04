@@ -70,6 +70,8 @@ function IconText:GetTagText(tag)
 		return self.icon.MaxCharges > 0 and self.icon.Charges > 0 and tostring(self.icon.Charges) or ""
 	elseif tag == 'stacks' then
 		return self.icon.Stacks > 1 and tostring(self.icon.Stacks) or ""
+	elseif tag == "resources" then
+		return self.icon.Resources > 0 and tostring(self.icon.Resources) or ""
 	end
 	return '{' .. tag .. '}'
 end

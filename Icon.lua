@@ -419,6 +419,10 @@ function Icon:PostUpdate()
 			if trigger.Charges ~= nil then
 				self.Charges = trigger.Charges
 			end
+			
+			if trigger.Resources ~= nil then
+				self.Resources = trigger.Resources
+			end
 
 			if trigger.MaxCharges ~= nil then
 				self.MaxCharges = trigger.MaxCharges
@@ -434,7 +438,7 @@ function Icon:PostUpdate()
 		end
 	end
 
-	local showIcon = self:InCombatCheck() and (showIcon or self.showWhen == "Always")
+	showIcon = self.icon:IsStyleOn("Moveable") or (self:InCombatCheck() and (showIcon or self.showWhen == "Always"))
 
 	if showIcon then
 		self.icon:Show(true)
