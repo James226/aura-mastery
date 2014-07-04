@@ -438,7 +438,7 @@ function Icon:PostUpdate()
 		end
 	end
 
-	local showIcon = self:InCombatCheck() and (showIcon or self.showWhen == "Always")
+	showIcon = self.icon:IsStyleOn("Moveable") or (self:InCombatCheck() and (showIcon or self.showWhen == "Always"))
 
 	if showIcon then
 		self.icon:Show(true)
