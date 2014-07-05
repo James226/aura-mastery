@@ -165,6 +165,12 @@ function Icon:Load(saveData)
 
 	end
 	
+	if next(self.iconText) ~= nil then
+		self.buffWatch["Resources"][tostring(self)] = function(result) 
+			self.Resources = { Resource = result.Resource, Mana = result.Mana }
+		end
+	end
+	
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 end
 
@@ -212,6 +218,7 @@ function Icon:ChangeActionSet(newActionSet)
 end
 
 function Icon:GetSaveData()
+
 	local saveData = { }
 	saveData.iconName = self.iconName
 	saveData.iconSound = self.iconSound 
@@ -342,6 +349,14 @@ function Icon:SetIcon(configWnd)
 			end
 		end
 	end
+	
+	if next(self.iconText) ~= nil then
+		self.buffWatch["Resources"][tostring(self)] = function(result) 
+			self.Resources = { Resource = result.Resource, Mana = result.Mana }
+		end
+	else
+		self.buffWatch["Resources"][tostring(self)] = nil
+	end
 
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 	self:UpdateDefaultIcon()
@@ -418,10 +433,6 @@ function Icon:PostUpdate()
 
 			if trigger.Charges ~= nil then
 				self.Charges = trigger.Charges
-			end
-			
-			if trigger.Resources ~= nil then
-				self.Resources = trigger.Resources
 			end
 
 			if trigger.MaxCharges ~= nil then
