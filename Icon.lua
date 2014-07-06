@@ -442,11 +442,11 @@ function Icon:PostUpdate()
 
 	local isMoveable = self.icon:IsStyleOn("Moveable")
 	if showIcon or isMoveable then
-		self.icon:Show(true)
+		self.icon:Show(true, true)
 		self:SetSprite(self:GetSprite())
 		self.icon:SetBGColor(self.iconColor)
 	else
-		self.icon:Show(false)
+		self.icon:Show(false, true)
 	end
 
 	if playSound and not self.soundPlayed and self.iconSound ~= -1 then
