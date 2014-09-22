@@ -68,6 +68,7 @@ function IconTrigger:Load(saveData)
 		elseif self.Type == "Cast" then
 			if not self.TriggerDetails.CastName then
 				self.TriggerDetails.CastName = ""
+			end
 		elseif self.Type == "Keybind" then
 			if self.TriggerDetails.Key ~= nil then
 				self.TriggerDetails.Input = {

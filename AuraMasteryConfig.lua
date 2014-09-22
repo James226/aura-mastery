@@ -952,6 +952,9 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 			editor:FindChild("Charges"):FindChild("ChargesValue"):SetTextRaw(trigger.TriggerDetails.Charges.Value)
 			editor:FindChild("TimeRemainingEnabled"):SetCheck(trigger.TriggerDetails.TimeRemaining.Enabled)
 			editor:FindChild("TimeRemainingValue"):SetText(trigger.TriggerDetails.TimeRemaining.Duration or 0)
+		elseif trigger.Type == "Cast" then
+			editor:FindChild("CastName"):SetText(trigger.TriggerDetails.CastName)
+			editor:FindChild("CastName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.CastName == "")
 		elseif trigger.Type == "Buff" then
 			editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
 			editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")

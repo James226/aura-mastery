@@ -271,7 +271,7 @@ function AuraMastery:new(o)
 		},
 		Cast = {
 			Target = {}
-		}
+		},
 		Cooldown = {},
 		OnCritical = {},
 		OnDeflect = {},
@@ -500,6 +500,7 @@ end
 function AuraMastery:OnUpdate()
 	local unitPlayer = GameLib.GetPlayerUnit()	
 	local targetPlayer = GameLib.GetTargetUnit()
+	local focusPlayer = unitPlayer:GetAlternateTarget()
 	local groupMemberCount = GroupLib.GetMemberCount()
 
 	for _, icon in pairs(self.Icons) do
@@ -521,6 +522,10 @@ function AuraMastery:OnUpdate()
 		self:ProcessCast(targetPlayer,"Target")
 	end
 	
+	if focusPlayer ~= nil then
+		self:ProcessCast(focusPlayer,"Target")
+	end
+
 	for index=1,groupMemberCount do
 		self:ProcessCast(GroupLib.GetGroupMember(index),"Target")
 	end
@@ -606,8 +611,8 @@ function AuraMastery:ProcessHealth(unit, target)
 end
 
 function AuraMastery:ProcessCast(unit, target)
-	local castName = unit.GetCastName()
-	if unit.IsCasting() and self.buffWatch["Cast"][target][castName] ~= nil and TableContainsElements(self.buffWatch["Cast"][target]) then
+	local castName = unit:GetCastName()
+	if unit:IsCasting() and self.buffWatch["Cast"][target][castName] ~= nil and TableContainsElements(self.buffWatch["Cast"][target]) then
 		for _, watcher in pairs(self.buffWatch["Cast"][target][castName]) do
 			watcher(castName)
 		end
