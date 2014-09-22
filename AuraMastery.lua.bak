@@ -269,9 +269,6 @@ function AuraMastery:new(o)
 			Player = {},
 			Target = {}
 		},
-		Cast = {
-			Target = {}
-		}
 		Cooldown = {},
 		OnCritical = {},
 		OnDeflect = {},
@@ -500,7 +497,6 @@ end
 function AuraMastery:OnUpdate()
 	local unitPlayer = GameLib.GetPlayerUnit()	
 	local targetPlayer = GameLib.GetTargetUnit()
-	local groupMemberCount = GroupLib.GetMemberCount()
 
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
@@ -518,13 +514,8 @@ function AuraMastery:OnUpdate()
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 		self:ProcessHealth(targetPlayer, "Target")
 		self:ProcessMOO(targetPlayer, "Target")
-		self:ProcessCast(targetPlayer,"Target")
 	end
 	
-	for index=1,groupMemberCount do
-		self:ProcessCast(GroupLib.GetGroupMember(index),"Target")
-	end
-
 	local abilities = GetAbilitiesList()
 	if abilities then
 		self:ProcessCooldowns(abilities)
@@ -601,15 +592,6 @@ function AuraMastery:ProcessHealth(unit, target)
 		local result = { Health = unit:GetHealth(), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
 		for _, watcher in pairs(self.buffWatch["Health"][target]) do
 			watcher(result)
-		end
-	end
-end
-
-function AuraMastery:ProcessCast(unit, target)
-	local castName = unit.GetCastName()
-	if unit.IsCasting() and self.buffWatch["Cast"][target][castName] ~= nil and TableContainsElements(self.buffWatch["Cast"][target]) then
-		for _, watcher in pairs(self.buffWatch["Cast"][target][castName]) do
-			watcher(castName)
 		end
 	end
 end

@@ -566,14 +566,6 @@ function IconTrigger:ProcessBuff(buff)
 	end
 end
 
-function IconTrigger:ProcessCast(castName)
-	if self.TriggerDetails.CastName ~= nil and self.TriggerDetails.CastName == castName then
-		self.isSet = true
-	else
-		self.isSet = false
-	end
-end
-
 function IconTrigger:ProcessEvent(result)
 	if self.Type == "Action Set" then
 		self.isSet = self.TriggerDetails.ActionSets[result]
