@@ -269,6 +269,9 @@ function AuraMastery:new(o)
 			Player = {},
 			Target = {}
 		},
+		Cast = {
+			Target = {}
+		}
 		Cooldown = {},
 		OnCritical = {},
 		OnDeflect = {},
@@ -514,6 +517,7 @@ function AuraMastery:OnUpdate()
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 		self:ProcessHealth(targetPlayer, "Target")
 		self:ProcessMOO(targetPlayer, "Target")
+		self:ProcessCast(targetPlayer,"Target")
 	end
 	
 	local abilities = GetAbilitiesList()
@@ -592,6 +596,15 @@ function AuraMastery:ProcessHealth(unit, target)
 		local result = { Health = unit:GetHealth(), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
 		for _, watcher in pairs(self.buffWatch["Health"][target]) do
 			watcher(result)
+		end
+	end
+end
+
+function AuraMastery:ProcessCast(unit, target)
+	if unit.IsCasting() and self.buffWatch["Cast"][target] ~= nil and TableContainsElements(self.buffWatch["Cast"][target]) then
+		local castName = unit.GetCastName()
+		for _, watcher in pairs(self.buffWatch["Cast"][target]) do
+			watcher(castName)
 		end
 	end
 end

@@ -185,6 +185,14 @@ function IconTrigger:SetConfig(editor)
 					Value = tonumber(editor:FindChild("Stacks"):FindChild("StacksValue"):GetText())
 				}
 			}
+		elseif self.Type == "Cast" then
+			self.TriggerDetails = {
+				CastName = editor:FindChild("CastName"):GetText()
+				-- Target = {
+				-- 	Player = editor:FindChild("TargetPlayer"):IsChecked(),
+				-- 	Target = editor:FindChild("TargetTarget"):IsChecked()
+				-- }
+			}
 		elseif self.Type == "Resources" then
 			self.TriggerDetails = { }
 			if editor:FindChild("ManaEnabled"):IsChecked() then
@@ -296,6 +304,9 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.buffName)
 		end
+	elseif self.Type == "Cast" then
+		self.castName = self.TriggerDetails.CastName
+		self:AddCastToBuffWatch("Target",self.TriggerDetails.CastName)
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:AddBasicToBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
@@ -337,6 +348,14 @@ function IconTrigger:AddBuffToBuffWatch(target, option)
 	self.buffWatch[triggerType][target][option][tostring(self)] = function(spell) self:ProcessBuff(spell) end
 end
 
+function IconTrigger:AddCastToBuffWatch(target, option)
+	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType][target][option] == nil then
+		self.buffWatch[triggerType][target][option] = {}
+	end
+	self.buffWatch[triggerType][target][option][tostring(self)] = function(spell) self:ProcessCast(spell) end
+end
+
 function IconTrigger:RemoveFromBuffWatch()
 	if self.Type == "Cooldown" or self.Type == "Limited Action Set Checker" then
 		self:RemoveCooldownFromBuffWatch(self.currentSpell)
@@ -348,6 +367,8 @@ function IconTrigger:RemoveFromBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:RemoveBuffFromBuffWatch("Target", self.buffName)
 		end
+	elseif self.Type == "Cast" then
+		self:RemoveBuffFromBuffWatch("Target",self.castName)
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:RemoveBasicFromBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
@@ -492,6 +513,14 @@ function IconTrigger:ProcessBuff(buff)
 		end
 		self.Stacks = buff.nCount
 		self.Sprite = buff.splEffect:GetIcon()
+	end
+end
+
+function IconTrigger:ProcessCast(castName)
+	if self.TriggerDetails.CastName ~= nil and self.TriggerDetails.CastName == castName then
+		self.isSet = true
+	else
+		self.isSet = false
 	end
 end
 

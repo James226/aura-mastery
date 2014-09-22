@@ -968,6 +968,9 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 			editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
 			editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
 			editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
+		elseif trigger.Type == "Cast" then
+			editor:FindChild("CastName"):SetText(trigger.TriggerDetails.CastName)
+			editor:FindChild("CastName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.CastName == "")
 		elseif trigger.Type == "Resources" then
 			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
 			self:PopulateValueBasedEditor(trigger, editor, "Mana")
