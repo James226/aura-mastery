@@ -43,6 +43,9 @@ function IconTrigger:Load(saveData)
 					Value = 0
 				}
 			end
+		elseif self.Type == "Cast" then
+			if not self.TriggerDetails.CastName then
+				self.TriggerDetails.CastName = ""
 		elseif self.Type == "Cooldown" then
 			if not self.TriggerDetails.Charges then
 				self.TriggerDetails.Charges = {
@@ -130,6 +133,10 @@ function IconTrigger:SetConfig(editor)
 					Operator = "==",
 					Value = 0
 				}
+			}
+		elseif self.Type == "Debuff" then
+			self.TriggerDetails = {
+				CastName = ""
 			}
 		end
 	else
@@ -353,7 +360,7 @@ function IconTrigger:AddCastToBuffWatch(target, option)
 	if self.buffWatch[triggerType][target][option] == nil then
 		self.buffWatch[triggerType][target][option] = {}
 	end
-	self.buffWatch[triggerType][target][option][tostring(self)] = function(spell) self:ProcessCast(spell) end
+	self.buffWatch[triggerType][target][option][tostring(self)] = function(cast) self:ProcessCast(cast) end
 end
 
 function IconTrigger:RemoveFromBuffWatch()
