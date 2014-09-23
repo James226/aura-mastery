@@ -528,7 +528,7 @@ function AuraMastery:OnUpdate()
 	end
 
 	for index=1,groupMemberCount do
-		if unitTest ~= nil then
+		if GroupLib.GetUnitForGroupMember(index) ~= nil then
 			self:ProcessCast(GroupLib.GetUnitForGroupMember(index),"Target")
 		end
 	end
