@@ -500,8 +500,8 @@ end
 function AuraMastery:OnUpdate()
 	local unitPlayer = GameLib.GetPlayerUnit()	
 	local targetPlayer = GameLib.GetTargetUnit()
-	local focusPlayer = unitPlayer:GetAlternateTarget()
 	local groupMemberCount = GroupLib.GetMemberCount()
+	local focusPlayer = nil
 
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
@@ -510,6 +510,7 @@ function AuraMastery:OnUpdate()
 	end
 	
 	if unitPlayer ~= nil then
+		focusPlayer = unitPlayer:GetAlternateTarget()
 		self:ProcessBuffs(unitPlayer:GetBuffs(), "Player")
 		self:ProcessHealth(unitPlayer, "Player")
 		self:ProcessMOO(unitPlayer, "Player")
@@ -527,7 +528,9 @@ function AuraMastery:OnUpdate()
 	end
 
 	for index=1,groupMemberCount do
-		self:ProcessCast(GroupLib.GetGroupMember(index),"Target")
+		if unitTest ~= nil then
+			self:ProcessCast(GroupLib.GetUnitForGroupMember(index),"Target")
+		end
 	end
 
 	local abilities = GetAbilitiesList()
