@@ -89,7 +89,6 @@ function AuraMasteryConfig:Init()
 	for _, tab in pairs(self.configForm:FindChild("BuffEditor"):GetChildren()) do
 		tab:Show(false)
 	end
-	--self.shareChannel = ICCommLib.JoinChannel("AuraMastery", "OnShareMsg", nil)
 	self:SelectTab("General")
 		
 	self.configForm:FindChild("BuffShowWhen"):AddItem("Always", "", 1)

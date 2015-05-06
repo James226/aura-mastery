@@ -2,13 +2,14 @@
 -- Client Lua Script for AuraMastery
 -- Copyright (c) NCsoft. All rights reserved
 -----------------------------------------------------------------------------------------------
- 
+
 require "Window"
+require "ICComm"
 
 -----------------------------------------------------------------------------------------------
 -- AuraMastery Module Definition
 -----------------------------------------------------------------------------------------------
-local AuraMastery = {} 
+local AuraMastery = {}
 local Icon = _G["AuraMasteryLibs"]["Icon"]
 
 -----------------------------------------------------------------------------------------------
@@ -258,8 +259,8 @@ end
 function AuraMastery:new(o)
     o = o or {}
     setmetatable(o, self)
-    self.__index = self 
-	
+    self.__index = self
+
 	self.buffWatch = {
 		Buff = {
 			Player = {},
@@ -308,12 +309,12 @@ function AuraMastery:OnSave(eLevel)
         return nil
     end
 	local saveData = { }
-	
+
 	saveData["Icons"] = { }
 	for idx, icon in pairs(self.Icons) do
 		saveData["Icons"][# saveData["Icons"] + 1] = icon:GetSaveData()
 	end
-	
+
 	return saveData
 end
 
@@ -321,11 +322,11 @@ function AuraMastery:OnRestore(eLevel, tData)
 	if eLevel ~= GameLib.CodeEnumAddonSaveLevel.Character then
 		return nil
 	end
-	
+
 	Event_FireGenericEvent("AMLoadIcons", tData)
 end
 
-function AuraMastery:OnLoadIcons(tData)	
+function AuraMastery:OnLoadIcons(tData)
 	for idx, icon in pairs(tData["Icons"]) do
 		local newIcon = self:AddIcon()
 		newIcon:Load(icon)
@@ -370,11 +371,11 @@ end
 function AuraMastery:AddIcon()
 	local newIcon = Icon.new(self.buffWatch, self.configForm)
 	newIcon:SetScale(1)
-	
+
 	newIcon.iconId = self.nextIconId
 	self.Icons[self.nextIconId] = newIcon
 	self.nextIconId = self.nextIconId + 1
-	
+
 	return newIcon
 end
 
@@ -401,7 +402,10 @@ function AuraMastery:OnLoad()
 
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
-	--self.shareChannel = ICCommLib.JoinChannel("AuraMastery", "OnSharingMessageReceived", self)
+
+  self.shareChannel = ICCommLib.JoinChannel("AuraMastery", ICCommLib.CodeEnumICCommChannelType.Global)
+	self.shareChannel:IsReady()
+	self.shareChannel:SetReceivedMessageFunction("OnSharingMessageReceived", self)
 end
 
 function AuraMastery:LoadBotSpellIds()
@@ -455,7 +459,7 @@ function AuraMastery:OnDocLoaded()
 		GeminiPackages:Require("AuraMastery:Config", function(config)
 			self.auraMasteryConfig = config
 			Apollo.RegisterSlashCommand("am", "OnOpenConfig", self)
-		end)		
+		end)
 	end
 end
 
@@ -495,7 +499,7 @@ function AuraMastery:GetSpellByName(spellName)
 end
 
 function AuraMastery:OnUpdate()
-	local unitPlayer = GameLib.GetPlayerUnit()	
+	local unitPlayer = GameLib.GetPlayerUnit()
 	local targetPlayer = GameLib.GetTargetUnit()
 
 	for _, icon in pairs(self.Icons) do
@@ -503,19 +507,19 @@ function AuraMastery:OnUpdate()
 			icon:PreUpdate()
 		end
 	end
-	
+
 	if unitPlayer ~= nil then
 		self:ProcessBuffs(unitPlayer:GetBuffs(), "Player")
 		self:ProcessHealth(unitPlayer, "Player")
 		self:ProcessMOO(unitPlayer, "Player")
 	end
-	
+
 	if targetPlayer ~= nil then
 		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 		self:ProcessHealth(targetPlayer, "Target")
 		self:ProcessMOO(targetPlayer, "Target")
 	end
-	
+
 	local abilities = GetAbilitiesList()
 	if abilities then
 		self:ProcessCooldowns(abilities)
@@ -526,9 +530,9 @@ function AuraMastery:OnUpdate()
 	self:ProcessOnDeflect()
 	self:ProcessResources()
 	self:ProcessGadget()
-	
+
 	self:ProcessInnate()
-	
+
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
 			icon:PostUpdate()
@@ -604,7 +608,7 @@ function AuraMastery:ProcessBuffs(buffs, target)
 			end
 		end
 	end
-		
+
 	for idx, buff in pairs(buffs.arHarmful) do
 		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
 			for _, watcher in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
@@ -732,6 +736,7 @@ end
 
 function AuraMastery:OnSharingMessageReceived(chan, msg)
 	if self.sharingCallback ~= nil then
+    msg = AuraMastery.DeserializeString(msg)
 		if msg.DestinationType == "player" then
 			local playerUnit = GameLib.GetPlayerUnit()
 			if playerUnit ~= nil and msg.Destination == playerUnit:GetName() then
@@ -749,18 +754,36 @@ function AuraMastery:OnSharingMessageReceived(chan, msg)
 	end
 end
 
+function AuraMastery.DeserializeString(string)
+  local iconScript, loadStringError = loadstring("return " .. iconData)
+  if iconScript then
+    local status, result = pcall(iconScript)
+    if status then
+      if result ~= nil then
+        return result
+      else
+        Print("Failed to import icon. Data deserialized but was invalid.")
+      end
+    else
+      Print("Failed to import icon, invalid load data: " .. tostring(result))
+    end
+  else
+    Print("Failed to import icon, invalid load data: " .. tostring(loadStringError))
+  end
+end
+
 function AuraMastery:SendCommsMessageToPlayer(player, msg)
 	msg.Destination = player
 	msg.Sender = GameLib.GetPlayerUnit():GetName()
 	msg.DestinationType = "player"
-	self.shareChannel:SendMessage(msg)
+	self.shareChannel:SendMessage(self.config:Serialize(msg))
 end
 
 function AuraMastery:SendCommsMessageToGroup(msg)
 	msg.Destination = ""
 	msg.Sender = GameLib.GetPlayerUnit():GetName()
 	msg.DestinationType = "group"
-	self.shareChannel:SendMessage(msg)
+	self.shareChannel:SendMessage(self.config:Serialize(msg))
 end
 
 function AuraMastery:SendCommsMessageToGuild(guild, msg)
@@ -770,7 +793,7 @@ function AuraMastery:SendCommsMessageToGuild(guild, msg)
 	}
 	msg.Sender = GameLib.GetPlayerUnit():GetName()
 	msg.DestinationType = "guild"
-	self.shareChannel:SendMessage(msg)
+	self.shareChannel:SendMessage(self.config:Serialize(msg))
 end
 
 if _G["AuraMasteryLibs"] == nil then
