@@ -151,5 +151,9 @@ function IconText:CalculateTextOffsets(anchor, inside)
 	return offsets
 end
 
+function IconText:Delete()
+	self.textElement:Destroy()
+end
+
 local GeminiPackages = _G["GeminiPackages"]
 GeminiPackages:NewPackage(IconText, "AuraMastery:IconText", 1)

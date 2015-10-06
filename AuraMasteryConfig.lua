@@ -857,7 +857,8 @@ function AuraMasteryConfig:OnIconTextRemove( wndHandler, wndControl, eMouseButto
 		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 		local icon = self.auraMastery.Icons[iconId]
 		local iconTextId = tonumber(wndHandler:GetParent():FindChild("IconTextId"):GetText())
-		table.remove(icon.iconText, iconTextId)
+		local iconText = table.remove(icon.iconText, iconTextId)
+		iconText:Delete()
 		
 		self.iconTextEditor[iconTextId]:Destroy()
 		table.remove(self.iconTextEditor, iconTextId)
