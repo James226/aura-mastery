@@ -583,7 +583,7 @@ function AuraMastery:ProcessResources()
 		if playerUnit ~= nil then
 			local resourceId = resourceIds[playerUnit:GetClassId()]
 
-			local mana, maxMana, resource, maxResource = playerUnit:GetMana(), playerUnit:GetMaxMana(), playerUnit:GetResource(resourceId), playerUnit:GetMaxResource(resourceId)
+			local mana, maxMana, resource, maxResource = playerUnit:GetFocus(), playerUnit:GetMaxFocus(), playerUnit:GetResource(resourceId), playerUnit:GetMaxResource(resourceId)
 			for _, watcher in pairs(self.buffWatch["Resources"]) do
 				watcher({Mana = mana, MaxMana = maxMana, Resource = resource, MaxResource = maxResource})
 			end
