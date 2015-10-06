@@ -296,7 +296,7 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.buffName)
 		end
-	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
+	elseif self.Type == "On Critical" or self.Type == "On MultiHit" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:AddBasicToBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
 		if self.TriggerDetails.Target.Player then
@@ -348,7 +348,7 @@ function IconTrigger:RemoveFromBuffWatch()
 		if self.TriggerDetails.Target.Target then
 			self:RemoveBuffFromBuffWatch("Target", self.buffName)
 		end
-	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
+	elseif self.Type == "On Critical" or self.Type == "On MultiHit" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:RemoveBasicFromBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
 		if self.TriggerDetails.Target.Player then

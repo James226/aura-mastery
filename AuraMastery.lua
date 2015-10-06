@@ -235,6 +235,7 @@ AuraMastery.spriteIcons = {
 }
 
 local criticalTime = 5
+local multiHitTime = 5
 local deflectTime = 4
 
 local resourceIds = {}
@@ -272,6 +273,7 @@ function AuraMastery:new(o)
 		},
 		Cooldown = {},
 		OnCritical = {},
+		OnMultiHit = {},
 		OnDeflect = {},
 		ActionSet = {},
 		Resources = {},
@@ -293,6 +295,7 @@ function AuraMastery:new(o)
 	self.selectedFontColor = CColor.new(1,1,1,1)
 	self.currentSampleNum = 0
 	self.lastCritical = 0
+	self.lastMultiHit = 0
 	self.lastDeflect = 0
 	self.Icons = {}
 	self.BotSpellIds = {}
@@ -355,6 +358,12 @@ function AuraMastery:OnDamageDealt(tData)
 	end
 end
 
+function AuraMastery:OnMultiHit(tData)
+	if tData.unitCaster ~= nil and tData.unitCaster == GameLib.GetPlayerUnit() then
+		self.lastMultiHit = os.time()
+	end
+end
+
 function AuraMastery:OnMiss( unitCaster, unitTarget, eMissType )
 	if unitTarget ~= nil and unitTarget == GameLib.GetPlayerUnit() then
 		if eMissType == GameLib.CodeEnumMissType.Dodge then
@@ -391,6 +400,7 @@ function AuraMastery:OnLoad()
 
 	Apollo.RegisterEventHandler("AbilityBookChange", "OnAbilityBookChange", self)
 	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
+	Apollo.RegisterEventHandler("CombatLogMultiHit", "OnMultiHit", self)
 	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
@@ -527,6 +537,7 @@ function AuraMastery:OnUpdate()
 	self:ProcessPetSpells()
 
 	self:ProcessOnCritical()
+	self:ProcessOnMultiHit()
 	self:ProcessOnDeflect()
 	self:ProcessResources()
 	self:ProcessGadget()
@@ -561,6 +572,16 @@ function AuraMastery:ProcessOnCritical()
 	if TableContainsElements(self.buffWatch["OnCritical"]) then
 		if os.difftime(os.time(), self.lastCritical) < criticalTime then
 			for _, watcher in pairs(self.buffWatch["OnCritical"]) do
+				watcher()
+			end
+		end
+	end
+end
+
+function AuraMastery:ProcessOnMultiHit()
+	if TableContainsElements(self.buffWatch["OnMultiHit"]) then
+		if os.difftime(os.time(), self.lastMultiHit) < multiHitTime then
+			for _, watcher in pairs(self.buffWatch["OnMultiHit"]) do
 				watcher()
 			end
 		end
