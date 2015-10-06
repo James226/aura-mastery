@@ -73,7 +73,7 @@ end
 function IconOverlay:Update()
 	if self.icon.duration > 0 then
 		self.overlayElement:SetProgress(((self.icon.duration / self.icon.maxDuration)) * 100)
-	elseif not self.icon.criticalRequirementPassed then
+	elseif not self.icon.criticalRequirementPassed and not self.icon.multiHitRequirementPassed then
 		self.overlayElement:SetProgress(self.overlayStyle == "Linear" and 100 or 99.999)
 	else
 		self.overlayElement:SetProgress(0)

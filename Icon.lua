@@ -37,6 +37,7 @@ function Icon.new(buffWatch, configForm)
 	self.duration = 0
 	self.maxDuration = 0
 	self.criticalRequirementPassed = true
+	self.multiHitRequirementPassed = true
 	self.chargesRemaining = 0
 	self.iconId = 0
 	self.enabled = true
@@ -154,6 +155,12 @@ function Icon:Load(saveData)
 					local trigger = iconTrigger.new(self, self.buffWatch)
 					trigger.Name = "OnCritical"
 					trigger.Type = "On Critical"
+					table.insert(self.Triggers, trigger)
+				end
+				if saveData.multiHitRequired ~= nil and saveData.multiHitRequired then
+					local trigger = iconTrigger.new(self, self.buffWatch)
+					trigger.Name = "OnMultiHit"
+					trigger.Type = "On MultiHit"
 					table.insert(self.Triggers, trigger)
 				end
 
