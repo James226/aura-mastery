@@ -296,6 +296,7 @@ function AuraMastery:new(o)
 	self.lastDeflect = 0
 	self.Icons = {}
 	self.BotSpellIds = {}
+	self.lastUpdateTime = os.clock()
 
     return o
 end
@@ -363,6 +364,74 @@ function AuraMastery:OnMiss( unitCaster, unitTarget, eMissType )
 	end
 end
 
+function AuraMastery:OnBuffAdded(unitTarget, data)
+	self:ProcessBuffEvent(unitTarget, "Add", data)
+end
+
+function AuraMastery:OnBuffRemoved(unitTarget, data)
+	self:ProcessBuffEvent(unitTarget, "Remove", data)
+end
+
+function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
+	if unitTarget == nil then
+		return
+	end
+
+	if unitTarget:IsThePlayer() then
+		self:ProcessBuff("Player", {
+			action = action,
+			data = data
+		})
+	end
+
+	if unitTarget == GameLib.GetTargetUnit() then
+		self:ProcessBuff("Target", {
+			action = action,
+			data = data
+		})
+	end
+end
+
+function AuraMastery:ProcessBuff(target, payload)
+	local buffType = payload.data.splEffect:IsBeneficial() and "Buff" or "Debuff"
+	local spellName = payload.data.splEffect:GetName()
+
+	if self.buffWatch[buffType][target][spellName] ~= nil then
+		for _, watcher in pairs(self.buffWatch[buffType][target][spellName]) do
+			watcher(payload)
+		end
+	end
+end
+
+function AuraMastery:OnTargetChanged()
+	local target = GameLib.GetTargetUnit()
+	local buffs = {}
+	if target ~= nil then
+		buffs = target:GetBuffs()
+	end
+
+	self:ReloadBuffLists("Buff", "Target", buffs.arBeneficial)
+	self:ReloadBuffLists("Debuff", "Target", buffs.arHarmful)
+end
+
+function AuraMastery:ReloadBuffLists(buffType, target, buffs)
+	for _, spellList in pairs(self.buffWatch[buffType][target]) do
+		for _, watcher in pairs(spellList) do
+			watcher({ action = "Remove" })
+		end
+	end
+
+	if buffs then
+		for idx, buff in pairs(buffs) do
+			if self.buffWatch[buffType][target][buff.splEffect:GetName()] ~= nil then
+				for _, watcher in pairs(self.buffWatch[buffType][target][buff.splEffect:GetName()]) do
+					watcher({ action = "Add", data = buff })
+				end
+			end
+		end
+	end
+end
+
 function AuraMastery:OnCharacterCreated()
 	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 	self:UpdateAbilityBook()
@@ -405,6 +474,11 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("Group_FlagsChanged", "OnGroupChange", self)
 	Apollo.RegisterEventHandler("UnitPvpFlagsChanged", "OnUnitPvpFlagsChanged", self)
 
+	Apollo.RegisterEventHandler("BuffAdded", "OnBuffAdded", self)
+	Apollo.RegisterEventHandler("BuffUpdated", "OnBuffAdded", self)
+	Apollo.RegisterEventHandler("BuffRemoved", "OnBuffRemoved", self)
+	Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetChanged", self)
+
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "UpdateAbilityBook", self)
 	self:OnAbilityBookChange()
 	self:LoadBotSpellIds()
@@ -412,7 +486,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
 
-  self.shareChannel = ICCommLib.JoinChannel("AuraMastery", ICCommLib.CodeEnumICCommChannelType.Global)
+  	self.shareChannel = ICCommLib.JoinChannel("AuraMastery", ICCommLib.CodeEnumICCommChannelType.Global)
 	self.shareChannel:IsReady()
 	self.shareChannel:SetReceivedMessageFunction("OnSharingMessageReceived", self)
 end
@@ -508,23 +582,25 @@ function AuraMastery:GetSpellByName(spellName)
 end
 
 function AuraMastery:OnUpdate()
+	local currentTime = os.clock()
+	local deltaTime = currentTime - self.lastUpdateTime
+	self.lastUpdateTime = currentTime
+
 	local unitPlayer = GameLib.GetPlayerUnit()
 	local targetPlayer = GameLib.GetTargetUnit()
 
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
-			icon:PreUpdate()
+			icon:PreUpdate(deltaTime)
 		end
 	end
 
 	if unitPlayer ~= nil then
-		self:ProcessBuffs(unitPlayer:GetBuffs(), "Player")
 		self:ProcessHealth(unitPlayer, "Player")
 		self:ProcessMOO(unitPlayer, "Player")
 	end
 
 	if targetPlayer ~= nil then
-		self:ProcessBuffs(targetPlayer:GetBuffs(), "Target")
 		self:ProcessHealth(targetPlayer, "Target")
 		self:ProcessMOO(targetPlayer, "Target")
 	end
@@ -605,24 +681,6 @@ function AuraMastery:ProcessHealth(unit, target)
 		local result = { Health = unit:GetHealth(), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
 		for _, watcher in pairs(self.buffWatch["Health"][target]) do
 			watcher(result)
-		end
-	end
-end
-
-function AuraMastery:ProcessBuffs(buffs, target)
-	for idx, buff in pairs(buffs.arBeneficial) do
-		if self.buffWatch["Buff"][target][buff.splEffect:GetName()] ~= nil then
-			for _, watcher in pairs(self.buffWatch["Buff"][target][buff.splEffect:GetName()]) do
-				watcher(buff)
-			end
-		end
-	end
-
-	for idx, buff in pairs(buffs.arHarmful) do
-		if self.buffWatch["Debuff"][target][buff.splEffect:GetName()] ~= nil then
-			for _, watcher in pairs(self.buffWatch["Debuff"][target][buff.splEffect:GetName()]) do
-				watcher(buff)
-			end
 		end
 	end
 end

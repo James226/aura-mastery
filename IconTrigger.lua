@@ -31,6 +31,8 @@ function IconTrigger.new(icon, buffWatch)
 	self.isSet = false
 
 	self.lastKeypress = 0
+    self.Time = 0
+    self.Stacks = 0
 
 	return self
 end
@@ -390,7 +392,11 @@ function IconTrigger:RemoveBuffFromBuffWatch(target, option)
 	end
 end
 
-function IconTrigger:ResetTrigger()
+function IconTrigger:ResetTrigger(deltaTime)
+    if self.Type == "Buff" or self.Type == "Debuff" then
+        self.Time = math.max(self.Time - deltaTime, 0)
+        return
+    end
 	self.Stacks = nil
 	self.Time = nil
 	if self.Type ~= "Action Set" and self.Type ~= "Limited Action Set Checker" then
@@ -490,16 +496,27 @@ function IconTrigger:ProcessSpell(spell)
 	end
 end
 
-function IconTrigger:ProcessBuff(buff)
-	if not self.TriggerDetails.Stacks.Enabled or self:IsOperatorSatisfied(buff.nCount, self.TriggerDetails.Stacks.Operator, self.TriggerDetails.Stacks.Value) then
-		self.isSet = true
-		self.Time = buff.fTimeRemaining
-		if self.MaxDuration == nil or self.MaxDuration < self.Time then
-			self.MaxDuration = self.Time
-		end
-		self.Stacks = buff.nCount
-		self.Sprite = buff.splEffect:GetIcon()
-	end
+function IconTrigger:ProcessBuff(data)
+    local action = data.action
+    local buff = data.data
+    if action == "Remove" then
+        self.isSet = false
+    end
+
+    if action == "Add" then
+        if not self.TriggerDetails.Stacks.Enabled or self:IsOperatorSatisfied(buff.nCount, self.TriggerDetails.Stacks.Operator, self.TriggerDetails.Stacks.Value) then
+            self.isSet = true
+        end
+    end
+
+    if buff ~= nil then
+    	self.Time = buff.fTimeRemaining
+        self.Stacks = buff.nCount
+    	if self.MaxDuration == nil or self.MaxDuration < self.Time then
+    		self.MaxDuration = self.Time
+    	end
+    	self.Sprite = buff.splEffect:GetIcon()
+    end
 end
 
 function IconTrigger:ProcessEvent(result)

@@ -371,10 +371,10 @@ function Icon:GetName()
 	return self.iconName
 end
 
-function Icon:PreUpdate()
+function Icon:PreUpdate(deltaTime)
 	self.isSet = false
 	for _, trigger in pairs(self.Triggers) do
-		trigger:ResetTrigger()
+		trigger:ResetTrigger(deltaTime)
 	end
 end
 
