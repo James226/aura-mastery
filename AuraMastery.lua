@@ -394,8 +394,17 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
-	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
+
+	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
+	Apollo.RegisterEventHandler("Group_Join", "OnGroupChange", self)
+	Apollo.RegisterEventHandler("Group_Left", "OnGroupChange", self)
+	Apollo.RegisterEventHandler("Group_Add", "OnGroupChange", self)
+	Apollo.RegisterEventHandler("Group_Remove", "OnGroupChange", self)
+	Apollo.RegisterEventHandler("Group_Disbanded", "OnGroupChange", self)
+	Apollo.RegisterEventHandler("Group_FlagsChanged", "OnGroupChange", self)
+	Apollo.RegisterEventHandler("UnitPvpFlagsChanged", "OnUnitPvpFlagsChanged", self)
+
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "UpdateAbilityBook", self)
 	self:OnAbilityBookChange()
 	self:LoadBotSpellIds()
@@ -730,6 +739,26 @@ function AuraMastery:OnEnteredCombat(unit, inCombat)
 	if unit:IsThePlayer() then
 		for _, icon in pairs(self.Icons) do
 			icon.isInCombat = inCombat
+		end
+	end
+end
+
+function AuraMastery:OnGroupChange()
+	local unitPlayer = GameLib.GetPlayerUnit()
+	if unitPlayer ~= nil then
+		local isInGroup, isInRaid = GroupLib.InGroup(unitPlayer:GetName()), GroupLib.InRaid(unitPlayer:GetName())
+		for _, icon in pairs(self.Icons) do
+			icon.isInGroup = isInGroup
+			icon.isInRaid = isInRaid
+		end
+	end
+end
+
+function AuraMastery:OnUnitPvpFlagsChanged(unit)
+	if unit:IsThePlayer() then
+		local isPvpFlagged = GameLib.IsPvpFlagged()
+		for _, icon in pairs(self.Icons) do
+			icon.isPvpFlagged = isPvpFlagged
 		end
 	end
 end

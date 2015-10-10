@@ -1,6 +1,6 @@
 require "Window"
 
-local AuraMasteryConfig  = {} 
+local AuraMasteryConfig  = {}
 AuraMasteryConfig .__index = AuraMasteryConfig
 
 local IconText = nil
@@ -90,7 +90,7 @@ function AuraMasteryConfig:Init()
 		tab:Show(false)
 	end
 	self:SelectTab("General")
-		
+
 	self.configForm:FindChild("BuffShowWhen"):AddItem("Always", "", 1)
 	self.configForm:FindChild("BuffShowWhen"):AddItem("All", "", 2)
 	self.configForm:FindChild("BuffShowWhen"):AddItem("Any", "", 3)
@@ -99,15 +99,15 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("All", "", 1)
 	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("Any", "", 2)
 	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("None", "", 3)
-	
+
 	local soundList = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList")
 	local nextItem = 0
-	
+
 	local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
 
 	soundItem:FindChild("Id"):SetText(-1)
 	soundItem:FindChild("Label"):SetText("None")
-			
+
 	for sound, soundNo in pairs(Sound) do
 		if type(soundNo) == "number" then
 			local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
@@ -116,26 +116,26 @@ function AuraMasteryConfig:Init()
 		end
 	end
 	soundList:ArrangeChildrenVert()
-	
+
 	local soundSelectHeight = self.configForm:FindChild("SoundSelect"):GetHeight()
 	self.configForm:FindChild("SoundSelect"):SetVScrollInfo(nextItem - soundSelectHeight, soundSelectHeight, soundSelectHeight)
-	
+
 	self:LoadSpriteIcons()
-	self.iconTextEditor = {}	
-	
+	self.iconTextEditor = {}
+
 	self.configForm:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.configForm:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetProgress(75)
-	
+
 	self.configForm:FindChild("IconOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.configForm:FindChild("IconOverlay"):FindChild("ProgressBar"):SetProgress(75)
 	self.configForm:FindChild("IconOverlay"):FindChild("ProgressBar"):SetFullSprite("icon_Crosshair")
-	
+
 	self.configForm:FindChild("LinearOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.configForm:FindChild("LinearOverlay"):FindChild("ProgressBar"):SetProgress(75)
-	
+
 	self.configForm:FindChild("RadialOverlay"):FindChild("ProgressBar"):SetMax(100)
 	self.configForm:FindChild("RadialOverlay"):FindChild("ProgressBar"):SetProgress(75)
-	
+
 	self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetMax(100)
 	self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetMax(100)
 
@@ -144,12 +144,11 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("SimpleTabButton"):Show(false)
 	self.configForm:FindChild("NoAurasTab"):Show(true)
 	self.configForm:FindChild("BuffEditor"):Enable(false)
-	
+
 	self:CreateControls()
 	self:SelectFirstIcon()
 
 	self.configForm:FindChild("ShareForm"):Show(false)
-	self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
 	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
 	self.configForm:FindChild("TriggerEffectsDropdown"):Show(false)
 
@@ -197,6 +196,10 @@ function AuraMasteryConfig:OnOK()
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
 
+    if icon == nil then
+        return
+    end
+
 	icon:SetIcon(self.configForm)
 	self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 	self:UpdateControls()
@@ -212,12 +215,12 @@ end
 
 function AuraMasteryConfig:LoadSpriteIcons()
 	local spriteList = self.configForm:FindChild("BuffEditor"):FindChild("AppearanceTab"):FindChild("SpriteItemList")
-	
+
 	local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SpriteItem", spriteList, self)
 	spriteItem:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(self.configForm:FindChild("BuffName"):GetText()))
 	spriteItem:FindChild("SpriteItemText"):SetText("Spell Icon")
 	spriteItem:SetAnchorOffsets(0, 0, spriteItem:GetWidth(), spriteItem:GetHeight())
-	
+
 	local iconsPerRow = math.floor(spriteList:GetWidth() / 110)
 	local currentPos = 1
 
@@ -252,8 +255,40 @@ function AuraMasteryConfig:CreateIconItem(i, icon)
 	iconItem:FindChild("Label"):SetText(icon:GetName())
 	iconItem:FindChild("LockButton"):SetCheck(true)
 	icon:SetConfigElement(iconItem)
+
+    self:RebuildTriggerList(iconItem, icon)
+    iconItem:FindChild("TriggerItemList"):Show(false)
+
+    local left, top, right, bottom = iconItem:GetAnchorOffsets()
+    iconItem:SetAnchorOffsets(left, top, right, top + 50)
+
 	iconList:ArrangeChildrenVert()
 	return iconItem
+end
+
+function AuraMasteryConfig:RebuildTriggerList(iconItem, icon)
+    local triggerItemList = iconItem:FindChild("TriggerItemList")
+    triggerItemList:DestroyChildren()
+    for _, trigger in pairs(icon.Triggers) do
+        local triggerItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem.TriggerItemList.TriggerItem", triggerItemList, self)
+        triggerItem:SetData(trigger)
+        triggerItem:FindChild("TriggerItemLabel"):SetText(trigger.Name)
+    end
+
+    local triggerItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem.TriggerItemList.TriggerItem", triggerItemList, self)
+    triggerItem:SetData("AddTrigger")
+    triggerItem:FindChild("TriggerMoveUp"):Show(false)
+    triggerItem:FindChild("TriggerMoveDown"):Show(false)
+    triggerItem:FindChild("TriggerDelete"):Show(false)
+    triggerItem:FindChild("TriggerItemLabel"):SetText("Add Trigger")
+
+    triggerItemList:ArrangeChildrenVert()
+
+    local left, top, right, bottom = iconItem:GetAnchorOffsets()
+    iconItem:SetAnchorOffsets(left, top, right, top + 83 + (#icon.Triggers * 30))
+
+
+    iconItem:GetParent():ArrangeChildrenVert()
 end
 
 function AuraMasteryConfig:PopulateAuraNameList()
@@ -319,6 +354,8 @@ function AuraMasteryConfig:OnAddIcon( wndHandler, wndControl, eMouseButton )
 		timeText.textString = "{charges}"
 		self:SelectIcon(iconItem)
 		self:OnAddTrigger()
+        self:SelectTab("General")
+        self:OnOK()
 	end
 end
 
@@ -331,7 +368,7 @@ end
 function AuraMasteryConfig:AddIcon()
 	local newIcon = Icon.new(self.buffWatch, self.configForm)
 	newIcon:SetScale(1)
-	
+
 	local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
 	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
 	iconItem:FindChild("Id"):SetText(tostring(self.nextIconId))
@@ -342,7 +379,7 @@ function AuraMasteryConfig:AddIcon()
 	self.nextIconId = self.nextIconId + 1
 
 	iconList:ArrangeChildrenVert()
-	
+
 	return newIcon
 end
 
@@ -353,7 +390,7 @@ function AuraMasteryConfig:RemoveIcon(icon)
 	iconList:ArrangeChildrenVert()
 
 	self.selectedIcon = nil
-	
+
 	self.auraMastery.Icons[iconId]:Delete()
 	self.auraMastery.Icons[iconId] = nil
 
@@ -376,7 +413,7 @@ end
 function AuraMasteryConfig:OnIconScale( wndHandler, wndControl, fNewValue, fOldValue )
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
-	
+
 	fNewValue = tonumber(string.format("%.1f", fNewValue))
 	icon:SetScale(fNewValue)
 	self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", fNewValue))
@@ -394,6 +431,39 @@ function AuraMasteryConfig:OnScaleValueChanged( wndHandler, wndControl, strText 
 	self.configForm:FindChild("BuffScaleValue"):SetText(tostring(value))
 	icon:SetScale(value)
 	self.configForm:FindChild("BuffScale"):SetValue(value)
+end
+
+function AuraMasteryConfig:OnPositionChanged( wndHandler, wndControl, strText )
+    local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    local icon = self.auraMastery.Icons[iconId]
+
+    local x, y = tonumber(self.configForm:FindChild("BuffPositionX"):GetText()), tonumber(self.configForm:FindChild("BuffPositionY"):GetText())
+    if x ~= nil and y ~= nil then
+        icon:SetPosition(x, y)
+    end
+end
+
+function AuraMasteryConfig:OnPositionNudge( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+    if wndHandler == wndControl then
+        local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+        local icon = self.auraMastery.Icons[iconId]
+        local x, y = icon:GetPosition()
+        local moveType = wndHandler:GetName():sub(9)
+
+        if moveType == "PlusY" then
+            y = y - 10
+        elseif moveType == "MinusY" then
+            y = y + 10
+        elseif moveType == "PlusX" then
+            x = x - 10
+        elseif moveType == "MinusX" then
+            x = x + 10
+        end
+
+        icon:SetPosition(x, y)
+        self.configForm:FindChild("BuffPositionX"):SetText(x)
+        self.configForm:FindChild("BuffPositionY"):SetText(y)
+    end
 end
 
 function AuraMasteryConfig:OnShownChanged( wndHandler, wndControl, selectedIndex )
@@ -435,18 +505,24 @@ function AuraMasteryConfig:OnTabSelected( wndHandler, wndControl, eMouseButton )
 	self:SelectTab(wndHandler:GetName():sub(0, -10))
 end
 
-function AuraMasteryConfig:OnTabUnselected( wndHandler, wndControl, eMouseButton )	
+function AuraMasteryConfig:OnTabUnselected( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMasteryConfig:SelectTab(tabName)
 	if self.currentTab ~= nil then
-		self.configForm:FindChild(self.currentTab .. "TabButton"):SetCheck(false)
+        local tab = self.configForm:FindChild(self.currentTab .. "TabButton")
+        if tab ~= nil then
+		      tab:SetCheck(false)
+        end
 		self.configForm:FindChild("BuffEditor"):FindChild(self.currentTab .. "Tab"):Show(false)
 	end
 
 	self.currentTab = tabName
 	self.configForm:FindChild("BuffEditor"):FindChild(tabName .. "Tab"):Show(true)
-	self.configForm:FindChild(tabName .. "TabButton"):SetCheck(true)
+    local tab = self.configForm:FindChild(self.currentTab .. "TabButton")
+    if tab ~= nil then
+          tab:SetCheck(true)
+    end
 end
 
 function AuraMasteryConfig:OnIconPreview()
@@ -477,16 +553,16 @@ end
 function AuraMasteryConfig:OnOverlaySelection( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
 	if wndHandler == wndControl then
 		local overlaySelection = wndHandler:FindChild("OverlayIconText"):GetText()
-		
+
 		if overlaySelection == "Solid" then
 			self.configForm:FindChild("SolidOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 			self.configForm:FindChild("IconOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
-			
+
 		elseif overlaySelection == "Icon" then
 			self.configForm:FindChild("SolidOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
 			self.configForm:FindChild("IconOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 		end
-		
+
 		if overlaySelection == "Linear" then
 			self.configForm:FindChild("LinearOverlay"):SetSprite("CRB_Basekit:kitBase_HoloOrange_TinyNoGlow")
 			self.configForm:FindChild("RadialOverlay"):SetSprite("CRB_Basekit:kitBase_HoloBlue_TinyLitNoGlow")
@@ -498,7 +574,7 @@ function AuraMasteryConfig:OnOverlaySelection( wndHandler, wndControl, eMouseBut
 			self.configForm:FindChild("IconSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", true)
 			self.configForm:FindChild("IconGeneralSample"):FindChild("ProgressBar"):SetStyleEx("RadialBar", true)
 		end
-	end    
+	end
 end
 
 function AuraMasteryConfig:OnOverlayColorUpdate()
@@ -518,11 +594,13 @@ end
 ---------------------------------------------------------------------------------------------------
 function AuraMasteryConfig:OnListItemSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY )
 	if wndHandler == wndControl then
-		self:SelectIcon(wndHandler)
+		self:SelectIcon(wndHandler:GetParent())
 	end
 end
 
 function AuraMasteryConfig:SelectIcon(iconItem)
+    self:OnOK()
+    self:SelectTab("General")
 	self.configForm:FindChild("NoAurasTab"):Show(false)
 	self.configForm:FindChild("BuffEditor"):Enable(true)
 	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
@@ -531,9 +609,19 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 
 		if self.selectedIcon ~= nil then
 			self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.16, 0.24, 1))
+
+            local left, top, right, bottom = self.selectedIcon:GetAnchorOffsets()
+            self.selectedIcon:SetAnchorOffsets(left, top, right, top + 50)
 		end
 		self.selectedIcon = iconItem
 		self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.5, 0.61, 1))
+
+        local left, top, right, bottom = self.selectedIcon:GetAnchorOffsets()
+        self.selectedIcon:SetAnchorOffsets(left, top, right, top + 83 + (#icon.Triggers * 30))
+        self.selectedIcon:FindChild("TriggerItemList"):Show(true)
+
+        self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
+
 		self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 
 		if icon.SimpleMode then
@@ -576,7 +664,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				self.configForm:FindChild("AuraBuffDetails"):Show(false)
 				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_Cooldown"))
 			else
-				simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type):SetCheck(true)				
+				simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type):SetCheck(true)
 				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type))
 				if icon.Triggers[1].Type == "Buff" or icon.Triggers[1].Type == "Debuff" then
 					self.configForm:FindChild("AuraBuffDetails"):Show(true)
@@ -585,7 +673,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				else
 					self.configForm:FindChild("AuraBuffDetails"):Show(false)
 					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(false)
-					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(false)					
+					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(false)
 				end
 			end
 
@@ -593,12 +681,12 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			if soundSelect:GetData() ~= nil then
 				soundSelect:GetData():SetCheck(false)
 			end
-			
+
 			for _, sound in pairs(self.configForm:FindChild("AuraSoundSelect"):GetChildren()) do
 				if tonumber(sound:GetData()) == icon.iconSound then
 					sound:SetCheck(true)
 					soundSelect:SetData(sound)
-					
+
 					local left, top, right, bottom = sound:GetAnchorOffsets()
 					soundSelect:SetVScrollPos(top)
 					break
@@ -618,7 +706,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 					if sprite:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
 						sprite:SetCheck(true)
 						spriteSelect:SetData(sprite)
-						
+
 						local left, top, right, bottom = sprite:GetAnchorOffsets()
 						spriteSelect:SetVScrollPos(top)
 						break
@@ -642,57 +730,67 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self:SetPlayWhenDescription(self.configForm:FindChild("BuffPlaySoundWhen"):GetSelectedIndex() + 1)
 			self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
 			self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
-			self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
+            self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
+            local x, y = icon:GetPosition()
+            self.configForm:FindChild("BuffPositionX"):SetText(x)
+			self.configForm:FindChild("BuffPositionY"):SetText(y)
+
 			self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
 			self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
-			self.configForm:FindChild("BuffOnlyInCombat"):SetCheck(icon.onlyInCombat)
+            self.configForm:FindChild("BuffShowInCombat"):SetCheck(icon.active.inCombat)
+            self.configForm:FindChild("BuffShowNotInCombat"):SetCheck(icon.active.notInCombat)
+            self.configForm:FindChild("BuffShowSolo"):SetCheck(icon.active.solo)
+            self.configForm:FindChild("BuffShowInGroup"):SetCheck(icon.active.inGroup)
+            self.configForm:FindChild("BuffShowInRaid"):SetCheck(icon.active.inRaid)
+            self.configForm:FindChild("BuffShowPvpFlagged"):SetCheck(icon.active.pvpFlagged)
+            self.configForm:FindChild("BuffShowNotPvpFlagged"):SetCheck(icon.active.notPvpFlagged)
 			self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
 			self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 			self.selectedColor = icon.iconColor
 			self.selectedOverlayColor = icon.iconOverlay.overlayColor
-			
+
 			self.configForm:FindChild("BuffActionSet1"):SetCheck(icon.actionSets[1])
 			self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
 			self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
 			self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
 
 			self:OnColorUpdate()
-			
+
 			for _, spriteIcon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
 				if (icon.iconSprite == "" and spriteIcon:FindChild("SpriteItemText"):GetText() == "Spell Icon") or spriteIcon:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
 					self:SelectSpriteIcon(spriteIcon)
 					break
 				end
 			end
-			
-			
-			
+
+
+
 			if self.selectedSound ~= nil then
 				self.selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 			end
-			
+
 			for _, sound in pairs(self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetChildren()) do
 				if tonumber(sound:FindChild("Id"):GetText()) == icon.iconSound then
 					self.selectedSound = sound
 					self.selectedSound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
-					
+
 					local left, top, right, bottom = sound:GetAnchorOffsets()
 					self.configForm:FindChild("SoundSelectList"):SetVScrollPos(top)
 					break
 				end
 			end
-			
-			
+
+
 			for textEditorId, textEditor in pairs(self.iconTextEditor) do
 				textEditor:Destroy()
 				self.iconTextEditor[textEditorId] = nil
 			end
-			
+
 			for iconTextId, iconText in pairs(icon.iconText) do
 				self:AddIconTextEditor()
-				
+
 				local textEditor = self.configForm:FindChild("TextList"):GetChildren()[iconTextId]
-				
+
 				for _, anchor in pairs(textEditor:FindChild("AnchorSelector"):GetChildren()) do
 					anchor:SetCheck(false)
 				end
@@ -700,7 +798,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				if selectedTextAnchor ~= nil then
 					selectedTextAnchor:SetCheck(true)
 				end
-				
+
 				for _, font in pairs(textEditor:FindChild("FontSelector"):GetChildren()) do
 					if font:GetText() == icon.iconText[iconTextId].textFont then
 						self:SelectFont(font)
@@ -713,7 +811,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				textEditor:FindChild("FontSample"):SetTextColor(icon.iconText[iconTextId].textFontColor)
 				textEditor:FindChild("TextString"):SetText(icon.iconText[iconTextId].textString)
 			end
-				
+
 			self.configForm:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
 			if icon.iconOverlay.overlayShape == "Icon" then
 				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
@@ -722,7 +820,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
 				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
 			end
-			
+
 			if icon.iconOverlay.overlayStyle == "Radial" then
 				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
 				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
@@ -737,7 +835,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 end
 
 function AuraMasteryConfig:SelectFont(fontElement)
-	local textEditor = fontElement:GetParent():GetParent()
+	local textEditor = fontElement:GetParent():GetParent():GetParent()
 	local editorData = textEditor:GetData()
 	if editorData.selectedFont ~= nil then
 		editorData.selectedFont:SetBGColor(CColor.new(1,1,1,1))
@@ -746,8 +844,19 @@ function AuraMasteryConfig:SelectFont(fontElement)
 	textEditor:FindChild("SelectedFont"):SetText(fontElement:GetText())
 	editorData.selectedFont = fontElement
 	editorData.selectedFont:SetBGColor(CColor.new(1,0,1,1))
-	
+
 	textEditor:SetData(editorData)
+end
+
+function AuraMasteryConfig:OnTriggerItemSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY )
+    if wndHandler == wndControl then
+        local trigger = wndHandler:GetData()
+        if trigger == "AddTrigger" then
+            self:OnAddTrigger()
+        else
+            self:SelectTriggerItem(wndHandler:GetData())
+        end
+    end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -810,7 +919,7 @@ function AuraMasteryConfig:LoadFontSelector(textId)
 		fontItem:SetAnchorOffsets(0, currentIdx * fontItem:GetHeight(), 0, currentIdx * fontItem:GetHeight() + fontItem:GetHeight())
 		fontItem:SetText(font.name)
 		currentIdx = currentIdx + 1
-	end	
+	end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -841,9 +950,9 @@ function AuraMasteryConfig:OnFontColorSelect( wndHandler, wndControl, eMouseButt
 	if wndHandler == wndControl then
 		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 		local icon = self.auraMastery.Icons[iconId]
-		local iconTextId = tonumber(wndHandler:GetParent():FindChild("IconTextId"):GetText())
+		local iconTextId = tonumber(wndHandler:GetParent():GetParent():FindChild("IconTextId"):GetText())
 		self.selectedFontColor = icon.iconText[iconTextId].textFontColor
-		self:OpenColorPicker(self.selectedFontColor, function() self:OnFontColorUpdate(wndHandler:GetParent()) end)
+		self:OpenColorPicker(self.selectedFontColor, function() self:OnFontColorUpdate(wndHandler:GetParent():GetParent()) end)
 	end
 end
 
@@ -856,9 +965,9 @@ function AuraMasteryConfig:OnIconTextRemove( wndHandler, wndControl, eMouseButto
 	if wndHandler == wndControl then
 		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 		local icon = self.auraMastery.Icons[iconId]
-		local iconTextId = tonumber(wndHandler:GetParent():FindChild("IconTextId"):GetText())
+		local iconTextId = tonumber(wndHandler:GetParent():GetParent():FindChild("IconTextId"):GetText())
 		table.remove(icon.iconText, iconTextId)
-		
+
 		self.iconTextEditor[iconTextId]:Destroy()
 		table.remove(self.iconTextEditor, iconTextId)
 	end
@@ -868,54 +977,7 @@ end
 -- Trigger Tab Functions
 ---------------------------------------------------------------------------------------------------
 function AuraMasteryConfig:PopulateTriggers(icon)
-	local triggerSelectDropdown = self.configForm:FindChild("TriggerSelectDropdown")
 
-	triggerSelectDropdown:DestroyChildren()
-
-	local firstTrigger = true
-	for _, trigger in pairs(icon.Triggers) do
-		local triggerItem = self:AddTriggerDropdown(triggerSelectDropdown, trigger)
-		if firstTrigger then
-			self:SelectTrigger(triggerItem)
-			firstTrigger = false
-		end
-	end
-
-	if firstTrigger then
-		self.configForm:FindChild("TriggerSelectButton"):SetText("")
-		self:SelectTrigger(nil)
-	end
-end
-
-function AuraMasteryConfig:AddTriggerDropdown(triggerSelectDropdown, trigger)
-	local numChildren = # triggerSelectDropdown:GetChildren()
-	local triggerDropdownItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.GeneralTab.TriggersPane.TriggerSelectDropdown.TriggerItem", triggerSelectDropdown, self)
-	triggerDropdownItem:SetAnchorOffsets(10, 10 + numChildren * 45, -10, 10 + numChildren * 45 + 45)
-	triggerDropdownItem:FindChild("TriggerName"):SetText(trigger.Name)
-	triggerDropdownItem:SetData(trigger)
-	return triggerDropdownItem
-end
-
-function AuraMasteryConfig:OnCheckTriggerSelectButton( wndHandler, wndControl, eMouseButton )
-	self.configForm:FindChild("TriggerWindow"):Enable(false)
-	self.configForm:FindChild("TriggerSelectDropdown"):Show(true)
-	self.configForm:FindChild("TriggerSelectDropdown"):BringToFront()
-end
-
-function AuraMasteryConfig:OnUncheckTriggerSelectButton( wndHandler, wndControl, eMouseButton )
-	self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
-end
-
-function AuraMasteryConfig:OnTriggerSelectDropdownHidden( wndHandler, wndControl )
-	self.configForm:FindChild("TriggerSelectButton"):SetCheck(false)
-	self.configForm:FindChild("TriggerWindow"):Enable(true)
-end
-
-function AuraMasteryConfig:OnTriggerSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
-	if wndHandler == wndControl then
-		self.configForm:FindChild("TriggerSelectDropdown"):Show(false)
-		self:SelectTrigger(wndHandler)
-	end
 end
 
 function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
@@ -925,95 +987,105 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 		editor:FindChild("TriggerEditor"):Show(false)
 		editor:FindChild("GeneralTriggerControls"):Show(false)
 	else
-		editor:FindChild("TriggerEditor"):Show(true)
-		editor:FindChild("GeneralTriggerControls"):Show(true)
-		local trigger = triggerDropdownItem:GetData()
-		editor:SetData(trigger)
-		self.configForm:FindChild("TriggerSelectButton"):SetText(trigger.Name)
-		editor:FindChild("TriggerName"):SetText(trigger.Name)
-		editor:FindChild("TriggerName"):FindChild("Placeholder"):Show(trigger.Name == "")
-		editor:FindChild("TriggerType"):SetText(trigger.Type)
-		editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
-
-		self:PopulateTriggerDetails(trigger.Type)
-
-		if trigger.Type == "Action Set" then
-			editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
-			editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
-			editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
-			editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
-		elseif trigger.Type == "Cooldown" then
-			editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)			
-			editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
-			editor:FindChild("ChargesEnabled"):SetCheck(trigger.TriggerDetails.Charges.Enabled)
-			editor:FindChild("Charges"):Enable(trigger.TriggerDetails.Charges.Enabled)
-			editor:FindChild("Charges"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Charges.Operator)
-			editor:FindChild("Charges"):FindChild("ChargesValue"):SetTextRaw(trigger.TriggerDetails.Charges.Value)
-		elseif trigger.Type == "Buff" then
-			editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
-			editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
-			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-			editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
-			editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
-			editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
-			editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
-		elseif trigger.Type == "Debuff" then
-			editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
-			editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
-			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-			editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
-			editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
-			editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
-			editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
-		elseif trigger.Type == "Resources" then
-			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
-			self:PopulateValueBasedEditor(trigger, editor, "Mana")
-			self:PopulateValueBasedEditor(trigger, editor, "Resource")
-		elseif trigger.Type == "Health" then
-			self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
-
-			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-
-			self:PopulateValueBasedEditor(trigger, editor, "Health")
-			self:PopulateValueBasedEditor(trigger, editor, "Shield")
-		elseif trigger.Type == "Moment Of Opportunity" then
-			editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-			editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-		elseif trigger.Type == "Scriptable" then
-			editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
-		elseif trigger.Type == "Keybind" then
-			self:SetKeybindInput(trigger.TriggerDetails.Input)
-			editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
-		elseif trigger.Type == "Limited Action Set Checker" then
-			editor:FindChild("AbilityName"):SetText(trigger.TriggerDetails.AbilityName)
-			if trigger.TriggerDetails.AbilityName ~= "" then
-				editor:FindChild("AbilityName"):FindChild("Placeholder"):Show(false, false)
-			end
-		end
-
-		self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
-
-		self.configForm:FindChild("TriggerEffectsList"):DestroyChildren()
-		for _, triggerEffect in pairs(trigger.TriggerEffects) do
-			self:AddTriggerEffect(triggerEffect)
-		end
-
-		local effectItems = self.configForm:FindChild("TriggerEffectsList"):GetChildren()
-		if #effectItems > 0 then
-			effectItems[1]:SetCheck(true)
-			self:OnTriggerEffectSelect(effectItems[1], effectItems[1])
-		else
-			self.configForm:FindChild("TriggerEffectContainer"):Show(false)
-		end
+        self:SelectTriggerItem(triggerDropdownItem:GetData())
 	end
+end
+
+function AuraMasteryConfig:PopulateTriggerItem(trigger)
+    local editor = self.configForm:FindChild("TriggerWindow")
+
+    editor:FindChild("TriggerEditor"):Show(true)
+    editor:FindChild("GeneralTriggerControls"):Show(true)
+    editor:SetData(trigger)
+    editor:FindChild("TriggerName"):SetText(trigger.Name)
+    editor:FindChild("TriggerName"):FindChild("Placeholder"):Show(trigger.Name == "")
+    editor:FindChild("TriggerType"):SetText(trigger.Type)
+    editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
+
+    self:PopulateTriggerDetails(trigger.Type)
+
+    if trigger.Type == "Action Set" then
+        editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
+        editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
+        editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
+        editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
+    elseif trigger.Type == "Cooldown" then
+        editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+        editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
+        editor:FindChild("ChargesEnabled"):SetCheck(trigger.TriggerDetails.Charges.Enabled)
+        editor:FindChild("Charges"):Enable(trigger.TriggerDetails.Charges.Enabled)
+        editor:FindChild("Charges"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Charges.Operator)
+        editor:FindChild("Charges"):FindChild("ChargesValue"):SetTextRaw(trigger.TriggerDetails.Charges.Value)
+    elseif trigger.Type == "Buff" then
+        editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
+        editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
+        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+        editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
+        editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
+        editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
+        editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
+    elseif trigger.Type == "Debuff" then
+        editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
+        editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
+        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+        editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
+        editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
+        editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
+        editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
+    elseif trigger.Type == "Resources" then
+        self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
+        self:PopulateValueBasedEditor(trigger, editor, "Mana")
+        self:PopulateValueBasedEditor(trigger, editor, "Resource")
+    elseif trigger.Type == "Health" then
+        self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
+
+        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+
+        self:PopulateValueBasedEditor(trigger, editor, "Health")
+        self:PopulateValueBasedEditor(trigger, editor, "Shield")
+    elseif trigger.Type == "Moment Of Opportunity" then
+        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+    elseif trigger.Type == "Scriptable" then
+        editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
+    elseif trigger.Type == "Keybind" then
+        self:SetKeybindInput(trigger.TriggerDetails.Input)
+        editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
+    elseif trigger.Type == "Limited Action Set Checker" then
+        editor:FindChild("AbilityName"):SetText(trigger.TriggerDetails.AbilityName)
+        if trigger.TriggerDetails.AbilityName ~= "" then
+            editor:FindChild("AbilityName"):FindChild("Placeholder"):Show(false, false)
+        end
+    end
+
+    self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
+
+    self.configForm:FindChild("TriggerEffectsList"):DestroyChildren()
+    for _, triggerEffect in pairs(trigger.TriggerEffects) do
+        self:AddTriggerEffect(triggerEffect)
+    end
+
+    local effectItems = self.configForm:FindChild("TriggerEffectsList"):GetChildren()
+    if #effectItems > 0 then
+        effectItems[1]:SetCheck(true)
+        self:OnTriggerEffectSelect(effectItems[1], effectItems[1])
+    else
+        self.configForm:FindChild("TriggerEffectContainer"):Show(false)
+    end
+end
+
+function AuraMasteryConfig:SelectTriggerItem(trigger)
+    self:OnOK()
+    self:PopulateTriggerItem(trigger)
+    self:SelectTab("Triggers")
 end
 
 function AuraMasteryConfig:PopulateValueBasedEditor(trigger, editor, resourceType)
 	local resourceEditor = editor:FindChild(resourceType)
-	
+
 	if trigger.TriggerDetails[resourceType] ~= nil then
 		editor:FindChild(resourceType .. "Enabled"):SetCheck(true)
 		self:ToggleResourceEditor(resourceEditor, true)
@@ -1033,17 +1105,20 @@ function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
 	if icon ~= nil then
-		local triggerSelectDropdown = self.configForm:FindChild("TriggerSelectDropdown")
-
-		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger) 
+		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger)
 			local trigger = iconTrigger.new(icon, icon.buffWatch)
-			trigger.Name = "Trigger " .. tostring(# triggerSelectDropdown:GetChildren() + 1)
+			trigger.Name = "Trigger " .. tostring(#icon.Triggers + 1)
 			trigger.TriggerDetails = { SpellName = "" }
 			table.insert(icon.Triggers, trigger)
-			
-			local triggerDropdownItem = self:AddTriggerDropdown(triggerSelectDropdown, trigger)
 
-			self:SelectTrigger(triggerDropdownItem)
+            self:RebuildTriggerList(self.selectedIcon, icon)
+
+            local left, top, right, bottom = self.selectedIcon:GetAnchorOffsets()
+            self.selectedIcon:SetAnchorOffsets(left, top, right, top + 83 + (#icon.Triggers * 30))
+            self.configForm:FindChild("IconList"):ArrangeChildrenVert()
+            self.configForm:FindChild("TriggerWindow"):SetData(trigger)
+            self:PopulateTriggerItem(trigger)
+            self:OnOK()
 		end)
 	end
 end
@@ -1061,6 +1136,8 @@ function AuraMasteryConfig:OnDeleteTrigger( wndHandler, wndControl, eMouseButton
 				break
 			end
 		end
+        self:SelectTab("General")
+        self:RebuildTriggerList(self.selectedIcon, icon)
 	end
 end
 
@@ -1080,6 +1157,7 @@ function AuraMasteryConfig:OnTriggerMoveUp( wndHandler, wndControl, eMouseButton
 				break
 			end
 		end
+        self:RebuildTriggerList(self.selectedIcon, icon)
 	end
 end
 
@@ -1099,6 +1177,7 @@ function AuraMasteryConfig:OnTriggerMoveDown( wndHandler, wndControl, eMouseButt
 				break
 			end
 		end
+        self:RebuildTriggerList(self.selectedIcon, icon)
 	end
 end
 
@@ -1269,7 +1348,7 @@ function AuraMasteryConfig:OnAcceptIconShare( wndHandler, wndControl, eMouseButt
 	local shareConfirmDialog = self.configForm:FindChild("ShareConfirmDialog")
 	local icon = shareConfirmDialog:GetData()
 	if icon ~= nil then
-		local newIcon = self.auraMastery:AddIcon()	
+		local newIcon = self.auraMastery:AddIcon()
 		newIcon:Load(icon)
 		self:CreateIconItem(newIcon.iconId, newIcon)
 
@@ -1328,7 +1407,7 @@ end
 
 function AuraMasteryConfig:Serialize(val, name)
 	local tmp = ""
-    if name then 
+    if name then
 		if type(name) == "number" then
 			tmp = tmp .. "[" .. name .. "]" .. " = "
 		else
@@ -1484,7 +1563,7 @@ local function ConvertHSVToRGB(h, s, v)
     else
     	r, g, b = v, p, q
     end
-    return r, g, b    
+    return r, g, b
 end
 
 function AuraMasteryConfig:UpdateColorPicker()
@@ -1595,7 +1674,7 @@ function AuraMasteryConfig:OnHexCodeChanged( wndHandler, wndControl, strText )
 		local b = tonumber(string.sub(strText, 5, 6), 16)
 		local a = tonumber(string.sub(strText, 7, 8), 16)
 		self.editingColor.r, self.editingColor.g, self.editingColor.b, self.editingColor.a = r / 255, g / 255, b / 255, a / 255
-		
+
 
 		self.colorPicker:FindChild("AlphaText"):SetText(string.format("%i", self.editingColor.a * 100))
 		self.colorPicker:FindChild("AlphaSlider"):SetValue(self.editingColor.a * 100)
@@ -1642,9 +1721,9 @@ function AuraMasteryConfig:OnAddTriggerEffect( wndHandler, wndControl, eMouseBut
 	triggerEffectsList:Enable(true)
 	GeminiPackages:Require("AuraMastery:TriggerEffect", function(TriggerEffect)
 		local selectedTrigger = self.configForm:FindChild("TriggerWindow"):GetData()
-		if selectedTrigger ~= nil then	
+		if selectedTrigger ~= nil then
 			local triggerEffect = TriggerEffect.new(selectedTrigger, wndHandler:GetText())
-			table.insert(selectedTrigger.TriggerEffects, triggerEffect)			
+			table.insert(selectedTrigger.TriggerEffects, triggerEffect)
 			self:AddTriggerEffect(triggerEffect)
 		end
 	end)
@@ -1671,13 +1750,14 @@ function AuraMasteryConfig:GetNextEffect(selectedEffectItem)
 			found = true
 		end
 	end
-	
+
 	if selectedEffectItem == currentEffect then
 		return lastEffect
 	else
 		return nil
 	end
 end
+
 function AuraMasteryConfig:OnRemoveTriggerEffect( wndHandler, wndControl, eMouseButton )
 	local selectedTrigger = self.configForm:FindChild("TriggerWindow"):GetData()
 	if selectedTrigger ~= nil then
@@ -1777,7 +1857,7 @@ function AuraMasteryConfig:PopulateAuraSpellNameList()
 	spellNameList:ArrangeChildrenVert()
 
 	local spriteList = self.configForm:FindChild("AuraIconSelect")
-	
+
 	local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSprite_Template", spriteList, self)
 	spriteItem:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(self.configForm:FindChild("BuffName"):GetText()))
 	spriteItem:SetName("AuraSprite_Default")
@@ -1791,11 +1871,11 @@ function AuraMasteryConfig:PopulateAuraSpellNameList()
 	spriteList:ArrangeChildrenTiles()
 
 	local soundList = self.configForm:FindChild("AuraSoundSelect")
-	
+
 	local soundItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSound_Template", soundList, self)
 	soundItem:SetData(-1)
 	soundItem:SetText("None")
-			
+
 	for sound, soundNo in pairs(Sound) do
 		if type(soundNo) == "number" then
 			local soundItem = Apollo.LoadForm("AuraMastery.xml", "SimpleTabParameters.AuraSound_Template", soundList, self)
@@ -1857,13 +1937,13 @@ function AuraMasteryConfig:SetAuraNameFilter(filterText)
 end
 
 function AuraMasteryConfig:OnGenerateAuraSpellTooltip(wndHandler, wndControl)
-	if wndControl == wndHandler then
-		splTarget = wndControl:GetData()
-		local currentTier = splTarget.nCurrentTier
-		splObject = splTarget.tTiers[currentTier].Spell.CodeEnumCastResult.ItemObjectiveComplete
-
-		Tooltip.GetSpellTooltipForm(self, wndHandler, GameLib.GetSpell(splObject:GetId()), false)
-	end
+	-- if wndControl == wndHandler then
+	-- 	splTarget = wndControl:GetData()
+	-- 	local currentTier = splTarget.nCurrentTier
+	-- 	splObject = splTarget.tTiers[currentTier].Spell.CodeEnumCastResult.ItemObjectiveComplete
+    --
+	-- 	Tooltip.GetSpellTooltipForm(self, wndHandler, GameLib.GetSpell(splObject:GetId()), false)
+	-- end
 end
 
 function AuraMasteryConfig:OnAuraSoundSelected( wndHandler, wndControl, eMouseButton )
@@ -1876,7 +1956,7 @@ end
 function AuraMasteryConfig:OnAuraScaleChanged( wndHandler, wndControl, fNewValue, fOldValue )
 	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
 	local icon = self.auraMastery.Icons[iconId]
-	
+
 	fNewValue = tonumber(string.format("%.1f", fNewValue))
 	icon:SetScale(fNewValue)
 	wndHandler:GetParent():FindChild("AuraSpriteScaleText"):SetText(fNewValue)

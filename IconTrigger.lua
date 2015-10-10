@@ -1,6 +1,6 @@
 require "Window"
 
-local IconTrigger  = {} 
+local IconTrigger  = {}
 IconTrigger .__index = IconTrigger
 
 setmetatable(IconTrigger, {
@@ -17,7 +17,14 @@ function IconTrigger.new(icon, buffWatch)
 	self.Name = ""
 	self.Type = "Cooldown"
 	self.Behaviour = "Pass"
-	self.TriggerDetails = {}
+    self.TriggerDetails = {
+        SpellName = "",
+        Charges = {
+            Enabled = false,
+            Operator = "==",
+            Value = 1
+        }
+    }
 	self.TriggerEffects = {}
 	self.Icon = icon
 
@@ -142,7 +149,7 @@ function IconTrigger:SetConfig(editor)
 		end
 
 		if self.Type == "Action Set" then
-			self.TriggerDetails = {	
+			self.TriggerDetails = {
 				ActionSets = {
 					editor:FindChild("ActionSet1"):IsChecked(),
 					editor:FindChild("ActionSet2"):IsChecked(),
@@ -204,7 +211,7 @@ function IconTrigger:SetConfig(editor)
 				}
 			end
 		elseif self.Type == "Health" then
-			self.TriggerDetails = { 
+			self.TriggerDetails = {
 				Target = {
 					Player = editor:FindChild("TargetPlayer"):IsChecked(),
 					Target = editor:FindChild("TargetTarget"):IsChecked()
@@ -227,7 +234,7 @@ function IconTrigger:SetConfig(editor)
 				}
 			end
 		elseif self.Type == "Moment Of Opportunity" then
-			self.TriggerDetails = { 
+			self.TriggerDetails = {
 				Target = {
 					Player = editor:FindChild("TargetPlayer"):IsChecked(),
 					Target = editor:FindChild("TargetTarget"):IsChecked()
@@ -292,7 +299,7 @@ function IconTrigger:AddToBuffWatch()
 		if self.TriggerDetails.Target.Player then
 			self:AddBuffToBuffWatch("Player", self.buffName)
 		end
-		
+
 		if self.TriggerDetails.Target.Target then
 			self:AddBuffToBuffWatch("Target", self.buffName)
 		end
@@ -344,7 +351,7 @@ function IconTrigger:RemoveFromBuffWatch()
 		if self.TriggerDetails.Target.Player then
 			self:RemoveBuffFromBuffWatch("Player", self.buffName)
 		end
-		
+
 		if self.TriggerDetails.Target.Target then
 			self:RemoveBuffFromBuffWatch("Target", self.buffName)
 		end

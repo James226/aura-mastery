@@ -5,9 +5,9 @@
 
 require "Window"
 
-local GeminiPackages = _G["GeminiPackages"]   
+local GeminiPackages = _G["GeminiPackages"]
 
-local Icon  = {} 
+local Icon  = {}
 Icon.__index = Icon
 
 setmetatable(Icon, {
@@ -21,7 +21,7 @@ local IconText
 
 function Icon.new(buffWatch, configForm)
 	local self = setmetatable({}, Icon)
-	
+
 	self.iconForm = iconForm
 	self.buffWatch = buffWatch
 	self.icon = Apollo.LoadForm("AuraMastery.xml", "AM_Icon", nil, self)
@@ -43,16 +43,16 @@ function Icon.new(buffWatch, configForm)
 	self.defaultIcon = ""
 
 	self.Triggers = {}
-	
+
 	self.buff = nil
 	self.spell = nil
-	
+
 	self.isEnabled = true
-	
+
 	self.isActive = true
-	
+
 	self.actionSets = { true, true, true, true }
-	
+
 	self.iconText = {}
 
 	self.Stacks = 0
@@ -63,17 +63,27 @@ function Icon.new(buffWatch, configForm)
 	self.playSoundWhen = "None"
 
 	self.onlyInCombat = false
-	
+
+    self.active = {
+        inCombat = true,
+        notInCombat = true,
+        solo = true,
+        inGroup = true,
+        inRaid = true,
+        pvpFlagged = true,
+        notPvpFlagged = true
+    }
+
 	self.soundPlayed = true
 	self.isInCombat = false
 
 	self.SimpleMode = false
-		
+
 	GeminiPackages:Require("AuraMastery:IconOverlay", function(iconOverlay)
 		local IconOverlay = iconOverlay
 		self.iconOverlay = IconOverlay.new(self)
 	end)
-	
+
 	return self
 end
 
@@ -88,14 +98,19 @@ function Icon:Load(saveData)
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
 		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
 		self.iconScale = saveData.iconScale or 1
-		self.icon:SetAnchorOffsets(saveData.iconPosition.left, saveData.iconPosition.top, saveData.iconPosition.left + (self.iconScale * self.defaultSize.width),  saveData.iconPosition.top + (self.iconScale * self.defaultSize.height))
+        self:SetPosition(saveData.iconPosition.left, saveData.iconPosition.top)
 		if saveData.iconColor ~= nil then
 			self.iconColor = CColor.new(saveData.iconColor[1], saveData.iconColor[2], saveData.iconColor[3], saveData.iconColor[4])
 		end
 
 		if saveData.onlyInCombat ~= nil then
-			self.onlyInCombat = saveData.onlyInCombat
+            self.active.inCombat = true
+            self.active.notInCombat = not saveData.onlyInCombat
 		end
+
+        if saveData.active ~= nil then
+            self.active = saveData.active
+        end
 
 		self.iconSprite = saveData.iconSprite or ""
 		self.iconBorder = saveData.iconBorder
@@ -109,13 +124,13 @@ function Icon:Load(saveData)
 				end
 			end)
 		end
-		
+
 		if saveData.actionSets ~= nil then
 			self.actionSets = saveData.actionSets
 		end
-		
+
 		self.iconOverlay:Load(saveData.iconOverlay)
-		
+
 		self:UpdateDefaultIcon()
 
 		if saveData.showWhen == nil then
@@ -139,7 +154,7 @@ function Icon:Load(saveData)
 			self.SimpleMode = saveData.SimpleMode
 		end
 
-		
+
 		GeminiPackages:Require("AuraMastery:IconTrigger", function(iconTrigger)
 			if saveData.Triggers ~= nil then
 				for _, triggerData in pairs(saveData.Triggers) do
@@ -164,7 +179,7 @@ function Icon:Load(saveData)
 		end)
 
 	end
-	
+
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
 end
 
@@ -214,9 +229,9 @@ end
 function Icon:GetSaveData()
 	local saveData = { }
 	saveData.iconName = self.iconName
-	saveData.iconSound = self.iconSound 
+	saveData.iconSound = self.iconSound
 	saveData.iconBackground = self.iconBackground
-	saveData.onlyInCombat = self.onlyInCombat
+    saveData.active = self.active
 	saveData.iconScale = self.iconScale
 	saveData.iconBorder = self.iconBorder
 	saveData.iconColor = { self.iconColor.r, self.iconColor.g, self.iconColor.b, self.iconColor.a }
@@ -224,18 +239,18 @@ function Icon:GetSaveData()
 	saveData.iconEnabled = self.enabled
 	saveData.actionSets = self.actionSets
 	saveData.SimpleMode = self.SimpleMode
-	
+
 	saveData.iconText = {}
 	for iconTextId, iconText in pairs(self.iconText) do
 		saveData.iconText[iconTextId] = iconText:Save()
 	end
 
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
-	saveData.iconPosition = { 
+	saveData.iconPosition = {
 		left = left,
 		top = top
 	}
-	
+
 	saveData.iconOverlay = self.iconOverlay:Save()
 
 	saveData.Triggers = {}
@@ -246,7 +261,7 @@ function Icon:GetSaveData()
 
 	saveData.showWhen = self.showWhen
 	saveData.playSoundWhen = self.playSoundWhen
-	
+
 	return saveData
 end
 
@@ -290,7 +305,7 @@ function Icon:SetIcon(configWnd)
 
 		self.iconOverlay:SetConfig(configWnd)
 		if #self.Triggers == 0 then
-			GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger) 
+			GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger)
 				local trigger = iconTrigger.new(self, self.buffWatch)
 				trigger.Name = "Trigger 1"
 				trigger.TriggerDetails = { SpellName = "" }
@@ -305,28 +320,33 @@ function Icon:SetIcon(configWnd)
 		self.showWhen = configWnd:FindChild("BuffShowWhen"):GetText()
 		self.playSoundWhen = configWnd:FindChild("BuffPlaySoundWhen"):GetText()
 		self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()
-		self.onlyInCombat = configWnd:FindChild("BuffOnlyInCombat"):IsChecked()
-		
+
+        self.active.inCombat = configWnd:FindChild("BuffShowInCombat"):IsChecked()
+        self.active.notInCombat = configWnd:FindChild("BuffShowNotInCombat"):IsChecked()
+        self.active.solo = configWnd:FindChild("BuffShowSolo"):IsChecked()
+        self.active.inGroup = configWnd:FindChild("BuffShowInGroup"):IsChecked()
+        self.active.inRaid = configWnd:FindChild("BuffShowInRaid"):IsChecked()
+        self.active.pvpFlagged = configWnd:FindChild("BuffShowPvpFlagged"):IsChecked()
+        self.active.notPvpFlagged = configWnd:FindChild("BuffShowNotPvpFlagged"):IsChecked()
+
 		self:SetScale(configWnd:FindChild("BuffScale"):GetValue())
-		
+
 		self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
 		self.icon:SetStyle("Border", self.iconBorder)
-		
 		if configWnd:FindChild("SoundSelect"):FindChild("SelectedSound") ~= nil then
 			self.iconSound = tonumber(configWnd:FindChild("SoundSelect"):FindChild("SelectedSound"):GetText())
 		else
 			self.iconSound = nil
 		end
 		self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
-		
+
 		for iconTextId, iconText in pairs(self.iconText) do
 			iconText:SetConfig(configWnd:FindChild("TextList"):GetChildren()[iconTextId])
 		end
-		
-		self.iconOverlay:SetConfig(configWnd)
-		
-		self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
 
+		self.iconOverlay:SetConfig(configWnd)
+
+		self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
 		self.actionSets = {
 			configWnd:FindChild("BuffActionSet1"):IsChecked(),
 			configWnd:FindChild("BuffActionSet2"):IsChecked(),
@@ -372,23 +392,23 @@ function Icon:PostUpdate()
 
 	for i = #self.Triggers, 1, -1 do
 		local trigger = self.Triggers[i]
-	
+
 		local triggerSet = trigger:IsSet()
-		
+
 		if self.showWhen ~= "Always" then
 			if showIcon == nil then
 				if self.showWhen == "None" then
-					showIcon = not triggerSet 
+					showIcon = not triggerSet
 				else
 					showIcon = triggerSet
 				end
 			elseif self.showWhen == "All" then
-				showIcon = showIcon and triggerSet 
+				showIcon = showIcon and triggerSet
 			else
-				showIcon = showIcon or triggerSet 
+				showIcon = showIcon or triggerSet
 			end
 		end
-		
+
 		if playSound == nil then
 			if self.playSoundWhen == "None" then
 				playSound = not triggerSet
@@ -396,11 +416,11 @@ function Icon:PostUpdate()
 				playSound = triggerSet
 			end
 		elseif self.playSoundWhen == "All" then
-			playSound = playSound and triggerSet 
+			playSound = playSound and triggerSet
 		elseif self.playSoundWhen == "None" then
 			playSound = playSound and not triggerSet
 		else
-			playSound = playSound or triggerSet		
+			playSound = playSound or triggerSet
 		end
 
 		if trigger:IsSet() then
@@ -419,7 +439,7 @@ function Icon:PostUpdate()
 			if trigger.Charges ~= nil then
 				self.Charges = trigger.Charges
 			end
-			
+
 			if trigger.Resources ~= nil then
 				self.Resources = trigger.Resources
 			end
@@ -438,7 +458,7 @@ function Icon:PostUpdate()
 		end
 	end
 
-	local showIcon = self:InCombatCheck() and (showIcon or self.showWhen == "Always")
+	local showIcon = self:VisibilityCheck() and (showIcon or self.showWhen == "Always")
 
 	local isMoveable = self.icon:IsStyleOn("Moveable")
 	if showIcon or isMoveable then
@@ -451,13 +471,13 @@ function Icon:PostUpdate()
 
 	if playSound and not self.soundPlayed and self.iconSound ~= -1 then
 		Sound.Play(self.iconSound)
-	end	
+	end
 	self.soundPlayed = playSound
-	
+
 	for _, iconText in pairs(self.iconText) do
 		iconText:Update()
 	end
-	
+
 	if self.iconOverlay ~= nil then
 		self.iconOverlay:Update()
 	end
@@ -494,8 +514,36 @@ function Icon:GetSprite()
 	end
 end
 
+function Icon:VisibilityCheck()
+    return self:InCombatCheck()
+    and self:GroupCheck()
+    and self:PvpFlagCheck()
+end
+
 function Icon:InCombatCheck()
-	return self.isInCombat or not self.onlyInCombat
+    if self.isInCombat then
+        return self.active.inCombat
+    else
+        return self.active.notInCombat
+    end
+end
+
+function Icon:GroupCheck()
+    if self.isInRaid then
+        return self.active.inRaid
+    elseif self.isInGroup then
+        return self.active.inGroup
+    else
+        return self.active.solo
+    end
+end
+
+function Icon:PvpFlagCheck()
+    if self.isPvpFlagged then
+        return self.active.pvpFlagged
+    else
+        return self.active.notPvpFlagged
+    end
 end
 
 function Icon:GetAbilitiesList()
@@ -533,6 +581,14 @@ function Icon:SetScale(scale)
 	self.iconScale = scale
 	local left, top, right, bottom = self.icon:GetAnchorOffsets()
 	self.icon:SetAnchorOffsets(left, top, left + (self.iconScale * self.defaultSize.width),  top + (self.iconScale * self.defaultSize.height))
+end
+
+function Icon:GetPosition()
+    return self.icon:GetAnchorOffsets()
+end
+
+function Icon:SetPosition(x, y)
+    self.icon:SetAnchorOffsets(x, y, x + (self.iconScale * self.defaultSize.width),  y + (self.iconScale * self.defaultSize.height))
 end
 
 function Icon:SetIconColor(color)
