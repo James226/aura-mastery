@@ -120,7 +120,6 @@ function AuraMasteryConfig:Init()
 	local soundSelectHeight = self.configForm:FindChild("SoundSelect"):GetHeight()
 	self.configForm:FindChild("SoundSelect"):SetVScrollInfo(nextItem - soundSelectHeight, soundSelectHeight, soundSelectHeight)
 
-	self:LoadSpriteIcons()
 	self.iconTextEditor = {}
 
 	self.configForm:FindChild("SolidOverlay"):FindChild("ProgressBar"):SetMax(100)
@@ -213,14 +212,18 @@ end
 
 
 
-function AuraMasteryConfig:LoadSpriteIcons()
-	local spriteList = self.configForm:FindChild("BuffEditor"):FindChild("AppearanceTab"):FindChild("SpriteItemList")
+function AuraMasteryConfig:LoadSpriteIcons(spriteList)
+    local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    local icon = self.auraMastery.Icons[iconId]
 
 	local spriteItem = Apollo.LoadForm("AuraMastery.xml", "SpriteItem", spriteList, self)
 	spriteItem:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(self.configForm:FindChild("BuffName"):GetText()))
 	spriteItem:FindChild("SpriteItemText"):SetText("Spell Icon")
 	spriteItem:SetAnchorOffsets(0, 0, spriteItem:GetWidth(), spriteItem:GetHeight())
 
+    if icon.iconSprite == "" then
+        self:SelectSpriteIcon(spriteItem)
+    end
 	local iconsPerRow = math.floor(spriteList:GetWidth() / 110)
 	local currentPos = 1
 
@@ -235,9 +238,13 @@ function AuraMasteryConfig:LoadSpriteIcons()
 		spriteItem:FindChild("SpriteItemText"):SetText(spriteName)
 		local x = math.floor(currentPos % iconsPerRow) * 110
 		local y = math.floor(currentPos / iconsPerRow) * 140
-		spriteItem:SetAnchorOffsets(x, y, x + spriteItem:GetWidth(), y + spriteItem:GetHeight())
 		currentPos = currentPos + 1
+
+        if spriteIcon == icon.iconSprite then
+            self:SelectSpriteIcon(spriteItem)
+        end
 	end
+    spriteList:ArrangeChildrenTiles()
 end
 
 function AuraMasteryConfig:CreateControls()
@@ -535,9 +542,6 @@ function AuraMasteryConfig:OnColorUpdate()
 	self.configForm:FindChild("BuffColorSample"):SetBGColor(self.selectedColor)
 	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetBGColor(self.selectedColor)
 	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetBGColor(self.selectedColor)
-	for _, icon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
-		icon:FindChild("SpriteItemIcon"):SetBGColor(self.selectedColor)
-	end
 end
 
 function AuraMasteryConfig:OnColorSelect( wndHandler, wndControl, eMouseButton )
@@ -545,9 +549,12 @@ function AuraMasteryConfig:OnColorSelect( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMasteryConfig:OnSpellNameChanged( wndHandler, wndControl, strText )
-	self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(strText))
-	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
-	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
+    local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+	local icon = self.auraMastery.Icons[iconId]
+    if icon.iconSprite == "" then
+    	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self:GetSpellIconByName(strText))
+    	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(self:GetSpellIconByName(strText))
+    end
 end
 
 function AuraMasteryConfig:OnOverlaySelection( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
@@ -729,6 +736,9 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self.configForm:FindChild("BuffPlaySoundWhen"):SelectItemByText(icon.playSoundWhen)
 			self:SetPlayWhenDescription(self.configForm:FindChild("BuffPlaySoundWhen"):GetSelectedIndex() + 1)
 			self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
+            self.configForm:FindChild("SelectedSprite"):SetText(icon.iconSprite)
+            self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
+            self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
 			self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
             self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
             local x, y = icon:GetPosition()
@@ -745,7 +755,6 @@ function AuraMasteryConfig:SelectIcon(iconItem)
             self.configForm:FindChild("BuffShowPvpFlagged"):SetCheck(icon.active.pvpFlagged)
             self.configForm:FindChild("BuffShowNotPvpFlagged"):SetCheck(icon.active.notPvpFlagged)
 			self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
-			self.configForm:FindChild("SpriteItemList"):GetChildren()[1]:FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
 			self.selectedColor = icon.iconColor
 			self.selectedOverlayColor = icon.iconOverlay.overlayColor
 
@@ -755,15 +764,6 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
 
 			self:OnColorUpdate()
-
-			for _, spriteIcon in pairs(self.configForm:FindChild("SpriteItemList"):GetChildren()) do
-				if (icon.iconSprite == "" and spriteIcon:FindChild("SpriteItemText"):GetText() == "Spell Icon") or spriteIcon:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
-					self:SelectSpriteIcon(spriteIcon)
-					break
-				end
-			end
-
-
 
 			if self.selectedSound ~= nil then
 				self.selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
@@ -880,7 +880,7 @@ end
 ---------------------------------------------------------------------------------------------------
 function AuraMasteryConfig:OnSpriteIconSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
 	if wndHandler == wndControl then
-		self:SelectSpriteIcon(wndHandler)
+		self:SelectSpriteIcon(wndHandler:GetParent())
 	end
 end
 
@@ -898,6 +898,7 @@ function AuraMasteryConfig:SelectSpriteIcon(spriteIcon)
 	self.selectedSprite:SetText("")
 	self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
 	self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(self.selectedSprite:FindChild("SpriteItemIcon"):GetSprite())
+    self:OnOK()
 end
 
 function AuraMasteryConfig:AddIconTextEditor()
@@ -1019,8 +1020,12 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
     elseif trigger.Type == "Buff" then
         editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
         editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
-        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+
+        for type, val in pairs(trigger.TriggerDetails.Target) do
+            editor:FindChild("Target" .. type):SetCheck(val)
+        end
+        editor:FindChild("TargetGroup"):Enable(false)
+
         editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
         editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
         editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
@@ -1028,8 +1033,12 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
     elseif trigger.Type == "Debuff" then
         editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
         editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
-        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+
+        for type, val in pairs(trigger.TriggerDetails.Target) do
+            editor:FindChild("Target" .. type):SetCheck(val)
+        end
+        editor:FindChild("TargetGroup"):Enable(false)
+
         editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
         editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
         editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
@@ -1074,6 +1083,17 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
         self:OnTriggerEffectSelect(effectItems[1], effectItems[1])
     else
         self.configForm:FindChild("TriggerEffectContainer"):Show(false)
+    end
+end
+
+function AuraMasteryConfig:OnBuffTargetChanged(wndHandler)
+    local currentGroup = wndHandler:GetParent()
+    for _, group in pairs(wndHandler:GetParent():GetParent():GetChildren()) do
+        if group ~= currentGroup then
+            for _, target in pairs(group:GetChildren()) do
+                target:SetCheck(false)
+            end
+        end
     end
 end
 
@@ -2053,6 +2073,27 @@ function AuraMasteryConfig:SetKeybindInput(input)
 	local keySelect = self.configForm:FindChild("KeybindTracker_KeySelect")
 	keySelect:SetText(keyText)
 	keySelect:SetData(input)
+end
+
+---------------------------------------------------------------------------------------------------
+-- IconSelector Functions
+---------------------------------------------------------------------------------------------------
+
+function AuraMasteryConfig:OnIconSelectorOpen( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+    self.iconSelector = Apollo.LoadForm("AuraMastery.xml", "IconSelector", nil, self)
+    self.iconSelector:Show(true)
+
+    self:LoadSpriteIcons(self.iconSelector:FindChild("IconList"))
+    self.lastSelectedSprite = self.selectedSprite
+end
+
+function AuraMasteryConfig:OnIconSelectorClose( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+    self:SelectSpriteIcon(self.lastSelectedSprite)
+    self.iconSelector:Destroy()
+end
+
+function AuraMasteryConfig:OnIconSelectorConfirm( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+    self.iconSelector:Destroy()
 end
 
 local GeminiPackages = _G["GeminiPackages"]

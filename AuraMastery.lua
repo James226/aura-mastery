@@ -207,8 +207,6 @@ AuraMastery.spriteIcons = {
 	Hamster = "CRB_Anim_Spinner:sprAnim_SpinnerLarge",
 	Whee = "CRB_Anim_Spinner:sprAnim_SpinnerSmall",
 	Wavey = "CRB_Anim_WaveRunner:CRB_Anim_WaveRunnerStretch",
-	Tap = "CRB_BreakoutSprites:spr_BreakoutStun_TapAnim",
-	Tap2 = "CRB_BreakoutSprites:spr_BreakoutStun_TapTextBlue",
 	Halo3 = "CRB_DatachronSprites:sprDCPP_SolTmdMeter",
 	Flies2 = "CRB_HUDAlerts:sprAlert_RotateAnim3",
 	Nom = "CRB_Tradeskills:sprSchemArtImage",
@@ -264,11 +262,21 @@ function AuraMastery:new(o)
 	self.buffWatch = {
 		Buff = {
 			Player = {},
-			Target = {}
+			Target = {},
+			TargetOfTarget = {},
+			FocusTarget = {},
+			FocusTargetTarget = {},
+			Friendly = {},
+			Hostile = {}
 		},
 		Debuff = {
 			Player = {},
-			Target = {}
+			Target = {},
+			TargetOfTarget = {},
+			FocusTarget = {},
+			FocusTargetTarget = {},
+			Friendly = {},
+			Hostile = {}
 		},
 		Cooldown = {},
 		OnCritical = {},
@@ -377,25 +385,76 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 		return
 	end
 
-	if unitTarget:IsThePlayer() then
-		self:ProcessBuff("Player", {
+	local buffType = data.splEffect:IsBeneficial() and "Buff" or "Debuff"
+	local spellName = data.splEffect:GetName()
+	local playerUnit = GameLib:GetPlayerUnit()
+
+	if unitTarget == playerUnit then
+		self:ProcessBuff("Player", buffType, spellName, {
+			unit = unitTarget,
 			action = action,
 			data = data
 		})
 	end
 
-	if unitTarget == GameLib.GetTargetUnit() then
-		self:ProcessBuff("Target", {
+	local targetUnit = GameLib:GetTargetUnit()
+	if targetUnit ~= nil then
+		if unitTarget == targetUnit then
+			self:ProcessBuff("Target", buffType, spellName, {
+				unit = unitTarget,
+				action = action,
+				data = data
+			})
+		end
+
+		if unitTarget == targetUnit:GetTarget() then
+			self:ProcessBuff("TargetOfTarget", buffType, spellName, {
+				unit = unitTarget,
+				action = action,
+				data = data
+			})
+		end
+	end
+
+	if unitTarget:GetDispositionTo(playerUnit) == Unit.CodeEnumDisposition.Friendly then
+		self:ProcessBuff("Friendly", buffType, spellName, {
+			unit = unitTarget,
+			action = action,
+			data = data
+		})
+	else
+		self:ProcessBuff("Hostile", buffType, spellName, {
+			unit = unitTarget,
 			action = action,
 			data = data
 		})
 	end
+
+	if self.unitFocus ~= nil then
+		if self.unitFocus == unitTarget then
+			self:ProcessBuff("FocusTarget", buffType, spellName, {
+				unit = unitTarget,
+				action = action,
+				data = data
+			})
+		end
+
+		-- local focusTargetTarget = self.unitFocus:GetTarget()
+		-- if focusTargetTarget ~= nil then
+		-- 	self:ProcessBuff("FocusTargetTarget", buffType, spellName, {
+		-- 		unit = focusTargetTarget,
+		-- 		action = action,
+		-- 		data = data
+		-- 	})
+		-- end
+	end
+
+	if not self.isInRaid then return end
+
+
 end
 
-function AuraMastery:ProcessBuff(target, payload)
-	local buffType = payload.data.splEffect:IsBeneficial() and "Buff" or "Debuff"
-	local spellName = payload.data.splEffect:GetName()
-
+function AuraMastery:ProcessBuff(target, buffType, spellName, payload)
 	if self.buffWatch[buffType][target][spellName] ~= nil then
 		for _, watcher in pairs(self.buffWatch[buffType][target][spellName]) do
 			watcher(payload)
@@ -403,21 +462,33 @@ function AuraMastery:ProcessBuff(target, payload)
 	end
 end
 
-function AuraMastery:OnTargetChanged()
-	local target = GameLib.GetTargetUnit()
-	local buffs = {}
-	if target ~= nil then
-		buffs = target:GetBuffs()
-	end
-
-	self:ReloadBuffLists("Buff", "Target", buffs.arBeneficial)
-	self:ReloadBuffLists("Debuff", "Target", buffs.arHarmful)
+function AuraMastery:OnTargetChanged(unit)
+	local lastTarget = self.target
+	self.target = unit
+	self:ReloadBuffsForUnit("Target", self.target, lastTarget)
 end
 
-function AuraMastery:ReloadBuffLists(buffType, target, buffs)
-	for _, spellList in pairs(self.buffWatch[buffType][target]) do
-		for _, watcher in pairs(spellList) do
-			watcher({ action = "Remove" })
+function AuraMastery:OnAlternateTargetUnitChanged(unit)
+	local lastFocus = self.unitFocus
+	self.unitFocus = unit
+	self:ReloadBuffsForUnit("FocusTarget", unit, lastFocus)
+	--self:ReloadBuffsForUnit(self.unitFocus:GetTarget(), "FocusTargetTarget")
+end
+
+function AuraMastery:ReloadBuffsForUnit(target, unit, lastUnit)
+	if unit ~= nil then
+		local buffs = unit:GetBuffs()
+		self:ReloadBuffLists("Buff", target, unit, buffs.arBeneficial, lastUnit)
+		self:ReloadBuffLists("Debuff", target, unit, buffs.arHarmful, lastUnit)
+	end
+end
+
+function AuraMastery:ReloadBuffLists(buffType, target, unit, buffs, lastUnit)
+	if lastUnit ~= nil then
+		for _, spellList in pairs(self.buffWatch[buffType][target]) do
+			for _, watcher in pairs(spellList) do
+				watcher({ action = "Remove", unit = lastUnit })
+			end
 		end
 	end
 
@@ -425,7 +496,7 @@ function AuraMastery:ReloadBuffLists(buffType, target, buffs)
 		for idx, buff in pairs(buffs) do
 			if self.buffWatch[buffType][target][buff.splEffect:GetName()] ~= nil then
 				for _, watcher in pairs(self.buffWatch[buffType][target][buff.splEffect:GetName()]) do
-					watcher({ action = "Add", data = buff })
+					watcher({ action = "Add", unit = unit, data = buff })
 				end
 			end
 		end
@@ -435,6 +506,11 @@ end
 function AuraMastery:OnCharacterCreated()
 	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 	self:UpdateAbilityBook()
+
+	local player = GameLib.GetPlayerUnit()
+	self:ReloadBuffsForUnit("Player", player)
+	self:OnTargetChanged(player:GetTarget())
+	self:OnAlternateTargetUnitChanged(player:GetAlternateTarget())
 end
 
 function AuraMastery:AddIcon()
@@ -462,7 +538,6 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
 	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
-	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
 
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
@@ -478,6 +553,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("BuffUpdated", "OnBuffAdded", self)
 	Apollo.RegisterEventHandler("BuffRemoved", "OnBuffRemoved", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetChanged", self)
+	Apollo.RegisterEventHandler("AlternateTargetUnitChanged", "OnAlternateTargetUnitChanged", self)
 
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "UpdateAbilityBook", self)
 	self:OnAbilityBookChange()
@@ -489,6 +565,12 @@ function AuraMastery:OnLoad()
   	self.shareChannel = ICCommLib.JoinChannel("AuraMastery", ICCommLib.CodeEnumICCommChannelType.Global)
 	self.shareChannel:IsReady()
 	self.shareChannel:SetReceivedMessageFunction("OnSharingMessageReceived", self)
+
+	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
+	local unitPlayer = GameLib.GetPlayerUnit()
+	if unitPlayer then
+		self:OnCharacterCreated(unitPlayer)
+	end
 end
 
 function AuraMastery:LoadBotSpellIds()

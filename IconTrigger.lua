@@ -34,6 +34,8 @@ function IconTrigger.new(icon, buffWatch)
     self.Time = 0
     self.Stacks = 0
 
+    self.Units = {}
+
 	return self
 end
 
@@ -173,7 +175,15 @@ function IconTrigger:SetConfig(editor)
 				BuffName = editor:FindChild("BuffName"):GetText(),
 				Target = {
 					Player = editor:FindChild("TargetPlayer"):IsChecked(),
-					Target = editor:FindChild("TargetTarget"):IsChecked()
+                    Target = editor:FindChild("TargetTarget"):IsChecked(),
+                    TargetOfTarget = editor:FindChild("TargetTargetOfTarget"):IsChecked(),
+                    FocusTarget = editor:FindChild("TargetFocusTarget"):IsChecked(),
+                    FocusTargetTarget = editor:FindChild("TargetFocusTargetTarget"):IsChecked(),
+                    Tank = editor:FindChild("TargetTank"):IsChecked(),
+                    Healer = editor:FindChild("TargetHealer"):IsChecked(),
+                    DPS = editor:FindChild("TargetDPS"):IsChecked(),
+                    Friendly = editor:FindChild("TargetFriendly"):IsChecked(),
+					Hostile = editor:FindChild("TargetHostile"):IsChecked()
 				},
 				Stacks = {
 					Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
@@ -186,7 +196,15 @@ function IconTrigger:SetConfig(editor)
 				DebuffName = editor:FindChild("DebuffName"):GetText(),
 				Target = {
 					Player = editor:FindChild("TargetPlayer"):IsChecked(),
-					Target = editor:FindChild("TargetTarget"):IsChecked()
+					Target = editor:FindChild("TargetTarget"):IsChecked(),
+                    TargetOfTarget = editor:FindChild("TargetTargetOfTarget"):IsChecked(),
+                    FocusTarget = editor:FindChild("TargetFocusTarget"):IsChecked(),
+                    FocusTargetTarget = editor:FindChild("TargetFocusTargetTarget"):IsChecked(),
+                    Tank = editor:FindChild("TargetTank"):IsChecked(),
+                    Healer = editor:FindChild("TargetHealer"):IsChecked(),
+                    DPS = editor:FindChild("TargetDPS"):IsChecked(),
+                    Friendly = editor:FindChild("TargetFriendly"):IsChecked(),
+					Hostile = editor:FindChild("TargetHostile"):IsChecked()
 				},
 				Stacks = {
 					Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
@@ -298,13 +316,11 @@ function IconTrigger:AddToBuffWatch()
 			self.buffName = self.Icon.iconName
 		end
 
-		if self.TriggerDetails.Target.Player then
-			self:AddBuffToBuffWatch("Player", self.buffName)
-		end
-
-		if self.TriggerDetails.Target.Target then
-			self:AddBuffToBuffWatch("Target", self.buffName)
-		end
+        for target, val in pairs(self.TriggerDetails.Target) do
+            if val then
+                self:AddBuffToBuffWatch(target, self.buffName)
+            end
+        end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:AddBasicToBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
@@ -496,16 +512,32 @@ function IconTrigger:ProcessSpell(spell)
 	end
 end
 
+local function HasProperties(table)
+    for key, val in pairs(table) do
+        if val ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
 function IconTrigger:ProcessBuff(data)
     local action = data.action
     local buff = data.data
+
     if action == "Remove" then
-        self.isSet = false
+        if data.unit == nil then
+            self.Units = {}
+        else
+            self.Units[tostring(data.unit:GetName())] = nil
+        end
+        self.isSet = HasProperties(self.Units)
     end
 
     if action == "Add" then
         if not self.TriggerDetails.Stacks.Enabled or self:IsOperatorSatisfied(buff.nCount, self.TriggerDetails.Stacks.Operator, self.TriggerDetails.Stacks.Value) then
-            self.isSet = true
+            self.Units[tostring(data.unit:GetName())] = data.unit
+            self.isSet = HasProperties(self.Units)
         end
     end
 
@@ -516,6 +548,11 @@ function IconTrigger:ProcessBuff(data)
     		self.MaxDuration = self.Time
     	end
     	self.Sprite = buff.splEffect:GetIcon()
+
+        if self.Time < 0 then
+            self.Units = {}
+            self.isSet = false
+        end
     end
 end
 
@@ -619,6 +656,21 @@ function IconTrigger:IsOperatorSatisfied(value, operator, compValue)
 	elseif operator == "<=" then
 		return value <= compValue
 	end
+end
+
+function IconTrigger:GetTarget()
+    if self.isSet then
+        if self.Type == "Buff" or self.Type == "Debuff" then
+            if self.TriggerDetails.Target.Player then
+                return GameLib:GetPlayerUnit()
+            elseif self.TriggerDetails.Target.Target then
+                return GameLib:GetTargetUnit()
+            end
+        else
+            return GameLib:GetPlayerUnit()
+        end
+    end
+    return nil
 end
 
 local GeminiPackages = _G["GeminiPackages"]

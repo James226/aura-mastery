@@ -84,6 +84,10 @@ function Icon.new(buffWatch, configForm)
 		self.iconOverlay = IconOverlay.new(self)
 	end)
 
+	GeminiPackages:Require("AuraMastery:TrackLine", function(trackLine)
+		--self.trackLine = trackLine.new(self)
+	end)
+
 	return self
 end
 
@@ -482,6 +486,10 @@ function Icon:PostUpdate()
 		self.iconOverlay:Update()
 	end
 
+    if self.trackLine ~= nil then
+        self.trackLine:Update()
+    end
+
 	if showIcon then
 		for i = #self.Triggers, 1, -1 do
 			local trigger = self.Triggers[i]
@@ -593,6 +601,16 @@ end
 
 function Icon:SetIconColor(color)
 	self.icon:SetBGColor(color)
+end
+
+function Icon:GetTarget()
+    for _, trigger in pairs(self.Triggers) do
+        local target = trigger:GetTarget()
+
+        if target ~= nil then
+            return target
+        end
+    end
 end
 
 if _G["AuraMasteryLibs"] == nil then
