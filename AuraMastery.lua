@@ -476,22 +476,27 @@ function AuraMastery:OnAlternateTargetUnitChanged(unit)
 end
 
 function AuraMastery:ReloadBuffsForUnit(target, unit, lastUnit)
+	self:RemoveBuffs("Buff", lastUnit, target)
+	self:RemoveBuffs("Debuff", lastUnit, target)
+
 	if unit ~= nil then
 		local buffs = unit:GetBuffs()
-		self:ReloadBuffLists("Buff", target, unit, buffs.arBeneficial, lastUnit)
-		self:ReloadBuffLists("Debuff", target, unit, buffs.arHarmful, lastUnit)
+		self:ReloadBuffLists("Buff", target, unit, buffs.arBeneficial)
+		self:ReloadBuffLists("Debuff", target, unit, buffs.arHarmful)
 	end
 end
 
-function AuraMastery:ReloadBuffLists(buffType, target, unit, buffs, lastUnit)
-	if lastUnit ~= nil then
-		for _, spellList in pairs(self.buffWatch[buffType][target]) do
+function AuraMastery:RemoveBuffs(buffType, unit, target)
+	if unit ~= nil then
+		for name, spellList in pairs(self.buffWatch[buffType][target]) do
 			for _, watcher in pairs(spellList) do
-				watcher({ action = "Remove", unit = lastUnit })
+				watcher({ action = "Remove", unit = unit })
 			end
 		end
 	end
+end
 
+function AuraMastery:ReloadBuffLists(buffType, target, unit, buffs)
 	if buffs then
 		for idx, buff in pairs(buffs) do
 			if self.buffWatch[buffType][target][buff.splEffect:GetName()] ~= nil then
