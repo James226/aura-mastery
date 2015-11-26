@@ -829,6 +829,10 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
 			end
 
+            if icon.trackLine ~= nil then
+                self.configForm:FindChild("TrackLineEnabled"):SetCheck(icon.trackLine.Enabled)
+            end
+
 			self:PopulateTriggers(icon)
 		end
 	end
@@ -2094,6 +2098,17 @@ end
 
 function AuraMasteryConfig:OnIconSelectorConfirm( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
     self.iconSelector:Destroy()
+end
+
+function AuraMasteryConfig:TrackLineNumberAdjust( wndHandler, wndControl, eMouseButton )
+    if wndHandler == wndControl then
+        local field = wndHandler:GetParent():FindChild("TrackLineNumberOfLines")
+        if wndHandler:GetName() == "TrackLinesMinus" then
+            field:SetText(math.max(0, field:GetText() - 1))
+        elseif wndHandler:GetName() == "TrackLinesPlus" then
+            field:SetText(math.min(20, field:GetText() + 1))
+        end
+    end
 end
 
 local GeminiPackages = _G["GeminiPackages"]

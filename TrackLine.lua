@@ -13,10 +13,11 @@ TrackLine.TrackMode = {
 	Circle = 2
 }
 
-function TrackLine.new(icon)
+function TrackLine.new(parent)
 	local self = setmetatable({}, { __index = TrackLine })
 
-    self.icon = icon
+    self.Enabled = false
+    self.parent = parent
 	self.bgColor = CColor.new(0,1,0,1)
 	self.intermediateColor = CColor.new(0, 0, 1, 1)
 	self.complementaryColor = CColor.new(1, 0, 1, 1)
@@ -44,8 +45,15 @@ function TrackLine.new(icon)
 	return self
 end
 
+function TrackLine:Destroy()
+    for i = 0, 20 do
+        self.marker[i]:DestroyChildren()
+    end
+end
+
 function TrackLine:Load(saveData)
 	if saveData ~= nil then
+        self.Enabled = saveData.Enabled
 		self:SetBGColor(CColor.new(saveData.bgColor[1], saveData.bgColor[2], saveData.bgColor[3], saveData.bgColor[4]))
 		self.Sprite = saveData.Sprite
 
@@ -76,12 +84,17 @@ end
 
 function TrackLine:Save()
 	local saveData = { }
+    saveData.Enabled = self.Enabled
 	saveData.Sprite = self.Sprite
 	saveData.bgColor = { self.bgColor.r, self.bgColor.g, self.bgColor.b, self.bgColor.a }
 	saveData.trackMode = self.trackMode
 	saveData.distance = self.distance
 	saveData.showDistanceMarker = self.showDistanceMarker
 	return saveData
+end
+
+function TrackLine:SetConfig(configWnd)
+    self.Enabled = configWnd:FindChild("TrackLineEnabled"):IsChecked()
 end
 
 function TrackLine:SetSprite(sprite)
@@ -92,11 +105,7 @@ function TrackLine:SetSprite(sprite)
 end
 
 function TrackLine:SetTarget(target, clearDistance)
-	if clearDistance ~= nil then
-		self.clearDistance = clearDistance
-	else
-		self.clearDistance = 20
-	end
+    self.target = target
 end
 
 local function indexOf(table, item)
@@ -134,12 +143,12 @@ function TrackLine.GetDistanceFunction()
 end
 
 function TrackLine:Update()
-	self:UpdateTarget()
+    if not self.Enabled then return end
 	self:UpdateLine()
 end
 
 function TrackLine:UpdateTarget()
-	self.target = self.icon:GetTarget()
+	self.target = self.parent:GetTarget()
 end
 
 function TrackLine:UpdateLine()

@@ -84,8 +84,8 @@ function Icon.new(buffWatch, configForm)
 		self.iconOverlay = IconOverlay.new(self)
 	end)
 
-	GeminiPackages:Require("AuraMastery:TrackLine", function(trackLine)
-		--self.trackLine = trackLine.new(self)
+	GeminiPackages:Require("AuraMastery:TrackLineGroup", function(trackLineGroup)
+		self.trackLine = trackLineGroup.new(self)
 	end)
 
 	return self
@@ -182,6 +182,10 @@ function Icon:Load(saveData)
 			end
 		end)
 
+        if self.trackLine ~= nil then
+            self.trackLine:Load(saveData.trackLine)
+        end
+
 	end
 
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
@@ -266,6 +270,10 @@ function Icon:GetSaveData()
 	saveData.showWhen = self.showWhen
 	saveData.playSoundWhen = self.playSoundWhen
 
+    if self.trackLine ~= nil then
+        saveData.trackLine = self.trackLine:Save()
+    end
+
 	return saveData
 end
 
@@ -349,6 +357,10 @@ function Icon:SetIcon(configWnd)
 		end
 
 		self.iconOverlay:SetConfig(configWnd)
+
+        if self.trackLine ~= nil then
+            self.trackLine:SetConfig(configWnd:FindChild("TrackLine"))
+        end
 
 		self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
 		self.actionSets = {
@@ -603,12 +615,12 @@ function Icon:SetIconColor(color)
 	self.icon:SetBGColor(color)
 end
 
-function Icon:GetTarget()
+function Icon:GetTargets()
     for _, trigger in pairs(self.Triggers) do
-        local target = trigger:GetTarget()
+        local targets = trigger:GetTargets()
 
-        if target ~= nil then
-            return target
+        if targets ~= nil then
+            return targets
         end
     end
 end

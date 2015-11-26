@@ -410,6 +410,9 @@ end
 
 function IconTrigger:ResetTrigger(deltaTime)
     if self.Type == "Buff" or self.Type == "Debuff" then
+        if self.Time == nil then
+            self.Time = 0
+        end
         self.Time = math.max(self.Time - deltaTime, 0)
         return
     end
@@ -531,15 +534,17 @@ function IconTrigger:ProcessBuff(data)
         else
             self.Units[tostring(data.unit:GetName())] = nil
         end
-        self.isSet = HasProperties(self.Units)
     end
 
     if action == "Add" then
         if not self.TriggerDetails.Stacks.Enabled or self:IsOperatorSatisfied(buff.nCount, self.TriggerDetails.Stacks.Operator, self.TriggerDetails.Stacks.Value) then
             self.Units[tostring(data.unit:GetName())] = data.unit
-            self.isSet = HasProperties(self.Units)
+        else
+            self.Units[tostring(data.unit:GetName())] = nil
         end
     end
+
+    self.isSet = HasProperties(self.Units)
 
     if buff ~= nil then
     	self.Time = buff.fTimeRemaining
@@ -658,17 +663,18 @@ function IconTrigger:IsOperatorSatisfied(value, operator, compValue)
 	end
 end
 
-function IconTrigger:GetTarget()
+function IconTrigger:GetTargets()
     if self.isSet then
-        if self.Type == "Buff" or self.Type == "Debuff" then
-            if self.TriggerDetails.Target.Player then
-                return GameLib:GetPlayerUnit()
-            elseif self.TriggerDetails.Target.Target then
-                return GameLib:GetTargetUnit()
-            end
-        else
-            return GameLib:GetPlayerUnit()
-        end
+        return self.Units
+        -- if self.Type == "Buff" or self.Type == "Debuff" then
+        --     if self.TriggerDetails.Target.Player then
+        --         return GameLib:GetPlayerUnit()
+        --     elseif self.TriggerDetails.Target.Target then
+        --         return GameLib:GetTargetUnit()
+        --     end
+        -- else
+        --     return GameLib:GetPlayerUnit()
+        -- end
     end
     return nil
 end
