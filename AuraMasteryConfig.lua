@@ -2024,6 +2024,7 @@ end
 
 function AuraMasteryConfig:OnKeybindKeySelect( wndHandler, wndControl, eMouseButton )
 	Apollo.RegisterEventHandler("SystemKeyDown", "OnKeybindKeySet", self)
+	Apollo.RegisterEventHandler("MouseButtonDown", "OnKeybindMouseButtonSet", self)
 	wndControl:SetFocus()
 	wndControl:ClearFocus()
 end
@@ -2031,6 +2032,7 @@ end
 function AuraMasteryConfig:OnKeybindKeySet(iKey)
 	if iKey ~= 16 and iKey ~= 17 then
 		Apollo.RemoveEventHandler("SystemKeyDown", self)
+		Apollo.RemoveEventHandler("MouseButtonDown", self)
 		local keyText = ""
 		local input = {
 			Key = iKey,
@@ -2051,6 +2053,28 @@ function AuraMasteryConfig:OnKeybindKeySet(iKey)
 	end
 end
 
+function AuraMasteryConfig:OnKeybindMouseButtonSet(mouseButton)
+	Apollo.RemoveEventHandler("SystemKeyDown", self)
+	Apollo.RemoveEventHandler("MouseButtonDown", self)
+	local keyText = ""
+	local input = {
+		Key = "MB:" .. mouseButton,
+		Shift = false,
+		Control = false,
+		Alt = false
+	}
+	if Apollo.IsShiftKeyDown() then
+		input.Shift = true
+	end
+	if Apollo.IsControlKeyDown() then
+		input.Control = true
+	end
+	if Apollo.IsAltKeyDown() then
+		input.Alt = true
+	end
+	self:SetKeybindInput(input)
+end
+
 function AuraMasteryConfig:SetKeybindInput(input)
 	local keyText = ""
 	if input.Shift then
@@ -2063,7 +2087,9 @@ function AuraMasteryConfig:SetKeybindInput(input)
 		keyText = keyText .. "Alt+"
 	end
 
-	if (input.Key >= 48 and input.Key <= 57) or (input.Key >= 65 and input.Key <= 90) then
+	if string.sub(input.Key, 1, 2) == "MB" then
+		keyText = input.Key
+	elseif (input.Key >= 48 and input.Key <= 57) or (input.Key >= 65 and input.Key <= 90) then
 		keyText = keyText .. string.char(input.Key)
 	elseif keys[input.Key] ~= nil then
 		keyText = keyText .. tostring(keys[input.Key])
