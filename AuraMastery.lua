@@ -545,6 +545,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
+	Apollo.RegisterEventHandler("MouseButtonDown", 	"OnMouseButtonDown", self)
 
 	Apollo.RegisterEventHandler("UnitEnteredCombat", "OnEnteredCombat", self)
 	Apollo.RegisterEventHandler("Group_Join", "OnGroupChange", self)
@@ -854,6 +855,16 @@ function AuraMastery:OnSystemKeyDown(iKey)
 		if self.buffWatch["Keybind"][iKey] ~= nil then
 			for _, watcher in pairs(self.buffWatch["Keybind"][iKey]) do
 				watcher(iKey)
+			end
+		end
+	end
+end
+
+function AuraMastery:OnMouseButtonDown(mouseButton)
+	if TableContainsElements(self.buffWatch["Keybind"]) then
+		if self.buffWatch["Keybind"]["MB:" .. mouseButton] ~= nil then
+			for _, watcher in pairs(self.buffWatch["Keybind"]["MB:" .. mouseButton]) do
+				watcher(mouseButton)
 			end
 		end
 	end
