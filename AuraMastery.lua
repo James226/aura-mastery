@@ -387,11 +387,12 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 	end
 
 	local buffType = data.splEffect:IsBeneficial() and "Buff" or "Debuff"
+	local spellId = tostring(data.splEffect:GetId())
 	local spellName = data.splEffect:GetName()
 	local playerUnit = GameLib:GetPlayerUnit()
 
 	if unitTarget == playerUnit then
-		self:ProcessBuff("Player", buffType, spellName, {
+		self:ProcessBuff("Player", buffType, spellId, spellName, {
 			unit = unitTarget,
 			action = action,
 			data = data
@@ -401,7 +402,7 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 	local targetUnit = GameLib:GetTargetUnit()
 	if targetUnit ~= nil then
 		if unitTarget == targetUnit then
-			self:ProcessBuff("Target", buffType, spellName, {
+			self:ProcessBuff("Target", buffType, spellId, spellName, {
 				unit = unitTarget,
 				action = action,
 				data = data
@@ -409,7 +410,7 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 		end
 
 		if unitTarget == targetUnit:GetTarget() then
-			self:ProcessBuff("TargetOfTarget", buffType, spellName, {
+			self:ProcessBuff("TargetOfTarget", buffType, spellId, spellName, {
 				unit = unitTarget,
 				action = action,
 				data = data
@@ -418,13 +419,13 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 	end
 
 	if unitTarget:GetDispositionTo(playerUnit) == Unit.CodeEnumDisposition.Friendly then
-		self:ProcessBuff("Friendly", buffType, spellName, {
+		self:ProcessBuff("Friendly", buffType, spellId, spellName, {
 			unit = unitTarget,
 			action = action,
 			data = data
 		})
 	else
-		self:ProcessBuff("Hostile", buffType, spellName, {
+		self:ProcessBuff("Hostile", buffType, spellId, spellName, {
 			unit = unitTarget,
 			action = action,
 			data = data
@@ -433,7 +434,7 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 
 	if self.unitFocus ~= nil then
 		if self.unitFocus == unitTarget then
-			self:ProcessBuff("FocusTarget", buffType, spellName, {
+			self:ProcessBuff("FocusTarget", buffType, spellId, spellName, {
 				unit = unitTarget,
 				action = action,
 				data = data
@@ -455,7 +456,13 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 
 end
 
-function AuraMastery:ProcessBuff(target, buffType, spellName, payload)
+function AuraMastery:ProcessBuff(target, buffType, spellId, spellName, payload)
+	if self.buffWatch[buffType][target][spellId] ~= nil then
+		for _, watcher in pairs(self.buffWatch[buffType][target][spellId]) do
+			watcher(payload)
+		end
+	end
+
 	if self.buffWatch[buffType][target][spellName] ~= nil then
 		for _, watcher in pairs(self.buffWatch[buffType][target][spellName]) do
 			watcher(payload)
