@@ -66,6 +66,20 @@ keys[39] = "RIGHT"
 keys[40] = "DOWN"
 keys[27] = "ESC"
 
+local ExtraSounds = {
+    Alarm = "alarm.wav",
+    Alert = "alert.wav",
+    Algalon = "algalon.wav",
+    Beware = "beware.wav",
+    Burn = "burn.wav",
+    Destruction = "destruction.wav",
+    DoorFutur = "doorfutur.wav",
+    Inferno = "inferno.wav",
+    Info = "info.wav",
+    Long = "long.wav",
+    RunAway = "runaway.wav"
+}
+
 function AuraMasteryConfig.new(auraMastery, xmlDoc)
 	local self = setmetatable({}, AuraMasteryConfig)
 	self.auraMastery = auraMastery
@@ -105,13 +119,19 @@ function AuraMasteryConfig:Init()
 
 	local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
 
-	soundItem:FindChild("Id"):SetText(-1)
+	soundItem:SetData(-1)
 	soundItem:FindChild("Label"):SetText("None")
+
+    for name, sound in pairs(ExtraSounds) do
+        local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
+        soundItem:SetData(sound)
+        soundItem:FindChild("Label"):SetText(name)
+    end
 
 	for sound, soundNo in pairs(Sound) do
 		if type(soundNo) == "number" then
 			local soundItem = Apollo.LoadForm("AuraMastery.xml", "SoundListItem", soundList, self)
-			soundItem:FindChild("Id"):SetText(soundNo)
+			soundItem:SetData(soundNo)
 			soundItem:FindChild("Label"):SetText(sound)
 		end
 	end
@@ -735,7 +755,6 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self:SetShownDescription(self.configForm:FindChild("BuffShowWhen"):GetSelectedIndex() + 1)
 			self.configForm:FindChild("BuffPlaySoundWhen"):SelectItemByText(icon.playSoundWhen)
 			self:SetPlayWhenDescription(self.configForm:FindChild("BuffPlaySoundWhen"):GetSelectedIndex() + 1)
-			self.configForm:FindChild("SelectedSound"):SetText(icon.iconSound)
             self.configForm:FindChild("SelectedSprite"):SetText(icon.iconSprite)
             self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
             self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
@@ -765,20 +784,34 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 
 			self:OnColorUpdate()
 
-			if self.selectedSound ~= nil then
-				self.selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
+            local soundSelect = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList")
+            local selectedSound = soundSelect:GetData()
+			if selectedSound ~= nil then
+				selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 			end
 
-			for _, sound in pairs(self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetChildren()) do
-				if tonumber(sound:FindChild("Id"):GetText()) == icon.iconSound then
-					self.selectedSound = sound
-					self.selectedSound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+            self.configForm:FindChild("CustomSoundEnabled"):SetCheck(icon.customSound)
 
-					local left, top, right, bottom = sound:GetAnchorOffsets()
-					self.configForm:FindChild("SoundSelectList"):SetVScrollPos(top)
-					break
-				end
-			end
+            if icon.customSound then
+                self.configForm:FindChild("CustomSoundName"):SetText(icon.iconSound)
+                local sound = soundSelect:GetChildren()[1]
+                soundSelect:SetData(sound)
+                sound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+                local left, top, right, bottom = sound:GetAnchorOffsets()
+                soundSelect:SetVScrollPos(top)
+            else
+                self.configForm:FindChild("CustomSoundName"):SetText("")
+    			for _, sound in pairs(soundSelect:GetChildren()) do
+    				if tonumber(sound:GetData()) == icon.iconSound or sound:GetData() == icon.iconSound then
+                        soundSelect:SetData(sound)
+    					sound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+
+    					local left, top, right, bottom = sound:GetAnchorOffsets()
+    					soundSelect:SetVScrollPos(top)
+    					break
+    				end
+    			end
+            end
 
 
 			for textEditorId, textEditor in pairs(self.iconTextEditor) do
@@ -868,14 +901,19 @@ end
 ---------------------------------------------------------------------------------------------------
 function AuraMasteryConfig:OnSoundItemSelected( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY )
 	if wndHandler == wndControl then
-		if self.selectedSound ~= nil then
-			self.selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
+        local selectedSound = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetData()
+		if selectedSound ~= nil then
+			selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
 		end
-		self.selectedSound = wndHandler
-		self.selectedSound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
-		local soundId = tonumber(wndHandler:FindChild("Id"):GetText())
-		self.configForm:FindChild("SoundSelect"):FindChild("SelectedSound"):SetText(soundId)
-		Sound.Play(soundId)
+		wndHandler:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+		local soundId = wndHandler:GetData()
+		self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList"):SetData(wndHandler)
+
+        if type(soundId) == "string" then
+            Sound.PlayFile("Sounds\\" .. soundId)
+        else
+		    Sound.Play(tonumber(soundId))
+        end
 	end
 end
 

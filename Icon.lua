@@ -98,6 +98,7 @@ end
 function Icon:Load(saveData)
 	if saveData ~= nil then
 		self.iconName = saveData.iconName
+        self.customSound = saveData.customSound or false
 		self.iconSound = saveData.iconSound
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
 		saveData.iconPostion = saveData.iconPosition or { left = 0, top = 0 }
@@ -237,6 +238,7 @@ end
 function Icon:GetSaveData()
 	local saveData = { }
 	saveData.iconName = self.iconName
+    saveData.customSound = self.customSound
 	saveData.iconSound = self.iconSound
 	saveData.iconBackground = self.iconBackground
     saveData.active = self.active
@@ -345,11 +347,17 @@ function Icon:SetIcon(configWnd)
 
 		self.iconBorder = configWnd:FindChild("BuffBorderShown"):IsChecked()
 		self.icon:SetStyle("Border", self.iconBorder)
-		if configWnd:FindChild("SoundSelect"):FindChild("SelectedSound") ~= nil then
-			self.iconSound = tonumber(configWnd:FindChild("SoundSelect"):FindChild("SelectedSound"):GetText())
-		else
-			self.iconSound = nil
-		end
+
+        self.customSound = configWnd:FindChild("CustomSoundEnabled"):IsChecked()
+        if self.customSound then
+            self.iconSound = configWnd:FindChild("CustomSoundName"):GetText()
+        else
+    		if configWnd:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetData() ~= nil then
+    			self.iconSound = configWnd:FindChild("SoundSelect"):FindChild("SoundSelectList"):GetData():GetData()
+    		else
+    			self.iconSound = nil
+    		end
+        end
 		self.iconSprite = configWnd:FindChild("SelectedSprite"):GetText()
 
 		for iconTextId, iconText in pairs(self.iconText) do
@@ -486,7 +494,11 @@ function Icon:PostUpdate()
 	end
 
 	if playSound and not self.soundPlayed and self.iconSound ~= -1 then
-		Sound.Play(self.iconSound)
+        if type(self.iconSound) == "string" then
+            Sound.PlayFile("Sounds\\" .. self.iconSound)
+        else
+	        Sound.Play(self.iconSound)
+        end
 	end
 	self.soundPlayed = playSound
 
