@@ -97,6 +97,10 @@ function TrackLineGroup:SetConfig(configWnd)
     end
 end
 
+function TrackLineGroup:NumberOfLines()
+    return #self.TrackLines
+end
+
 function TrackLineGroup:Update()
     if not self.Enabled then return end
 
@@ -107,11 +111,11 @@ function TrackLineGroup:Update()
 end
 
 function TrackLineGroup:UpdateTarget()
-    local units = self.parent:GetTargets() or {}
+    local targets = self.parent:GetTargets() or {}
     local i = 1
-    for _, unit in pairs(units) do
+    for _, target in pairs(targets) do
         if self.TrackLines[i] == nil then return end
-	    self.TrackLines[i]:SetTarget(unit)
+	    self.TrackLines[i]:SetTarget(target.Unit)
         i = i + 1
     end
     local numOfLines = #self.TrackLines

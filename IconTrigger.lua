@@ -232,10 +232,18 @@ function IconTrigger:SetConfig(editor)
 			end
 		elseif self.Type == "Health" then
 			self.TriggerDetails = {
-				Target = {
-					Player = editor:FindChild("TargetPlayer"):IsChecked(),
-					Target = editor:FindChild("TargetTarget"):IsChecked()
-				}
+                Target = {
+                    Player = editor:FindChild("TargetPlayer"):IsChecked(),
+                    Target = editor:FindChild("TargetTarget"):IsChecked(),
+                    TargetOfTarget = editor:FindChild("TargetTargetOfTarget"):IsChecked(),
+                    FocusTarget = editor:FindChild("TargetFocusTarget"):IsChecked(),
+                    FocusTargetTarget = editor:FindChild("TargetFocusTargetTarget"):IsChecked(),
+                    Tank = editor:FindChild("TargetTank"):IsChecked(),
+                    Healer = editor:FindChild("TargetHealer"):IsChecked(),
+                    DPS = editor:FindChild("TargetDPS"):IsChecked(),
+                    Friendly = editor:FindChild("TargetFriendly"):IsChecked(),
+                    Hostile = editor:FindChild("TargetHostile"):IsChecked()
+                },
 			}
 			if editor:FindChild("HealthEnabled"):IsChecked() then
 				local resourceEditor = editor:FindChild("Health")
@@ -324,12 +332,11 @@ function IconTrigger:AddToBuffWatch()
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
 		self:AddBasicToBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
-		if self.TriggerDetails.Target.Player then
-			self:AddCooldownToBuffWatch("Player")
-		end
-		if self.TriggerDetails.Target.Target then
-			self:AddCooldownToBuffWatch("Target")
-		end
+        for target, val in pairs(self.TriggerDetails.Target) do
+            if val then
+                self:AddCooldownToBuffWatch(target)
+            end
+        end
 	elseif self.Type == "Keybind" then
 		self:AddCooldownToBuffWatch(self.TriggerDetails.Input.Key)
 	elseif self.Type == "Limited Action Set Checker" then
@@ -409,6 +416,12 @@ function IconTrigger:RemoveBuffFromBuffWatch(target, option)
 end
 
 function IconTrigger:ResetTrigger(deltaTime)
+    -- for _, u in pairs(self.Units) do
+    --     for _, b in pairs(u.Buffs) do
+    --         b.fTimeRemaining = b.fTimeRemaining - deltaTime
+    --     end
+    -- end
+
     if self.Type == "Buff" or self.Type == "Debuff" then
         if self.Time == nil then
             self.Time = 0
@@ -418,9 +431,30 @@ function IconTrigger:ResetTrigger(deltaTime)
     end
 	self.Stacks = nil
 	self.Time = nil
-	if self.Type ~= "Action Set" and self.Type ~= "Limited Action Set Checker" then
+	if self.Type ~= "Action Set" and self.Type ~= "Limited Action Set Checker" and self.Type ~= "Health" then
 		self.isSet = false
 	end
+
+    if self.Type == "Health" then
+        for key, target in pairs(self.Units) do
+            if (target.LastUpdate or 0) > 1 then
+                local unit = target.Unit
+                local data = {
+                    Action = "Update",
+                    Id = key,
+                    Unit = unit,
+                    Health = unit:GetHealth(),
+                    MaxHealth = unit:GetMaxHealth(),
+                    Shield = unit:GetShieldCapacity(),
+                    MaxShield = unit:GetShieldCapacityMax()
+                }
+                self:ProcessHealth(data)
+                target.LastUpdate = 0
+            else
+                target.LastUpdate = (target.LastUpdate or 0) + deltaTime
+            end
+        end
+    end
 end
 
 function IconTrigger:IsPass()
@@ -524,39 +558,70 @@ local function HasProperties(table)
     return false
 end
 
+local function First(table)
+    for k, v in pairs(table) do
+        if v ~= nil then
+            return v
+        end
+    end
+end
+
+function IconTrigger:RemoveBuffFromTarget(unit, buff)
+    local unitId = unit:GetId()
+    if buff ~= nil then
+        self.Units[unitId].Buffs[buff.idBuff] = nil
+
+        if not HasProperties(self.Units[unitId].Buffs) then
+            self.Units[unitId] = nil
+        end
+    else
+        self.Units[unitId] = nil
+    end
+end
+
 function IconTrigger:ProcessBuff(data)
     local action = data.action
     local buff = data.data
+    local unitId = data.unit:GetId()
 
     if action == "Remove" then
         if data.unit == nil then
             self.Units = {}
-        else
-            self.Units[tostring(data.unit:GetName())] = nil
+        elseif self.Units[unitId] ~= nil then
+            self:RemoveBuffFromTarget(data.unit, buff)
         end
     end
 
     if action == "Add" then
         if not self.TriggerDetails.Stacks.Enabled or self:IsOperatorSatisfied(buff.nCount, self.TriggerDetails.Stacks.Operator, self.TriggerDetails.Stacks.Value) then
-            self.Units[tostring(data.unit:GetName())] = data.unit
+            if self.Units[unitId] == nil then
+                self.Units[unitId] = { Unit = data.unit, LastUpdate = 0, Buffs = {} }
+            end
+            buff.LastUpdate = os.clock()
+            self.Units[unitId].Buffs[buff.idBuff] = buff
+
         else
-            self.Units[tostring(data.unit:GetName())] = nil
+            self.Units[unitId] = nil
         end
     end
 
     self.isSet = HasProperties(self.Units)
 
-    if buff ~= nil then
-    	self.Time = buff.fTimeRemaining
-        self.Stacks = buff.nCount
-    	if self.MaxDuration == nil or self.MaxDuration < self.Time then
-    		self.MaxDuration = self.Time
-    	end
-    	self.Sprite = buff.splEffect:GetIcon()
+    local firstTarget = First(self.Units)
+    if firstTarget ~= nil then
+        local firstBuff = First(firstTarget.Buffs)
+        if firstBuff ~= nil then
+        	self.Time = firstBuff.fTimeRemaining - (os.clock() - firstBuff.LastUpdate)
+            self.Stacks = firstBuff.nCount
+        	if self.MaxDuration == nil or self.MaxDuration < self.Time then
+        		self.MaxDuration = self.Time
+        	end
+        	self.Sprite = buff.splEffect:GetIcon()
 
-        if self.Time < 0 then
-            self.Units = {}
-            self.isSet = false
+            if self.Time < 0 then
+                self.Units = {}
+                self.isSet = false
+            end
         end
     end
 end
@@ -587,14 +652,23 @@ function IconTrigger:ProcessResources(result)
 end
 
 function IconTrigger:ProcessHealth(result)
-	self.isSet = true
-	if self.TriggerDetails["Health"] ~= nil then
-		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Health, result.Health, result.MaxHealth)
-	end
+    local isSet = (result.Action == "Update")
+    if result.Action == "Update" then
+        if self.TriggerDetails["Health"] ~= nil then
+    		isSet = isSet and self:ProcessResource(self.TriggerDetails.Health, result.Health, result.MaxHealth)
+    	end
 
-	if self.TriggerDetails["Shield"] ~= nil then
-		self.isSet = self.isSet and self:ProcessResource(self.TriggerDetails.Shield, result.Shield, result.MaxShield)
-	end
+    	if self.TriggerDetails["Shield"] ~= nil then
+    		isSet = isSet and self:ProcessResource(self.TriggerDetails.Shield, result.Shield, result.MaxShield)
+    	end
+    end
+
+    if isSet then
+        self.Units[result.Id] = { Unit = result.Unit, LastUpdate = 0, Buffs = {} }
+    else
+        self.Units[result.Id] = nil
+    end
+	self.isSet = HasProperties(self.Units)
 end
 
 function IconTrigger:ProcessResource(operation, resource, maxResource)

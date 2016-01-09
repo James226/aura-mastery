@@ -363,6 +363,43 @@ function AuraMastery:OnDamageDealt(tData)
 			self.lastCritical = os.time()
 		end
 	end
+
+	self:ProcessHealthEvent(tData.unitTarget)
+end
+
+function AuraMastery:OnFallDamageDealt(tData)
+	self:ProcessHealthEvent(tData.unitCaster, tData.nDamageAmount)
+end
+
+function AuraMastery:OnHealingDealt(tData)
+	self:ProcessHealthEvent(tData.unitTarget)
+end
+
+function AuraMastery:ProcessHealthEvent(unit, decrementedHealth)
+	if unit ~= nil then
+		decrementedHealth = decrementedHealth or 0
+		local playerUnit = GameLib.GetPlayerUnit()
+
+		if unit == playerUnit then
+			self:ProcessHealth(unit, "Player", "Player", decrementedHealth)
+		elseif unit == GameLib.GetTargetUnit() then
+			self:ProcessHealth(unit, "Target", "Target", decrementedHealth)
+		end
+
+		if unit:GetDispositionTo(playerUnit) == Unit.CodeEnumDisposition.Friendly then
+			self:ProcessHealth(unit, "Friendly", unit:GetId(), decrementedHealth)
+		else
+			self:ProcessHealth(unit, "Hostile", unit:GetId(), decrementedHealth)
+		end
+	end
+end
+
+function AuraMastery:OnUnitDestroyed(unit)
+	if unit:GetDispositionTo(playerUnit) == Unit.CodeEnumDisposition.Friendly then
+		self:ProcessHealth(nil, "Friendly", unit:GetId())
+	else
+		self:ProcessHealth(nil, "Hostile", unit:GetId())
+	end
 end
 
 function AuraMastery:OnMiss( unitCaster, unitTarget, eMissType )
@@ -451,7 +488,7 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 		-- end
 	end
 
-	if not self.isInRaid then return end
+	--if not self.isInRaid then return end
 
 
 end
@@ -474,6 +511,8 @@ function AuraMastery:OnTargetChanged(unit)
 	local lastTarget = self.target
 	self.target = unit
 	self:ReloadBuffsForUnit("Target", self.target, lastTarget)
+	self:ProcessHealth(nil, "Target", "Target")
+	self:ProcessHealth(unit, "Target", "Target")
 end
 
 function AuraMastery:OnAlternateTargetUnitChanged(unit)
@@ -549,6 +588,8 @@ function AuraMastery:OnLoad()
 
 	Apollo.RegisterEventHandler("AbilityBookChange", "OnAbilityBookChange", self)
 	Apollo.RegisterEventHandler("CombatLogDamage", "OnDamageDealt", self)
+	Apollo.RegisterEventHandler("CombatLogFallingDamage", "OnFallDamageDealt", self)
+	Apollo.RegisterEventHandler("CombatLogHeal", "OnHealingDealt", self)
 	Apollo.RegisterEventHandler("AttackMissed", "OnMiss", self)
 	Apollo.RegisterEventHandler("SpecChanged", "OnSpecChanged", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", 	"OnSystemKeyDown", self)
@@ -568,6 +609,8 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("BuffRemoved", "OnBuffRemoved", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetChanged", self)
 	Apollo.RegisterEventHandler("AlternateTargetUnitChanged", "OnAlternateTargetUnitChanged", self)
+
+	Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
 
 	Apollo.RegisterTimerHandler("AuraMastery_ShareChannelConnect", "ShareChannelConnect", self)
 	Apollo.RegisterTimerHandler("AuraMastery_CacheTimer", "UpdateAbilityBook", self)
@@ -703,12 +746,10 @@ function AuraMastery:OnUpdate()
 	end
 
 	if unitPlayer ~= nil then
-		self:ProcessHealth(unitPlayer, "Player")
 		self:ProcessMOO(unitPlayer, "Player")
 	end
 
 	if targetPlayer ~= nil then
-		self:ProcessHealth(targetPlayer, "Target")
 		self:ProcessMOO(targetPlayer, "Target")
 	end
 
@@ -783,11 +824,18 @@ function AuraMastery:ProcessResources()
 	end
 end
 
-function AuraMastery:ProcessHealth(unit, target)
+function AuraMastery:ProcessHealth(unit, target, id, decrementedHealth)
 	if self.buffWatch["Health"][target] ~= nil and TableContainsElements(self.buffWatch["Health"][target]) then
-		local result = { Health = unit:GetHealth(), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
-		for _, watcher in pairs(self.buffWatch["Health"][target]) do
-			watcher(result)
+		if unit ~= nil then
+			local result = { Action = "Update", Id = id, Unit = unit, Health = unit:GetHealth() - (decrementedHealth or 0), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
+			for _, watcher in pairs(self.buffWatch["Health"][target]) do
+				watcher(result)
+			end
+		else
+			local result = { Action = "Remove", Id = id }
+			for _, watcher in pairs(self.buffWatch["Health"][target]) do
+				watcher(result)
+			end
 		end
 	end
 end
@@ -940,18 +988,13 @@ end
 
 function AuraMastery:OnSharingMessageReceived(chan, msg)
 	if self.sharingCallback == nil then return end
-	Print("Incoming")
 	msg = AuraMastery.DeserializeString(msg)
-	Print("Deserialized")
 	if msg.DestinationType == "player" then
-		Print("Player")
 		local playerUnit = GameLib.GetPlayerUnit()
-		Print("Dest: " .. msg.Destination)
 		if playerUnit ~= nil and msg.Destination == playerUnit:GetName() then
 			self.sharingCallback(chan, msg)
 		end
 	elseif msg.DestinationType == "group" and GroupLib.GetMemberCount() > 0 then
-		Print("group")
 		for i = 1, GroupLib.GetMemberCount() do
 			if GroupLib.GetGroupMember(i).strCharacterName == msg.Sender then
 				self.sharingCallback(chan, msg)

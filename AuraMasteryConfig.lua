@@ -230,8 +230,6 @@ function AuraMasteryConfig:OnCancel()
 	self.configForm:Show(false) -- hide the window
 end
 
-
-
 function AuraMasteryConfig:LoadSpriteIcons(spriteList)
     local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
     local icon = self.auraMastery.Icons[iconId]
@@ -864,6 +862,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 
             if icon.trackLine ~= nil then
                 self.configForm:FindChild("TrackLineEnabled"):SetCheck(icon.trackLine.Enabled)
+                self.configForm:FindChild("TrackLineNumberOfLines"):SetText(icon.trackLine:NumberOfLines())
             end
 
 			self:PopulateTriggers(icon)
@@ -1092,8 +1091,10 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
     elseif trigger.Type == "Health" then
         self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
 
-        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+        for type, val in pairs(trigger.TriggerDetails.Target) do
+            editor:FindChild("Target" .. type):SetCheck(val)
+        end
+        editor:FindChild("TargetGroup"):Enable(false)
 
         self:PopulateValueBasedEditor(trigger, editor, "Health")
         self:PopulateValueBasedEditor(trigger, editor, "Shield")
