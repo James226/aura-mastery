@@ -826,7 +826,7 @@ end
 
 function AuraMastery:ProcessHealth(unit, target, id, decrementedHealth)
 	if self.buffWatch["Health"][target] ~= nil and TableContainsElements(self.buffWatch["Health"][target]) then
-		if unit ~= nil then
+		if unit ~= nil and unit:GetHealth() ~= nil then
 			local result = { Action = "Update", Id = id, Unit = unit, Health = unit:GetHealth() - (decrementedHealth or 0), MaxHealth = unit:GetMaxHealth(), Shield = unit:GetShieldCapacity(), MaxShield = unit:GetShieldCapacityMax() }
 			for _, watcher in pairs(self.buffWatch["Health"][target]) do
 				watcher(result)
