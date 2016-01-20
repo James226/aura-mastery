@@ -61,6 +61,7 @@ function Icon.new(buffWatch, configForm)
 
 	self.showWhen = "Always"
 	self.playSoundWhen = "None"
+    self.group = '00000000-0000-0000-0000-000000000000'
 
 	self.onlyInCombat = false
 
@@ -133,6 +134,8 @@ function Icon:Load(saveData)
 		if saveData.actionSets ~= nil then
 			self.actionSets = saveData.actionSets
 		end
+
+        self.group = saveData.group or '00000000-0000-0000-0000-000000000000'
 
 		self.iconOverlay:Load(saveData.iconOverlay)
 
@@ -249,6 +252,7 @@ function Icon:GetSaveData()
 	saveData.iconEnabled = self.enabled
 	saveData.actionSets = self.actionSets
 	saveData.SimpleMode = self.SimpleMode
+    saveData.group = self.group
 
 	saveData.iconText = {}
 	for iconTextId, iconText in pairs(self.iconText) do

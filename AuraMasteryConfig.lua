@@ -80,6 +80,32 @@ local ExtraSounds = {
     RunAway = "runaway.wav"
 }
 
+local function IndexOf(table, item)
+    for idx, val in pairs(table) do
+        if item == val then
+            return idx
+        end
+    end
+end
+
+local function CatchError(func)
+    local status, error = pcall(func)
+
+    if not status then
+        Print("[AuraMastery] An error has occured")
+        Print(error)
+    end
+end
+
+local random = math.random
+local function uuid()
+    local template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+    return string.gsub(template, '[xy]', function (c)
+        local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
+        return string.format('%x', v)
+    end)
+end
+
 function AuraMasteryConfig.new(auraMastery, xmlDoc)
 	local self = setmetatable({}, AuraMasteryConfig)
 	self.auraMastery = auraMastery
@@ -161,11 +187,11 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("TriggerBehaviourDropdown"):Show(false)
 
 	self.configForm:FindChild("SimpleTabButton"):Show(false)
-	self.configForm:FindChild("NoAurasTab"):Show(true)
+    self:SelectTab("NoAuras")
 	self.configForm:FindChild("BuffEditor"):Enable(false)
 
 	self:CreateControls()
-	self:SelectFirstIcon()
+	--self:SelectFirstIcon()
 
 	self.configForm:FindChild("ShareForm"):Show(false)
 	self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
@@ -212,17 +238,18 @@ end
 -- AuraMasteryForm Functions
 -----------------------------------------------------------------------------------------------
 function AuraMasteryConfig:OnOK()
-	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
-	local icon = self.auraMastery.Icons[iconId]
+    CatchError(function()
+    	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    	local icon = self.auraMastery.Icons[iconId]
 
-    if icon == nil then
-        return
-    end
-
-	icon:SetIcon(self.configForm)
-	self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
-	self:UpdateControls()
-	self:PopulateTriggers(icon)
+        if icon == nil then
+            return
+        end
+    	icon:SetIcon(self.configForm)
+    	self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
+    	self:UpdateControls()
+    	self:PopulateTriggers(icon)
+    end)
 end
 
 function AuraMasteryConfig:OnCancel()
@@ -265,17 +292,113 @@ function AuraMasteryConfig:LoadSpriteIcons(spriteList)
     spriteList:ArrangeChildrenTiles()
 end
 
+function AuraMasteryConfig:CreateGroup(group)
+    local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
+    local groupItem = Apollo.LoadForm("AuraMastery.xml", "IconListGroupItem", iconList, self)
+    groupItem:FindChild("Label"):SetText(group.name)
+    groupItem:SetData(group)
+    return groupItem
+end
+
 function AuraMasteryConfig:CreateControls()
-	for i, icon in pairs(self.auraMastery.Icons) do
-		self:CreateIconItem(icon.iconId, icon)
+    for idx, group in pairs(self.auraMastery.IconGroups) do
+		local groupItem = self:CreateGroup(group)
+
+        local iconsList = groupItem:FindChild("Icons")
+        for i, icon in pairs(self.auraMastery.Icons) do
+            if icon.group == group.id then
+                self:CreateIconItem(icon.iconId, icon, iconsList)
+            end
+    	end
 	end
+    self:UpdateControls()
+
 	self:PopulateAuraSpellNameList()
 	self:PopulateAuraNameList()
 end
 
-function AuraMasteryConfig:CreateIconItem(i, icon)
+function AuraMasteryConfig:OnAddGroup( wndHandler, wndControl, eMouseButton )
+    CatchError(function()
+        GeminiPackages:Require("AuraMastery:IconGroup", function(IconGroup)
+            local group = IconGroup.new()
+            group.id = uuid()
+            group.name = "Group " .. (#self.auraMastery.IconGroups + 1)
+            table.insert(self.auraMastery.IconGroups, group)
+            self:CreateGroup(group)
+        end)
+    end)
+    self:UpdateControls()
+end
+
+function AuraMasteryConfig:OnRemoveGroup( wndHandler, wndControl, eMouseButton )
+    if wndHandler == wndControl then
+        CatchError(function()
+            local groupTab = wndHandler:GetParent()
+            local group = groupTab:GetData()
+
+            table.remove(self.auraMastery.IconGroups, IndexOf(self.auraMastery.IconGroups, group))
+            local groupList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
+            for _, groupItem in pairs(groupList:GetChildren()) do
+                if groupItem:GetData() == group then
+                    for _, iconItem in pairs(groupItem:FindChild("Icons"):GetChildren()) do
+                        self:RemoveIcon(iconItem)
+                    end
+                    groupItem:Destroy()
+                    break
+                end
+            end
+            groupList:SetData(nil)
+            self:SelectTab("NoAuras")
+        end)
+    end
+end
+
+function AuraMasteryConfig:OnToggleIconGroup( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+    if wndHandler == wndControl then
+        CatchError(function()
+            local groupItem = wndHandler:GetParent():GetParent()
+            local groupList = groupItem:GetParent()
+            local previousGroupItem = groupList:GetData()
+            if previousGroupItem ~= nil then
+                previousGroupItem:FindChild("StatusLabel"):SetText("+")
+                previousGroupItem:FindChild("Icons"):Show(false, true)
+                if previousGroupItem == groupItem then
+                    groupList:SetData(nil)
+                    self:UpdateControls()
+                    self:SelectTab("NoAuras")
+                    return
+                end
+            end
+            local icons = groupItem:FindChild("Icons")
+            icons:Show(not icons:IsShown(), true)
+            groupItem:FindChild("StatusLabel"):SetText(icons:IsShown() and "-" or "+")
+            groupList:SetData(groupItem)
+            self:UpdateControls()
+            local left, top, right, bottom = groupItem:GetAnchorOffsets()
+            groupList:SetVScrollPos(top)
+
+            local groupTab = self.configForm:FindChild("GroupTab")
+            groupTab:SetData(groupItem:GetData())
+            groupTab:FindChild("GroupName"):SetText(groupItem:GetData().name)
+            self.configForm:FindChild("BuffEditor"):Enable(true)
+            self:SelectTab("Group")
+        end)
+    end
+end
+
+function AuraMasteryConfig:OnGroupNameChanged( wndHandler, wndControl, strText )
+    local groupTab = wndHandler:GetParent()
+    local group = groupTab:GetData()
+
+    group.name = strText
+
+    self:UpdateControls()
+end
+
+
+function AuraMasteryConfig:CreateIconItem(i, icon, groupList)
 	local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
-	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", iconList, self)
+	local iconItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem", groupList, self)
 	iconItem:FindChild("Id"):SetText(i)
 	iconItem:FindChild("Label"):SetText(icon:GetName())
 	iconItem:FindChild("LockButton"):SetCheck(true)
@@ -329,10 +452,29 @@ function AuraMasteryConfig:PopulateAuraNameList()
 end
 
 function AuraMasteryConfig:UpdateControls()
-	for _, iconItem in pairs(self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
-		local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
-		iconItem:FindChild("Label"):SetText(icon:GetName())
-	end
+    CatchError(function()
+    	for _, iconItem in pairs(self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
+            iconItem:FindChild("Label"):SetText(iconItem:GetData().name)
+            if iconItem:FindChild("Icons"):IsShown() then
+                local height = 85
+                for _, item in pairs(iconItem:FindChild("Icons"):GetChildren()) do
+                    if item:FindChild("Id") ~= nil then
+                		local icon = self.auraMastery.Icons[tonumber(item:FindChild("Id"):GetText())]
+                        if icon ~= nil then
+                            item:FindChild("Label"):SetText(icon:GetName())
+                        end
+                    end
+                    height = height + item:GetHeight()
+                end
+                iconItem:SetAnchorOffsets(0, 0, 0, height)
+            else
+                iconItem:SetAnchorOffsets(0, 0, 0, 85)
+            end
+
+            iconItem:FindChild("Icons"):ArrangeChildrenVert()
+    	end
+        self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
+    end)
 end
 
 function AuraMasteryConfig:SelectFirstIcon()
@@ -366,27 +508,39 @@ end
 
 function AuraMasteryConfig:OnAddIcon( wndHandler, wndControl, eMouseButton )
 	if wndHandler == wndControl then
-		local icon = self.auraMastery:AddIcon()
-		local iconItem = self:CreateIconItem(icon.iconId, icon)
-		local timeText = self:AddIconText(icon)
-		timeText.textAnchor = "OB"
-		timeText.textString = "{time}"
-		local stacksText = self:AddIconText(icon)
-		stacksText.textAnchor = "IBR"
-		stacksText.textString = "{stacks}"
-		local chargesText = self:AddIconText(icon)
-		timeText.textAnchor = "ITL"
-		timeText.textString = "{charges}"
-		self:SelectIcon(iconItem)
-		self:OnAddTrigger()
-        self:SelectTab("General")
-        self:OnOK()
+        CatchError(function()
+            local groupItem = wndHandler:GetParent()
+            local groupList = groupItem:GetParent()
+    		local icon = self.auraMastery:AddIcon()
+    		local iconItem = self:CreateIconItem(icon.iconId, icon, groupItem:FindChild("Icons"))
+            icon.group = groupItem:GetData().id
+    		local timeText = self:AddIconText(icon)
+    		timeText.textAnchor = "OB"
+    		timeText.textString = "{time}"
+    		local stacksText = self:AddIconText(icon)
+    		stacksText.textAnchor = "IBR"
+    		stacksText.textString = "{stacks}"
+    		local chargesText = self:AddIconText(icon)
+    		timeText.textAnchor = "ITL"
+    		timeText.textString = "{charges}"
+
+            if groupList:GetData() ~= groupItem then
+                local groupButton = groupItem:FindChild("Background")
+                self:OnToggleIconGroup(groupButton, groupButton)
+            end
+
+    		self:SelectIcon(iconItem)
+    		self:OnAddTrigger()
+            self:SelectTab("General")
+            self:OnOK()
+        end)
 	end
 end
 
 function AuraMasteryConfig:OnRemoveIcon( wndHandler, wndControl, eMouseButton )
 	if wndHandler == wndControl then
 		self:RemoveIcon(self.selectedIcon)
+        self:UpdateControls()
 	end
 end
 
@@ -419,10 +573,10 @@ function AuraMasteryConfig:RemoveIcon(icon)
 	self.auraMastery.Icons[iconId]:Delete()
 	self.auraMastery.Icons[iconId] = nil
 
-	self.configForm:FindChild("NoAurasTab"):Show(true)
+    self:SelectTab("NoAuras")
 	self.configForm:FindChild("BuffEditor"):Enable(false)
 
-	self:SelectFirstIcon()
+	--self:SelectFirstIcon()
 end
 
 function AuraMasteryConfig:NumIcons()
@@ -543,10 +697,14 @@ function AuraMasteryConfig:SelectTab(tabName)
 	end
 
 	self.currentTab = tabName
-	self.configForm:FindChild("BuffEditor"):FindChild(tabName .. "Tab"):Show(true)
-    local tab = self.configForm:FindChild(self.currentTab .. "TabButton")
-    if tab ~= nil then
-          tab:SetCheck(true)
+    if tabName ~= nil then
+        self.configForm:FindChild("EditorTabs"):Show(tabName ~= "NoAuras" and tabName ~= "Group", true)
+        self.configForm:FindChild("BuffEditor"):Enable(tabName ~= "NoAuras")
+    	self.configForm:FindChild("BuffEditor"):FindChild(tabName .. "Tab"):Show(true)
+        local tab = self.configForm:FindChild(self.currentTab .. "TabButton")
+        if tab ~= nil then
+              tab:SetCheck(true)
+        end
     end
 end
 
@@ -624,9 +782,7 @@ function AuraMasteryConfig:OnListItemSelect( wndHandler, wndControl, eMouseButto
 end
 
 function AuraMasteryConfig:SelectIcon(iconItem)
-    self:OnOK()
     self:SelectTab("General")
-	self.configForm:FindChild("NoAurasTab"):Show(false)
 	self.configForm:FindChild("BuffEditor"):Enable(true)
 	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
 	if icon ~= nil then
@@ -868,6 +1024,7 @@ function AuraMasteryConfig:SelectIcon(iconItem)
 			self:PopulateTriggers(icon)
 		end
 	end
+    self:OnOK()
 end
 
 function AuraMasteryConfig:SelectFont(fontElement)
@@ -1171,7 +1328,7 @@ function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
 		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger)
 			local trigger = iconTrigger.new(icon, icon.buffWatch)
 			trigger.Name = "Trigger " .. tostring(#icon.Triggers + 1)
-			trigger.TriggerDetails = { SpellName = "" }
+			--trigger.TriggerDetails = { SpellName = "" }
 			table.insert(icon.Triggers, trigger)
 
             self:RebuildTriggerList(self.selectedIcon, icon)
@@ -1201,6 +1358,7 @@ function AuraMasteryConfig:OnDeleteTrigger( wndHandler, wndControl, eMouseButton
 		end
         self:SelectTab("General")
         self:RebuildTriggerList(self.selectedIcon, icon)
+        self:UpdateControls()
 	end
 end
 
@@ -1365,27 +1523,36 @@ function AuraMasteryConfig:ToggleResourceEditor(editor, enabled)
 end
 
 function AuraMasteryConfig:OnImportIcon( wndHandler, wndControl, eMouseButton )
-	self.configForm:FindChild("ClipboardExport"):SetText("")
-	self.configForm:FindChild("ClipboardExport"):PasteTextFromClipboard()
-	local iconData = self.configForm:FindChild("ClipboardExport"):GetText()
+    CatchError(function()
+    	self.configForm:FindChild("ClipboardExport"):SetText("")
+    	self.configForm:FindChild("ClipboardExport"):PasteTextFromClipboard()
+    	local iconData = self.configForm:FindChild("ClipboardExport"):GetText()
+        local groupItem = self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetData()
+        if groupItem == nil then
+            Print("[AuraMastery] You must select a group before importing an Aura")
+            return
+        end
 
-	local iconScript, loadStringError = loadstring("return " .. iconData)
-	if iconScript then
-		local status, result = pcall(iconScript)
-		if status then
-			if result ~= nil and result.iconName ~= nil then
-				local newIcon = self.auraMastery:AddIcon()
-				newIcon:Load(result)
-				self:CreateIconItem(newIcon.iconId, newIcon)
-			else
-				Print("Failed to import icon. Data deserialized but was invalid.")
-			end
-		else
-			Print("Failed to import icon, invalid load data in clipboard: " .. tostring(result))
-		end
-	else
-		Print("Failed to import icon, invalid load data in clipboard: " .. tostring(loadStringError))
-	end
+    	local iconScript, loadStringError = loadstring("return " .. iconData)
+    	if iconScript then
+    		local status, result = pcall(iconScript)
+    		if status then
+    			if result ~= nil and result.iconName ~= nil then
+    				local newIcon = self.auraMastery:AddIcon()
+    				newIcon:Load(result)
+                    newIcon.group = groupItem:GetData().id
+    				self:CreateIconItem(newIcon.iconId, newIcon, groupItem:FindChild("Icons"))
+                    self:UpdateControls()
+    			else
+    				Print("Failed to import icon. Data deserialized but was invalid.")
+    			end
+    		else
+    			Print("Failed to import icon, invalid load data in clipboard: " .. tostring(result))
+    		end
+    	else
+    		Print("Failed to import icon, invalid load data in clipboard: " .. tostring(loadStringError))
+    	end
+    end)
 end
 
 function AuraMasteryConfig:OnExportIcon( wndHandler, wndControl, eMouseButton )
@@ -1398,22 +1565,32 @@ function AuraMasteryConfig:OnExportIcon( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMasteryConfig:OnSharingMessageReceived(channel, msg)
-	if msg.Icon ~= nil then
-		if not self.configForm:FindChild("ShareConfirmDialog"):IsShown() then
-			self.configForm:FindChild("ShareConfirmDialog"):SetData(msg.Icon)
-			self.configForm:FindChild("ShareConfirmDialog"):Show(true)
-			self.configForm:FindChild("ShareConfirmDialog"):FindChild("ShareConfirmMessage"):SetText(msg.Sender .. " would like to share the icon '" .. msg.Icon.iconName .. "' with you.\n\nWould you like to accept this icon?")
-		end
-	end
+    CatchError(function()
+    	if msg.Icon ~= nil then
+    		if not self.configForm:FindChild("ShareConfirmDialog"):IsShown() then
+    			self.configForm:FindChild("ShareConfirmDialog"):SetData(msg.Icon)
+    			self.configForm:FindChild("ShareConfirmDialog"):Show(true)
+    			self.configForm:FindChild("ShareConfirmDialog"):FindChild("ShareConfirmMessage"):SetText(msg.Sender .. " would like to share the icon '" .. msg.Icon.iconName .. "' with you.\n\nWould you like to accept this icon?")
+    		end
+    	end
+    end)
 end
 
 function AuraMasteryConfig:OnAcceptIconShare( wndHandler, wndControl, eMouseButton )
 	local shareConfirmDialog = self.configForm:FindChild("ShareConfirmDialog")
 	local icon = shareConfirmDialog:GetData()
+    local groupItem = self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetData()
+    if groupItem == nil then
+        Print("[AuraMastery] You must select a group before importing an Aura")
+        return
+    end
+
 	if icon ~= nil then
 		local newIcon = self.auraMastery:AddIcon()
 		newIcon:Load(icon)
-		self:CreateIconItem(newIcon.iconId, newIcon)
+        newIcon.group = groupItem:GetData().id
+		self:CreateIconItem(newIcon.iconId, newIcon, groupItem:FindChild("Icons"))
+        self:UpdateControls()
 
 		shareConfirmDialog:Show(false)
 		shareConfirmDialog:SetData(nil)
@@ -1439,13 +1616,15 @@ function AuraMasteryConfig:OnShareIcon( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMasteryConfig:OnSendIcon( wndHandler, wndControl, eMouseButton )
-	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
-	local icon = self.auraMastery.Icons[iconId]
-	if icon ~= nil then
-		local msg = {}
-		msg.Icon = icon:GetSaveData()
-		self.auraMastery:SendCommsMessageToPlayer(self.configForm:FindChild("ShareForm"):FindChild("Name"):GetText(), msg)
-	end
+    CatchError(function()
+    	local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    	local icon = self.auraMastery.Icons[iconId]
+    	if icon ~= nil then
+    		local msg = {}
+    		msg.Icon = icon:GetSaveData()
+    		self.auraMastery:SendCommsMessageToPlayer(self.configForm:FindChild("ShareForm"):FindChild("Name"):GetText(), msg)
+    	end
+    end)
 end
 
 function AuraMasteryConfig:OnSendIconToGroup( wndHandler, wndControl, eMouseButton )

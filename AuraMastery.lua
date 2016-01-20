@@ -304,6 +304,12 @@ function AuraMastery:new(o)
 	self.lastCritical = 0
 	self.lastDeflect = 0
 	self.Icons = {}
+	self.IconGroups = {}
+	GeminiPackages:Require("AuraMastery:IconGroup", function(IconGroup)
+		local group = IconGroup.new()
+		group.name = "Misc"
+		table.insert(self.IconGroups, group)
+	end)
 	self.BotSpellIds = {}
 	self.lastUpdateTime = os.clock()
 
@@ -320,9 +326,14 @@ function AuraMastery:OnSave(eLevel)
     end
 	local saveData = { }
 
-	saveData["Icons"] = { }
+	saveData.Icons = { }
 	for idx, icon in pairs(self.Icons) do
-		saveData["Icons"][# saveData["Icons"] + 1] = icon:GetSaveData()
+		table.insert(saveData.Icons, icon:GetSaveData())
+	end
+
+	saveData.Groups = { }
+	for idx, group in pairs(self.IconGroups) do
+		table.insert(saveData.Groups, group:Save())
 	end
 
 	return saveData
@@ -337,12 +348,22 @@ function AuraMastery:OnRestore(eLevel, tData)
 end
 
 function AuraMastery:OnLoadIcons(tData)
-	for idx, icon in pairs(tData["Icons"]) do
-		local newIcon = self:AddIcon()
-		newIcon:Load(icon)
-	end
+	GeminiPackages:Require("AuraMastery:IconGroup", function(IconGroup)
+		if tData.Groups ~= nil then
+			self.IconGroups = {}
+			for _, group in pairs(tData.Groups) do
+				local iconGroup = IconGroup.new()
+				iconGroup:Load(group)
+				table.insert(self.IconGroups, iconGroup)
+			end
+		end
 
-	self:OnSpecChanged(AbilityBook.GetCurrentSpec())
+		for idx, icon in pairs(tData["Icons"]) do
+			local newIcon = self:AddIcon()
+			newIcon:Load(icon)
+		end
+		self:OnSpecChanged(AbilityBook.GetCurrentSpec())
+	end)
 end
 
 function AuraMastery:OnAbilityBookChange()
