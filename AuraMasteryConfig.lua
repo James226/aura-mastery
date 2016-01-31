@@ -1191,99 +1191,107 @@ function AuraMasteryConfig:SelectTrigger(triggerDropdownItem)
 end
 
 function AuraMasteryConfig:PopulateTriggerItem(trigger)
-    local editor = self.configForm:FindChild("TriggerWindow")
+    CatchError(function()
+        local editor = self.configForm:FindChild("TriggerWindow")
 
-    editor:FindChild("TriggerEditor"):Show(true)
-    editor:FindChild("GeneralTriggerControls"):Show(true)
-    editor:SetData(trigger)
-    editor:FindChild("TriggerName"):SetText(trigger.Name)
-    editor:FindChild("TriggerName"):FindChild("Placeholder"):Show(trigger.Name == "")
-    editor:FindChild("TriggerType"):SetText(trigger.Type)
-    editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
+        editor:FindChild("TriggerEditor"):Show(true)
+        editor:FindChild("GeneralTriggerControls"):Show(true)
+        editor:SetData(trigger)
+        editor:FindChild("TriggerName"):SetText(trigger.Name)
+        editor:FindChild("TriggerName"):FindChild("Placeholder"):Show(trigger.Name == "")
+        editor:FindChild("TriggerType"):SetText(trigger.Type)
+        editor:FindChild("TriggerBehaviour"):SetText(trigger.Behaviour)
 
-    self:PopulateTriggerDetails(trigger.Type)
+        self:PopulateTriggerDetails(trigger.Type)
 
-    if trigger.Type == "Action Set" then
-        editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
-        editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
-        editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
-        editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
-    elseif trigger.Type == "Cooldown" then
-        editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
-        editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
-        editor:FindChild("ChargesEnabled"):SetCheck(trigger.TriggerDetails.Charges.Enabled)
-        editor:FindChild("Charges"):Enable(trigger.TriggerDetails.Charges.Enabled)
-        editor:FindChild("Charges"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Charges.Operator)
-        editor:FindChild("Charges"):FindChild("ChargesValue"):SetTextRaw(trigger.TriggerDetails.Charges.Value)
-    elseif trigger.Type == "Buff" then
-        editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
-        editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
+        if trigger.Type == "Action Set" then
+            editor:FindChild("ActionSet1"):SetCheck(trigger.TriggerDetails.ActionSets[1])
+            editor:FindChild("ActionSet2"):SetCheck(trigger.TriggerDetails.ActionSets[2])
+            editor:FindChild("ActionSet3"):SetCheck(trigger.TriggerDetails.ActionSets[3])
+            editor:FindChild("ActionSet4"):SetCheck(trigger.TriggerDetails.ActionSets[4])
+        elseif trigger.Type == "Cooldown" then
+            editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+            editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
+            editor:FindChild("ChargesEnabled"):SetCheck(trigger.TriggerDetails.Charges.Enabled)
+            editor:FindChild("Charges"):Enable(trigger.TriggerDetails.Charges.Enabled)
+            editor:FindChild("Charges"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Charges.Operator)
+            editor:FindChild("Charges"):FindChild("ChargesValue"):SetTextRaw(trigger.TriggerDetails.Charges.Value)
+        elseif trigger.Type == "Buff" then
+            editor:FindChild("BuffName"):SetText(trigger.TriggerDetails.BuffName)
+            editor:FindChild("BuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.BuffName == "")
 
-        for type, val in pairs(trigger.TriggerDetails.Target) do
-            editor:FindChild("Target" .. type):SetCheck(val)
+            self:PopulateTriggerItemTargets(trigger, editor)
+
+            editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
+            editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
+            editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
+            editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
+        elseif trigger.Type == "Debuff" then
+            editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
+            editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
+
+            self:PopulateTriggerItemTargets(trigger, editor)
+
+            editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
+            editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
+            editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
+            editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
+        elseif trigger.Type == "Resources" then
+            self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
+            self:PopulateValueBasedEditor(trigger, editor, "Mana")
+            self:PopulateValueBasedEditor(trigger, editor, "Resource")
+        elseif trigger.Type == "Health" then
+            self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
+
+            self:PopulateTriggerItemTargets(trigger, editor)
+
+            self:PopulateValueBasedEditor(trigger, editor, "Health")
+            self:PopulateValueBasedEditor(trigger, editor, "Shield")
+        elseif trigger.Type == "Moment Of Opportunity" then
+            editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
+            editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
+        elseif trigger.Type == "Scriptable" then
+            editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
+        elseif trigger.Type == "Keybind" then
+            self:SetKeybindInput(trigger.TriggerDetails.Input)
+            editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
+        elseif trigger.Type == "Limited Action Set Checker" then
+            editor:FindChild("AbilityName"):SetText(trigger.TriggerDetails.AbilityName)
+            if trigger.TriggerDetails.AbilityName ~= "" then
+                editor:FindChild("AbilityName"):FindChild("Placeholder"):Show(false, false)
+            end
         end
-        editor:FindChild("TargetGroup"):Enable(false)
 
-        editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
-        editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
-        editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
-        editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
-    elseif trigger.Type == "Debuff" then
-        editor:FindChild("DebuffName"):SetText(trigger.TriggerDetails.DebuffName)
-        editor:FindChild("DebuffName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.DebuffName == "")
+        self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
 
-        for type, val in pairs(trigger.TriggerDetails.Target) do
-            editor:FindChild("Target" .. type):SetCheck(val)
+        self.configForm:FindChild("TriggerEffectsList"):DestroyChildren()
+        for _, triggerEffect in pairs(trigger.TriggerEffects) do
+            self:AddTriggerEffect(triggerEffect)
         end
-        editor:FindChild("TargetGroup"):Enable(false)
 
-        editor:FindChild("StacksEnabled"):SetCheck(trigger.TriggerDetails.Stacks.Enabled)
-        editor:FindChild("Stacks"):Enable(trigger.TriggerDetails.Stacks.Enabled)
-        editor:FindChild("Stacks"):FindChild("Operator"):SetTextRaw(trigger.TriggerDetails.Stacks.Operator)
-        editor:FindChild("Stacks"):FindChild("StacksValue"):SetTextRaw(trigger.TriggerDetails.Stacks.Value)
-    elseif trigger.Type == "Resources" then
-        self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
-        self:PopulateValueBasedEditor(trigger, editor, "Mana")
-        self:PopulateValueBasedEditor(trigger, editor, "Resource")
-    elseif trigger.Type == "Health" then
-        self:InitializeTriggerDetailsWindow(trigger.Type, self.configForm)
-
-        for type, val in pairs(trigger.TriggerDetails.Target) do
-            editor:FindChild("Target" .. type):SetCheck(val)
+        local effectItems = self.configForm:FindChild("TriggerEffectsList"):GetChildren()
+        if #effectItems > 0 then
+            effectItems[1]:SetCheck(true)
+            self:OnTriggerEffectSelect(effectItems[1], effectItems[1])
+        else
+            self.configForm:FindChild("TriggerEffectContainer"):Show(false)
         end
-        editor:FindChild("TargetGroup"):Enable(false)
+    end)
+end
 
-        self:PopulateValueBasedEditor(trigger, editor, "Health")
-        self:PopulateValueBasedEditor(trigger, editor, "Shield")
-    elseif trigger.Type == "Moment Of Opportunity" then
-        editor:FindChild("TargetPlayer"):SetCheck(trigger.TriggerDetails.Target.Player)
-        editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
-    elseif trigger.Type == "Scriptable" then
-        editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
-    elseif trigger.Type == "Keybind" then
-        self:SetKeybindInput(trigger.TriggerDetails.Input)
-        editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
-    elseif trigger.Type == "Limited Action Set Checker" then
-        editor:FindChild("AbilityName"):SetText(trigger.TriggerDetails.AbilityName)
-        if trigger.TriggerDetails.AbilityName ~= "" then
-            editor:FindChild("AbilityName"):FindChild("Placeholder"):Show(false, false)
+function AuraMasteryConfig:PopulateTriggerItemTargets(trigger, editor)
+    for type, val in pairs(trigger.TriggerDetails.Target) do
+        local input = editor:FindChild("Target" .. type)
+        if input.SetCheck ~= nil then
+            input:SetCheck(val)
+            if val then
+                self:OnBuffTargetChanged(input)
+            end
+        else
+            input:SetText(val)
         end
     end
-
-    self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
-
-    self.configForm:FindChild("TriggerEffectsList"):DestroyChildren()
-    for _, triggerEffect in pairs(trigger.TriggerEffects) do
-        self:AddTriggerEffect(triggerEffect)
-    end
-
-    local effectItems = self.configForm:FindChild("TriggerEffectsList"):GetChildren()
-    if #effectItems > 0 then
-        effectItems[1]:SetCheck(true)
-        self:OnTriggerEffectSelect(effectItems[1], effectItems[1])
-    else
-        self.configForm:FindChild("TriggerEffectContainer"):Show(false)
-    end
+    editor:FindChild("TargetGroup"):Enable(false)
 end
 
 function AuraMasteryConfig:OnBuffTargetChanged(wndHandler)
@@ -1291,7 +1299,20 @@ function AuraMasteryConfig:OnBuffTargetChanged(wndHandler)
     for _, group in pairs(wndHandler:GetParent():GetParent():GetChildren()) do
         if group ~= currentGroup then
             for _, target in pairs(group:GetChildren()) do
-                target:SetCheck(false)
+                SendVarToRover(target:GetName(), target)
+                if target.SetCheck ~= nil then
+                    target:SetCheck(false)
+                else
+                    target:SetText("")
+                    target:Enable(false)
+                end
+            end
+        else
+            for _, target in pairs(group:GetChildren()) do
+                SendVarToRover(target:GetName(), target)
+                if target.SetCheck == nil then
+                    target:Enable(true)
+                end
             end
         end
     end
@@ -1638,6 +1659,7 @@ function AuraMasteryConfig:OnSendIconToGroup( wndHandler, wndControl, eMouseButt
 end
 
 function AuraMasteryConfig:OnEnableShareRequests( wndHandler, wndControl, eMouseButton )
+    self.auraMastery:ShareChannelConnect()
 	self.auraMastery.sharingCallback = function(chan, msg) self:OnSharingMessageReceived(chan, msg) end
 	self.configForm:FindChild("ShareButton"):SetBGColor("ffffff00")
 end

@@ -183,7 +183,9 @@ function IconTrigger:SetConfig(editor)
                     Healer = editor:FindChild("TargetHealer"):IsChecked(),
                     DPS = editor:FindChild("TargetDPS"):IsChecked(),
                     Friendly = editor:FindChild("TargetFriendly"):IsChecked(),
-					Hostile = editor:FindChild("TargetHostile"):IsChecked()
+                    Hostile = editor:FindChild("TargetHostile"):IsChecked(),
+                    Named = editor:FindChild("TargetNamed"):IsChecked(),
+					NamedUnit = editor:FindChild("TargetNamedUnit"):GetText()
 				},
 				Stacks = {
 					Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
@@ -204,7 +206,9 @@ function IconTrigger:SetConfig(editor)
                     Healer = editor:FindChild("TargetHealer"):IsChecked(),
                     DPS = editor:FindChild("TargetDPS"):IsChecked(),
                     Friendly = editor:FindChild("TargetFriendly"):IsChecked(),
-					Hostile = editor:FindChild("TargetHostile"):IsChecked()
+					Hostile = editor:FindChild("TargetHostile"):IsChecked(),
+                    Named = editor:FindChild("TargetNamed"):IsChecked(),
+					NamedUnit = editor:FindChild("TargetNamedUnit"):GetText()
 				},
 				Stacks = {
 					Enabled = editor:FindChild("StacksEnabled"):IsChecked(),
@@ -242,7 +246,9 @@ function IconTrigger:SetConfig(editor)
                     Healer = editor:FindChild("TargetHealer"):IsChecked(),
                     DPS = editor:FindChild("TargetDPS"):IsChecked(),
                     Friendly = editor:FindChild("TargetFriendly"):IsChecked(),
-                    Hostile = editor:FindChild("TargetHostile"):IsChecked()
+                    Hostile = editor:FindChild("TargetHostile"):IsChecked(),
+                    Named = editor:FindChild("TargetNamed"):IsChecked(),
+					NamedUnit = editor:FindChild("TargetNamedUnit"):GetText()
                 },
 			}
 			if editor:FindChild("HealthEnabled"):IsChecked() then
@@ -326,7 +332,12 @@ function IconTrigger:AddToBuffWatch()
 
         for target, val in pairs(self.TriggerDetails.Target) do
             if val then
-                self:AddBuffToBuffWatch(target, self.buffName)
+                if target == "Named" then
+                elseif target == "NamedUnit" then
+                    self:AddBuffToBuffWatch(val, self.buffName)
+                else
+                    self:AddBuffToBuffWatch(target, self.buffName)
+                end
             end
         end
 	elseif self.Type == "On Critical" or self.Type == "On Deflect" or self.Type == "Action Set" or self.Type == "Resources" or self.Type == "Gadget" then
@@ -334,7 +345,12 @@ function IconTrigger:AddToBuffWatch()
 	elseif self.Type == "Health" or self.Type == "Moment Of Opportunity" then
         for target, val in pairs(self.TriggerDetails.Target) do
             if val then
-                self:AddCooldownToBuffWatch(target)
+                if target == "Named" then
+                elseif target == "NamedUnit" then
+                    self:AddCooldownToBuffWatch(val)
+                else
+                    self:AddCooldownToBuffWatch(target)
+                end
             end
         end
 	elseif self.Type == "Keybind" then
@@ -363,6 +379,9 @@ end
 
 function IconTrigger:AddBuffToBuffWatch(target, option)
 	local triggerType = string.gsub(self.Type, " ", "")
+	if self.buffWatch[triggerType][target] == nil then
+		self.buffWatch[triggerType][target] = {}
+	end
 	if self.buffWatch[triggerType][target][option] == nil then
 		self.buffWatch[triggerType][target][option] = {}
 	end

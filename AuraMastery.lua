@@ -412,6 +412,7 @@ function AuraMastery:ProcessHealthEvent(unit, decrementedHealth)
 		else
 			self:ProcessHealth(unit, "Hostile", unit:GetId(), decrementedHealth)
 		end
+		self:ProcessHealth(unit, unit:GetName(), unit:GetId(), decrementedHealth)
 	end
 end
 
@@ -509,12 +510,20 @@ function AuraMastery:ProcessBuffEvent(unitTarget, action, data)
 		-- end
 	end
 
+	self:ProcessBuff(unitTarget:GetName(), buffType, spellId, spellName, {
+		unit = unitTarget,
+		action = action,
+		data = data
+	})
+
 	--if not self.isInRaid then return end
 
 
 end
 
 function AuraMastery:ProcessBuff(target, buffType, spellId, spellName, payload)
+	if self.buffWatch[buffType][target] == nil then return end
+
 	if self.buffWatch[buffType][target][spellId] ~= nil then
 		for _, watcher in pairs(self.buffWatch[buffType][target][spellId]) do
 			watcher(payload)
@@ -641,7 +650,7 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterTimerHandler("AuraMastery_BuffTimer", "OnUpdate", self)
 	Apollo.CreateTimer("AuraMastery_BuffTimer", 0.1, true)
 
-	self:ShareChannelConnect()
+	--self:ShareChannelConnect()
 
 	Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 	local unitPlayer = GameLib.GetPlayerUnit()
@@ -652,13 +661,16 @@ end
 
 function AuraMastery:ShareChannelConnect()
 	if not self.shareChannel then
-		self.shareChannel = ICCommLib.JoinChannel("AMShare", ICCommLib.CodeEnumICCommChannelType.Global)
+		self.shareChannel = ICCommLib.JoinChannel("AMShare2", ICCommLib.CodeEnumICCommChannelType.Global)
 	end
 
 	if self.shareChannel:IsReady() then
         self.shareChannel:SetReceivedMessageFunction("OnSharingMessageReceived", self)
+		return true
     else
+		Print("[AuraMastery] Connection failed")
     	Apollo.CreateTimer("AuraMastery_ShareChannelConnect", 1, false)
+		return false
     end
 end
 
@@ -1045,18 +1057,22 @@ function AuraMastery.DeserializeString(string)
 end
 
 function AuraMastery:SendCommsMessageToPlayer(player, msg)
-	msg.Destination = player
-	msg.Sender = GameLib.GetPlayerUnit():GetName()
-	msg.DestinationType = "player"
-	self.shareChannel:SendMessage(self.config:Serialize(msg))
+	if self:ShareChannelConnect() then
+		msg.Destination = player
+		msg.Sender = GameLib.GetPlayerUnit():GetName()
+		msg.DestinationType = "player"
+		self.shareChannel:SendMessage(self.config:Serialize(msg))
+	end
 end
 
 function AuraMastery:SendCommsMessageToGroup(msg)
-	msg.Destination = ""
-	msg.Sender = GameLib.GetPlayerUnit():GetName()
-	msg.DestinationType = "group"
-	self.shareChannel:SendMessage(self.config:Serialize(msg))
-	self:OnSharingMessageReceived("AM", self.config:Serialize(msg))
+	if self:ShareChannelConnect() then
+		msg.Destination = ""
+		msg.Sender = GameLib.GetPlayerUnit():GetName()
+		msg.DestinationType = "group"
+		self.shareChannel:SendMessage(self.config:Serialize(msg))
+		self:OnSharingMessageReceived("AM", self.config:Serialize(msg))
+	end
 end
 
 function AuraMastery:SendCommsMessageToGuild(guild, msg)
