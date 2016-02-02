@@ -9,6 +9,14 @@ setmetatable(IconTrigger, {
   end,
 })
 
+local function IndexOf(table, item)
+    for idx, val in pairs(table) do
+        if item == val then
+            return idx
+        end
+    end
+end
+
 function IconTrigger.new(icon, buffWatch)
 	local self = setmetatable({}, IconTrigger)
 
@@ -306,6 +314,17 @@ function IconTrigger:SetConfig(editor)
 					Value = 0
 				}
 			}
+        elseif self.Type == "Cast" then
+            self.TriggerDetails = {
+				SpellName = editor:FindChild("SpellName"):GetText(),
+				Target = {
+					Player = editor:FindChild("TargetPlayer"):IsChecked(),
+                    Target = editor:FindChild("TargetTarget"):IsChecked(),
+                    FocusTarget = editor:FindChild("TargetFocusTarget"):IsChecked(),
+                    Named = editor:FindChild("TargetNamed"):IsChecked(),
+					NamedUnit = editor:FindChild("TargetNamedUnit"):GetText()
+				},
+            }
 		end
 	end
 	self:AddToBuffWatch()
@@ -320,7 +339,20 @@ function IconTrigger:RemoveEffect(effect)
 	end
 end
 
+function IconTrigger:AddUnit(unit)
+    if unit ~= nil then
+        self.Units[unit:GetId()] = { Unit = unit }
+    end
+end
+
+function IconTrigger:RemoveUnit(unit)
+    if unit ~= nil then
+        self.Units[unit:GetId()] = nil
+    end
+end
+
 function IconTrigger:AddToBuffWatch()
+    self.Units = {}
 	if self.Type == "Cooldown" then
 		self.currentSpell = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName
 		self:AddCooldownToBuffWatch(self.currentSpell)
@@ -358,7 +390,27 @@ function IconTrigger:AddToBuffWatch()
 	elseif self.Type == "Limited Action Set Checker" then
 		self.currentSpell = self.TriggerDetails.AbilityName == "" and self.Icon.iconName or self.TriggerDetails.AbilityName
 		self:AddCooldownToBuffWatch(self.currentSpell)
-	end
+	elseif self.Type == "Cast" then
+        Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
+        Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
+        if self.TriggerDetails.Target.Player then
+            self:AddUnit(GameLib.GetPlayerUnit())
+        end
+        if self.TriggerDetails.Target.Target then
+            local target = GameLib.GetTargetUnit()
+            if target ~= nil then
+                self:OnTargetChanged(target)
+            end
+        	Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetChanged", self)
+        end
+        if self.TriggerDetails.Target.FocusTarget then
+            local focus = GameLib.GetPlayerUnit():GetAlternateTarget()
+            if focus ~= nil then
+                self:OnAlternateTargetUnitChanged(focus)
+            end
+            Apollo.RegisterEventHandler("AlternateTargetUnitChanged", "OnAlternateTargetUnitChanged", self)
+        end
+    end
 end
 
 function IconTrigger:AddCooldownToBuffWatch(option)
@@ -410,7 +462,12 @@ function IconTrigger:RemoveFromBuffWatch()
 		end
 	elseif self.Type == "Keybind" then
 		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.Input.Key)
-	end
+	elseif self.Type == "Cast" then
+        Apollo.RemoveEventHandler("TargetUnitChanged", self)
+        Apollo.RemoveEventHandler("AlternateTargetUnitChanged", self)
+        Apollo.RemoveEventHandler("UnitCreated", self)
+        Apollo.RemoveEventHandler("UnitDestroyed", self)
+    end
 end
 
 function IconTrigger:RemoveBasicFromBuffWatch()
@@ -473,6 +530,94 @@ function IconTrigger:ResetTrigger(deltaTime)
                 target.LastUpdate = (target.LastUpdate or 0) + deltaTime
             end
         end
+    elseif self.Type == "Cast" then
+        for _, unit in pairs(self.Units) do
+            if unit.Unit:GetCastName() == (self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName) then
+                self.MaxDuration = unit.Unit:GetCastDuration() / 1000
+                self.Time = self.MaxDuration - (unit.Unit:GetCastElapsed() / 1000)
+                self.isSet = self.Time > 0
+            end
+        end
+    end
+end
+
+function IconTrigger:OnUnitCreated(unit)
+
+    if (self.TriggerDetails.Target and unit == GameLib.GetTargetUnit()) then
+        return self:OnTargetChanged(nil)
+    end
+
+    if (self.TriggerDetails.FocusTarget and unit == GameLib.GetPlayerUnit():GetAlternateTarget()) then
+        return self:OnAlternateTargetUnitChanged(nil)
+    end
+
+    local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
+    if (self.TriggerDetails.Player and unit:IsThePlayer()) or
+        (self.TriggerDetails.Friendly and disposition == Unit.CodeEnumDisposition.Friendly) or
+        (self.TriggerDetails.Hostile and disposition ~= Unit.CodeEnumDisposition.Friendly) or
+        (self.TriggerDetails.Named and unit:GetName() == self.TriggerDetails.NamedUnit) then
+        self:AddUnit(unit)
+    end
+end
+
+function IconTrigger:OnUnitDestroyed(unit)
+
+    if (self.TriggerDetails.Target and unit == GameLib.GetTargetUnit()) then
+        return self:OnTargetChanged(nil)
+    end
+
+    if (self.TriggerDetails.FocusTarget and unit == GameLib.GetPlayerUnit():GetAlternateTarget()) then
+        return self:OnAlternateTargetUnitChanged(nil)
+    end
+
+    local disposition = unit:GetDispositionTo(GameLib.GetPlayerUnit())
+    if (self.TriggerDetails.Player and unit:IsThePlayer()) or
+        (self.TriggerDetails.Friendly and disposition == Unit.CodeEnumDisposition.Friendly) or
+        (self.TriggerDetails.Hostile and disposition ~= Unit.CodeEnumDisposition.Friendly) or
+        (self.TriggerDetails.Named and unit:GetName() == self.TriggerDetails.NamedUnit) then
+        self:RemoveUnit(unit)
+    end
+end
+
+function IconTrigger:OnTargetChanged(unit)
+    if self.targetUnit ~= nil then
+        self:RemoveUnit(self.targetUnit)
+    end
+    if unit ~= nil then
+        self:AddUnit(unit)
+    end
+    self.targetUnit = unit
+end
+
+function IconTrigger:OnAlternateTargetUnitChanged(unit)
+    if self.focusTarget ~= nil then
+        self:RemoveUnit(self.focusTarget)
+    end
+    if unit ~= nil then
+        self:AddUnit(unit)
+    end
+    self.focusTarget = unit
+end
+
+function IconTrigger:GetTargets()
+    local targets = {}
+    if self.TriggerDetails.Player then
+        table.insert(targets, GameLib.GetPlayerUnit())
+    end
+    if self.TriggerDetails.Target then
+        table.insert(targets, GameLib.GetTargetUnit())
+    end
+    if self.TriggerDetails.TargetOfTarget then
+        table.insert(targets, GameLib.GetPlayerUnit())
+    end
+    if self.TriggerDetails.FocusTarget then
+        table.insert(targets, GameLib.GetPlayerUnit())
+    end
+    if self.TriggerDetails.Player then
+        table.insert(targets, GameLib.GetPlayerUnit())
+    end
+    if self.TriggerDetails.Player then
+        table.insert(targets, GameLib.GetPlayerUnit())
     end
 end
 

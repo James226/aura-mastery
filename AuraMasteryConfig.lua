@@ -1260,6 +1260,11 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
             if trigger.TriggerDetails.AbilityName ~= "" then
                 editor:FindChild("AbilityName"):FindChild("Placeholder"):Show(false, false)
             end
+        elseif trigger.Type == "Cast" then
+            editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+            editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
+
+            self:PopulateTriggerItemTargets(trigger, editor)
         end
 
         self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
@@ -1291,7 +1296,10 @@ function AuraMasteryConfig:PopulateTriggerItemTargets(trigger, editor)
             input:SetText(val)
         end
     end
-    editor:FindChild("TargetGroup"):Enable(false)
+    local targetGroup = editor:FindChild("TargetGroup")
+    if targetGroup ~= nil then
+        editor:FindChild("TargetGroup"):Enable(false)
+    end
 end
 
 function AuraMasteryConfig:OnBuffTargetChanged(wndHandler)
@@ -1452,6 +1460,9 @@ end
 
 function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEditor)
 	detailsEditor:FindChild("TriggerTypeDropdown"):Show(false)
+    local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    local icon = self.auraMastery.Icons[iconId]
+
 	if triggerType == "Resources" then
 		self:InitializeResourceEditor(detailsEditor:FindChild("Mana"))
 		self:InitializeResourceEditor(detailsEditor:FindChild("Resource"))
@@ -1459,32 +1470,28 @@ function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEd
 		self:InitializeResourceEditor(detailsEditor:FindChild("Health"))
 		self:InitializeResourceEditor(detailsEditor:FindChild("Shield"))
 	elseif triggerType == "Cooldown" then
-		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
-		local icon = self.auraMastery.Icons[iconId]
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("SpellName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
 		self:InitializeResourceEditor(detailsEditor)
 	elseif triggerType == "Buff" then
-		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
-		local icon = self.auraMastery.Icons[iconId]
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("BuffName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
 		self:InitializeResourceEditor(detailsEditor)
 	elseif triggerType == "Debuff" then
-		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
-		local icon = self.auraMastery.Icons[iconId]
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("DebuffName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
 		self:InitializeResourceEditor(detailsEditor)
 	elseif triggerType == "Limited Action Set Checker" then
-		local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
-		local icon = self.auraMastery.Icons[iconId]
 		if icon ~= nil then
 			detailsEditor:FindChild("TriggerDetails"):FindChild("AbilityName"):FindChild("Placeholder"):SetText(icon.iconName)
 		end
+    elseif triggerType == "Cast" then
+        if icon ~= nil then
+            detailsEditor:FindChild("TriggerDetails"):FindChild("SpellName"):FindChild("Placeholder"):SetText(icon.iconName)
+        end
 	end
 end
 
