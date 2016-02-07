@@ -1265,6 +1265,14 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
             editor:FindChild("SpellName"):FindChild("Placeholder"):Show(trigger.TriggerDetails.SpellName == "")
 
             self:PopulateTriggerItemTargets(trigger, editor)
+        elseif trigger.Type == "ICD" then
+            self:PopulateTriggerItemTargets(trigger, editor)
+            self:SetDropdown(editor:FindChild("EventType"), trigger.TriggerDetails.EventType)
+            editor:FindChild("Duration"):SetText(trigger.TriggerDetails.Duration)
+            editor:FindChild("SpellName"):SetText(trigger.TriggerDetails.SpellName)
+            if trigger.TriggerDetails.SpellName ~= "" then
+                editor:FindChild("SpellName"):FindChild("Placeholder"):Show(false, false)
+            end
         end
 
         self.configForm:FindChild("TriggerTypeDropdown"):Show(false)
@@ -1492,7 +1500,12 @@ function AuraMasteryConfig:InitializeTriggerDetailsWindow(triggerType, detailsEd
         if icon ~= nil then
             detailsEditor:FindChild("TriggerDetails"):FindChild("SpellName"):FindChild("Placeholder"):SetText(icon.iconName)
         end
-	end
+	elseif triggerType == "ICD" then
+        if icon ~= nil then
+            detailsEditor:FindChild("TriggerDetails"):FindChild("SpellName"):FindChild("Placeholder"):SetText(icon.iconName)
+            self:SetDropdownIndex(detailsEditor:FindChild("EventType"), 1)
+        end
+    end
 end
 
 function AuraMasteryConfig:InitializeResourceEditor(editor)
@@ -2352,10 +2365,6 @@ function AuraMasteryConfig:SetKeybindInput(input)
 	keySelect:SetData(input)
 end
 
----------------------------------------------------------------------------------------------------
--- IconSelector Functions
----------------------------------------------------------------------------------------------------
-
 function AuraMasteryConfig:OnIconSelectorOpen( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
     self.iconSelector = Apollo.LoadForm("AuraMastery.xml", "IconSelector", nil, self)
     self.iconSelector:Show(true)
@@ -2382,6 +2391,61 @@ function AuraMasteryConfig:TrackLineNumberAdjust( wndHandler, wndControl, eMouse
             field:SetText(math.min(20, field:GetText() + 1))
         end
     end
+end
+
+function AuraMasteryConfig:OnDropdownOpen( wndHandler, wndControl, eMouseButton )
+    if wndHandler == wndControl then
+        local dropdown = wndHandler:GetParent()
+        local list = dropdown:FindChild("DropdownList")
+        if not list:IsShown() then
+            list:Show(true, false)
+        end
+    end
+end
+
+function AuraMasteryConfig:OnDropdownOptionSelected( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
+    if wndHandler == wndControl then
+        local optionValue = wndHandler:GetText()
+
+        local dropdown = wndHandler:GetParent():GetParent():GetParent()
+        local dropdownButton = dropdown:FindChild("DropdownButton")
+        local dropdownList = dropdown:FindChild("DropdownList")
+        dropdown:SetData(wndHandler:GetName():sub(9))
+        dropdownButton:SetText(optionValue)
+        dropdownList:Show(false, false)
+    end
+end
+
+function AuraMasteryConfig:SetDropdown(dropdown, value)
+    local dropdownListItems = dropdown:FindChild("DropdownListItems"):GetChildren()
+    for _, item in pairs(dropdownListItems) do
+        if item:GetName():sub(9) == value then
+            dropdown:SetData(value)
+            dropdown:FindChild("DropdownButton"):SetText(item:GetText())
+            return
+        end
+    end
+    Print("[AuraMastery] Failed to set option for '" .. dropdown:GetName() .. "', invalid option: '" .. tostring(value) .. "'")
+end
+
+function AuraMasteryConfig:SetDropdownIndex(dropdown, index)
+    local dropdownListItems = dropdown:FindChild("DropdownListItems"):GetChildren()
+    for i, item in pairs(dropdownListItems) do
+        if i == index then
+            dropdown:SetData(item:GetName():sub(9))
+            dropdown:FindChild("DropdownButton"):SetText(item:GetText())
+            return
+        end
+    end
+    Print("[AuraMastery] Failed to set option for '" .. dropdown:GetName() .. "', invalid index: '" .. index .. "'")
+end
+
+function AuraMasteryConfig:OnEventTypeChanged( wndHandler, wndControl )
+    CatchError(function()
+        local dropdown = wndHandler:GetParent()
+        local triggerDetails = dropdown:GetParent():GetParent()
+        triggerDetails:ArrangeChildrenVert()
+    end)
 end
 
 local GeminiPackages = _G["GeminiPackages"]

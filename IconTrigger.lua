@@ -17,6 +17,15 @@ local function IndexOf(table, item)
     end
 end
 
+local function CatchError(func)
+    local status, error = pcall(func)
+
+    if not status then
+        Print("[AuraMastery] An error has occured")
+        Print(error)
+    end
+end
+
 function IconTrigger.new(icon, buffWatch)
 	local self = setmetatable({}, IconTrigger)
 
@@ -41,6 +50,7 @@ function IconTrigger.new(icon, buffWatch)
 	self.lastKeypress = 0
     self.Time = 0
     self.Stacks = 0
+    self.LastEvent = 0
 
     self.Units = {}
 
@@ -325,6 +335,17 @@ function IconTrigger:SetConfig(editor)
 					NamedUnit = editor:FindChild("TargetNamedUnit"):GetText()
 				},
             }
+        elseif self.Type == "ICD" then
+            self.TriggerDetails = {
+                SpellName = editor:FindChild("SpellName"):GetText(),
+                Duration = tonumber(editor:FindChild("Duration"):GetText()),
+                EventType = editor:FindChild("EventType"):GetData(),
+                Target = {
+					Player = editor:FindChild("TargetPlayer"):IsChecked(),
+                    Target = editor:FindChild("TargetTarget"):IsChecked(),
+                    FocusTarget = editor:FindChild("TargetFocusTarget"):IsChecked(),
+				},
+            }
 		end
 	end
 	self:AddToBuffWatch()
@@ -410,7 +431,54 @@ function IconTrigger:AddToBuffWatch()
             end
             Apollo.RegisterEventHandler("AlternateTargetUnitChanged", "OnAlternateTargetUnitChanged", self)
         end
+    elseif self.Type == "ICD" then
+        if self.TriggerDetails.EventType == "DamageDone" then
+            Apollo.RegisterEventHandler("CombatLogDamage", "OnICDDamageDone", self)
+        elseif self.TriggerDetails.EventType == "HealingDone" then
+            Apollo.RegisterEventHandler("CombatLogHeal", "OnICDDamageDone", self)
+        elseif self.TriggerDetails.EventType == "Buff" or self.TriggerDetails.EventType == "Debuff" then
+            Apollo.RegisterEventHandler("BuffAdded", "OnICDBuff", self)
+        elseif self.TriggerDetails.EventType == "ResourceGain" then
+            Apollo.RegisterEventHandler("CombatLogVitalModifier", "OnICDResourceGain", self)
+        end
     end
+end
+
+function IconTrigger:OnICDDamageDone(data)
+    CatchError(function()
+        if data.unitCaster:IsThePlayer() then
+            local spell = data.splCallingSpell
+            local spellName = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName
+            if spell:GetName() == spellName or spell:GetId() == spellName then
+                self.LastEvent = os.clock()
+            end
+        end
+    end)
+end
+
+function IconTrigger:OnICDBuff(unit, buff)
+    CatchError(function()
+        if unit:IsThePlayer() then
+            local spell = buff.splEffect
+            local spellName = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName
+            if (spell:GetName() == spellName or spell:GetId() == spellName) and spell:IsBeneficial() == (self.TriggerDetails.EventType == "Buff") then
+                self.LastEvent = os.clock()
+            end
+        end
+    end)
+end
+
+function IconTrigger:OnICDResourceGain(data)
+    CatchError(function()
+        SendVarToRover("Resource", data)
+        if data.unitCaster:IsThePlayer() then
+            local spell = data.splCallingSpell
+            local spellName = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName
+            if spell:GetName() == spellName or spell:GetId() == spellName then
+                self.LastEvent = os.clock()
+            end
+        end
+    end)
 end
 
 function IconTrigger:AddCooldownToBuffWatch(option)
@@ -462,12 +530,13 @@ function IconTrigger:RemoveFromBuffWatch()
 		end
 	elseif self.Type == "Keybind" then
 		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.Input.Key)
-	elseif self.Type == "Cast" then
-        Apollo.RemoveEventHandler("TargetUnitChanged", self)
-        Apollo.RemoveEventHandler("AlternateTargetUnitChanged", self)
-        Apollo.RemoveEventHandler("UnitCreated", self)
-        Apollo.RemoveEventHandler("UnitDestroyed", self)
     end
+    Apollo.RemoveEventHandler("TargetUnitChanged", self)
+    Apollo.RemoveEventHandler("AlternateTargetUnitChanged", self)
+    Apollo.RemoveEventHandler("UnitCreated", self)
+    Apollo.RemoveEventHandler("UnitDestroyed", self)
+    Apollo.RemoveEventHandler("CombatLogDamage", self)
+    Apollo.RemoveEventHandler("CombatLogHeal", self)
 end
 
 function IconTrigger:RemoveBasicFromBuffWatch()
@@ -642,6 +711,14 @@ function IconTrigger:IsSet()
 			self.Time = self.TriggerDetails.Duration - timeSinceKeypress
 			self.MaxDuration = self.TriggerDetails.Duration
 		end
+    elseif self.Type == "ICD" then
+        local currentTime = os.clock()
+        local activeTime = self.TriggerDetails.Duration
+        if self.LastEvent + activeTime > currentTime then
+            self.isSet = true
+            self.Time = (self.LastEvent + activeTime) - currentTime
+            self.MaxDuration = activeTime
+        end
 	end
 
 	self.isPass = self:IsPass()
