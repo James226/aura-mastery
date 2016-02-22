@@ -59,7 +59,7 @@ end
 
 function IconTrigger:Load(saveData)
 	if saveData ~= nil then
-		self.Name = saveData.Name
+		self.Name = (not string.match(saveData.Name, "Trigger ([0-9]+)")) and saveData.Name or ""
 		self.Type = saveData.Type
 		self.Behaviour = saveData.Behaviour or "Pass"
 		self.TriggerDetails = saveData.TriggerDetails

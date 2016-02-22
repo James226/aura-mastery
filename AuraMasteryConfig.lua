@@ -420,7 +420,7 @@ function AuraMasteryConfig:RebuildTriggerList(iconItem, icon)
     for _, trigger in pairs(icon.Triggers) do
         local triggerItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem.TriggerItemList.TriggerItem", triggerItemList, self)
         triggerItem:SetData(trigger)
-        triggerItem:FindChild("TriggerItemLabel"):SetText(trigger.Name)
+        triggerItem:FindChild("TriggerItemLabel"):SetText(trigger.Name == "" and trigger.Type or trigger.Name)
     end
 
     local triggerItem = Apollo.LoadForm("AuraMastery.xml", "IconListItem.TriggerItemList.TriggerItem", triggerItemList, self)
@@ -462,6 +462,12 @@ function AuraMasteryConfig:UpdateControls()
                 		local icon = self.auraMastery.Icons[tonumber(item:FindChild("Id"):GetText())]
                         if icon ~= nil then
                             item:FindChild("Label"):SetText(icon:GetName())
+                            for _, trigger in pairs(item:FindChild("TriggerItemList"):GetChildren()) do
+                                local triggerData = trigger:GetData()
+                                if triggerData ~= "AddTrigger" then
+                                    trigger:FindChild("TriggerItemLabel"):SetText(triggerData.Name == "" and triggerData.Type or triggerData.Name)
+                                end
+                            end
                         end
                     end
                     height = height + item:GetHeight()
@@ -1573,27 +1579,30 @@ function AuraMasteryConfig:OnImportIcon( wndHandler, wndControl, eMouseButton )
             Print("[AuraMastery] You must select a group before importing an Aura")
             return
         end
-
-    	local iconScript, loadStringError = loadstring("return " .. iconData)
-    	if iconScript then
-    		local status, result = pcall(iconScript)
-    		if status then
-    			if result ~= nil and result.iconName ~= nil then
-    				local newIcon = self.auraMastery:AddIcon()
-    				newIcon:Load(result)
-                    newIcon.group = groupItem:GetData().id
-    				self:CreateIconItem(newIcon.iconId, newIcon, groupItem:FindChild("Icons"))
-                    self:UpdateControls()
-    			else
-    				Print("Failed to import icon. Data deserialized but was invalid.")
-    			end
-    		else
-    			Print("Failed to import icon, invalid load data in clipboard: " .. tostring(result))
-    		end
-    	else
-    		Print("Failed to import icon, invalid load data in clipboard: " .. tostring(loadStringError))
-    	end
+        self:ImportIconText(iconData, groupItem)
     end)
+end
+
+function AuraMasteryConfig:ImportIconText(iconData, groupItem)
+    local iconScript, loadStringError = loadstring("return " .. iconData)
+    if iconScript then
+        local status, result = pcall(iconScript)
+        if status then
+            if result ~= nil and result.iconName ~= nil then
+                local newIcon = self.auraMastery:AddIcon()
+                newIcon:Load(result)
+                newIcon.group = groupItem:GetData().id
+                self:CreateIconItem(newIcon.iconId, newIcon, groupItem:FindChild("Icons"))
+                self:UpdateControls()
+            else
+                Print("Failed to import icon. Data deserialized but was invalid.")
+            end
+        else
+            Print("Failed to import icon, invalid load data in clipboard: " .. tostring(result))
+        end
+    else
+        Print("Failed to import icon, invalid load data in clipboard: " .. tostring(loadStringError))
+    end
 end
 
 function AuraMasteryConfig:OnExportIcon( wndHandler, wndControl, eMouseButton )
@@ -2446,6 +2455,109 @@ function AuraMasteryConfig:OnEventTypeChanged( wndHandler, wndControl )
         local triggerDetails = dropdown:GetParent():GetParent()
         triggerDetails:ArrangeChildrenVert()
     end)
+end
+
+
+function AuraMasteryConfig:OnCatalogOpen( wndHandler, wndControl, eMouseButton )
+    if self.catalog == nil then
+        self.catalog = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryCatalog", nil, self)
+        self.catalog:FindChild("AuraList"):DestroyChildren()
+    end
+
+    local importGroupDropdown = self.catalog:FindChild("ImportGroup")
+    local importGroupList = importGroupDropdown:FindChild("DropdownListItems")
+    importGroupList:DestroyChildren()
+
+    for idx, group in pairs(self.auraMastery.IconGroups) do
+        local groupItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryCatalog.Footer.ImportGroup.DropdownList.DropdownListItems.DropdownOption", importGroupList, self)
+        groupItem:SetName("Dropdown" .. group.id)
+        groupItem:SetText(group.name)
+	end
+
+    if #self.auraMastery.IconGroups > 0 then
+        self:SetDropdownIndex(importGroupDropdown, 1)
+    end
+
+    importGroupList:ArrangeChildrenVert()
+
+    self.catalog:Show(true, false)
+    self.catalog:BringToFront()
+end
+
+function AuraMasteryConfig:OnCatalogClose( wndHandler, wndControl, eMouseButton )
+    self.catalog:Show(false, false)
+end
+
+function AuraMasteryConfig:OnImportGroupChanged( wndHandler, wndControl )
+    CatchError(function()
+        local dropdown = wndHandler:GetParent()
+        local groupId = dropdown:GetData()
+        for _, groupItem in pairs(self.configForm:FindChild("IconListHolder"):FindChild("IconList"):GetChildren()) do
+            if groupItem:GetData().id == groupId then
+                self.catalogImportGroup = groupItem
+                break;
+            end
+        end
+    end)
+end
+
+function AuraMasteryConfig:OnCategorySelectOpen( wndHandler, wndControl )
+    self.catalog:FindChild("AuraList"):Enable(false)
+end
+
+function AuraMasteryConfig:OnCatalogChanged( wndHandler, wndControl )
+    CatchError(function()
+        self.catalog:FindChild("AuraList"):Enable(true)
+        local dropdown = wndHandler:GetParent()
+        self.catalogDoc = XmlDoc.CreateFromFile("Catalog/" .. dropdown:GetData() .. ".xml")
+    	self.catalogDoc:RegisterCallback("OnCatalogLoaded", self)
+    end)
+end
+
+function AuraMasteryConfig:OnCatalogLoaded()
+    CatchError(function()
+        if self.catalogDoc:IsLoaded() then
+            local auraList = self.catalog:FindChild("AuraList")
+            auraList:DestroyChildren()
+            for _, aura in ipairs(self.catalogDoc:ToTable()[1]) do
+                local item = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryCatalog.AuraList.AuraListItem", auraList, self)
+                item:FindChild("AuraName"):SetText(aura.Name)
+                item:FindChild("AuraDescription"):SetText(aura.Description)
+                item:FindChild("AuraIcon"):SetSprite(aura.Icon)
+                item:SetData(aura[1].__XmlText)
+            end
+            auraList:ArrangeChildrenVert()
+    	end
+    end)
+end
+
+function AuraMasteryConfig:OnCatalogImport( wndHandler, wndControl, eMouseButton )
+    local auraList = self.catalog:FindChild("AuraList")
+    for _, item in pairs(auraList:GetChildren()) do
+        if item:FindChild("Background"):IsChecked() then
+            local auraData = item:GetData()
+            if self.catalogImportGroup == nil then
+                Print("[AuraMastery] You must select a group before importing an Aura")
+                return
+            end
+            self:ImportIconText(auraData, self.catalogImportGroup)
+            item:FindChild("Background"):SetCheck(false)
+        end
+    end
+end
+
+function AuraMasteryConfig:OnCatalogAuraSelect( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY )
+    if wndHandler == wndControl then
+        local auraList = wndHandler:GetParent()
+        auraList:SetData(wndHandler)
+    end
+end
+
+function AuraMasteryConfig:OnCatalogSelectAll( wndHandler, wndControl, eMouseButton )
+    local auraList = self.catalog:FindChild("AuraList")
+    for _, item in pairs(auraList:GetChildren()) do
+        item:FindChild("Background"):SetCheck(true)
+    end
 end
 
 local GeminiPackages = _G["GeminiPackages"]
