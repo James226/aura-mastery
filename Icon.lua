@@ -26,6 +26,7 @@ function Icon.new(buffWatch, configForm)
 	self.buffWatch = buffWatch
 	self.icon = Apollo.LoadForm("AuraMastery.xml", "AM_Icon", nil, self)
 	self.iconName = ""
+    self.description = ""
 	self.iconSound = -1
 	self.iconBackground = true
 	self.buffStart = 0
@@ -99,6 +100,7 @@ end
 function Icon:Load(saveData)
 	if saveData ~= nil then
 		self.iconName = saveData.iconName
+        self.description = saveData.description or ""
         self.customSound = saveData.customSound or false
 		self.iconSound = saveData.iconSound
 		self.iconBackground = saveData.iconBackground == nil or saveData.iconBackground
@@ -240,7 +242,8 @@ end
 
 function Icon:GetSaveData()
 	local saveData = { }
-	saveData.iconName = self.iconName
+    saveData.iconName = self.iconName
+	saveData.description = self.description
     saveData.customSound = self.customSound
 	saveData.iconSound = self.iconSound
 	saveData.iconBackground = self.iconBackground
@@ -304,7 +307,8 @@ end
 
 function Icon:SetIcon(configWnd)
 	if self.SimpleMode then
-		self.iconName = configWnd:FindChild("AuraSpellNameList"):GetData():GetText()
+        self.iconName = configWnd:FindChild("AuraSpellNameList"):GetData():GetText()
+		self.description = configWnd:FindChild("Description"):GetText()
 		self.onlyInCombat = configWnd:FindChild("AuraOnlyInCombat"):IsChecked()
 		self.actionSets = {
 			configWnd:FindChild("AuraActionSet1"):IsChecked(),
@@ -335,6 +339,7 @@ function Icon:SetIcon(configWnd)
 		end
 	else
 		self.iconName = configWnd:FindChild("BuffName"):GetText()
+        self.description = configWnd:FindChild("Description"):GetText()
 		self.showWhen = configWnd:FindChild("BuffShowWhen"):GetText()
 		self.playSoundWhen = configWnd:FindChild("BuffPlaySoundWhen"):GetText()
 		self.iconBackground = configWnd:FindChild("BuffBackgroundShown"):IsChecked()

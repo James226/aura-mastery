@@ -788,249 +788,254 @@ function AuraMasteryConfig:OnListItemSelect( wndHandler, wndControl, eMouseButto
 end
 
 function AuraMasteryConfig:SelectIcon(iconItem)
-    self:SelectTab("General")
-	self.configForm:FindChild("BuffEditor"):Enable(true)
-	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
-	if icon ~= nil then
-		self.configForm:FindChild("BuffId"):SetText(tonumber(iconItem:FindChild("Id"):GetText()))
+    CatchError(function()
+        self:SelectTab("General")
+    	self.configForm:FindChild("BuffEditor"):Enable(true)
+    	local icon = self.auraMastery.Icons[tonumber(iconItem:FindChild("Id"):GetText())]
+    	if icon ~= nil then
+    		self.configForm:FindChild("BuffId"):SetText(tonumber(iconItem:FindChild("Id"):GetText()))
 
-		if self.selectedIcon ~= nil then
-			self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.16, 0.24, 1))
+    		if self.selectedIcon ~= nil then
+    			self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.16, 0.24, 1))
+
+                local left, top, right, bottom = self.selectedIcon:GetAnchorOffsets()
+                self.selectedIcon:SetAnchorOffsets(left, top, right, top + 50)
+    		end
+    		self.selectedIcon = iconItem
+    		self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.5, 0.61, 1))
 
             local left, top, right, bottom = self.selectedIcon:GetAnchorOffsets()
-            self.selectedIcon:SetAnchorOffsets(left, top, right, top + 50)
-		end
-		self.selectedIcon = iconItem
-		self.selectedIcon:FindChild("Background"):SetBGColor(ApolloColor.new(0.03, 0.5, 0.61, 1))
+            self.selectedIcon:SetAnchorOffsets(left, top, right, top + 83 + (#icon.Triggers * 30))
+            self.selectedIcon:FindChild("TriggerItemList"):Show(true)
 
-        local left, top, right, bottom = self.selectedIcon:GetAnchorOffsets()
-        self.selectedIcon:SetAnchorOffsets(left, top, right, top + 83 + (#icon.Triggers * 30))
-        self.selectedIcon:FindChild("TriggerItemList"):Show(true)
+            self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
 
-        self.configForm:FindChild("IconListHolder"):FindChild("IconList"):ArrangeChildrenVert()
+    		self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
 
-		self.configForm:FindChild("ExportButton"):SetActionData(GameLib.CodeEnumConfirmButtonType.CopyToClipboard, self:Serialize(icon:GetSaveData()))
+    		if icon.SimpleMode then
+    			self:SelectTab("Simple")
+    			self.configForm:FindChild("GeneralTabButton"):Show(false)
+    			self.configForm:FindChild("AppearanceTabButton"):Show(false)
+    			self.configForm:FindChild("TextTabButton"):Show(false)
+    			self.configForm:FindChild("SimpleTabButton"):Show(true)
 
-		if icon.SimpleMode then
-			self:SelectTab("Simple")
-			self.configForm:FindChild("GeneralTabButton"):Show(false)
-			self.configForm:FindChild("AppearanceTabButton"):Show(false)
-			self.configForm:FindChild("TextTabButton"):Show(false)
-			self.configForm:FindChild("SimpleTabButton"):Show(true)
+    			self.configForm:FindChild("AuraEnabled"):SetCheck(icon.enabled)
+    			self.configForm:FindChild("AuraOnlyInCombat"):SetCheck(icon.onlyInCombat)
+    			self.configForm:FindChild("AuraActionSet1"):SetCheck(icon.actionSets[1])
+    			self.configForm:FindChild("AuraActionSet2"):SetCheck(icon.actionSets[2])
+    			self.configForm:FindChild("AuraActionSet3"):SetCheck(icon.actionSets[3])
+    			self.configForm:FindChild("AuraActionSet4"):SetCheck(icon.actionSets[4])
+    			self.configForm:FindChild("AuraAlwaysShow"):SetCheck(icon.showWhen == "Always")
+    			self.configForm:FindChild("AuraSpriteScaleSlider"):SetValue(icon.iconScale)
+    			self.configForm:FindChild("AuraSpriteScaleText"):SetText(string.format("%.1f", icon.iconScale))
+    			self.configForm:FindChild("AuraSpellNameFilter"):SetText(icon.iconName)
+    			self:SetAuraSpellNameFilter(icon.iconName)
+    			self.configForm:FindChild("AuraSpellName_FilterOption"):SetCheck(true)
+    			self.configForm:FindChild("AuraSpellNameList"):SetData(self.configForm:FindChild("AuraSpellName_FilterOption"))
+    			self.configForm:FindChild("AuraSprite_Default"):FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
+    			local spellList = self.configForm:FindChild("AuraSpellNameList")
+    			for _, spell in pairs(spellList:GetChildren()) do
+    				if spell:GetName() == "AuraSpellName_FilterOption" then
+    					spell:SetCheck(true)
+    				else
+    					spell:SetCheck(false)
+    				end
+    			end
 
-			self.configForm:FindChild("AuraEnabled"):SetCheck(icon.enabled)
-			self.configForm:FindChild("AuraOnlyInCombat"):SetCheck(icon.onlyInCombat)
-			self.configForm:FindChild("AuraActionSet1"):SetCheck(icon.actionSets[1])
-			self.configForm:FindChild("AuraActionSet2"):SetCheck(icon.actionSets[2])
-			self.configForm:FindChild("AuraActionSet3"):SetCheck(icon.actionSets[3])
-			self.configForm:FindChild("AuraActionSet4"):SetCheck(icon.actionSets[4])
-			self.configForm:FindChild("AuraAlwaysShow"):SetCheck(icon.showWhen == "Always")
-			self.configForm:FindChild("AuraSpriteScaleSlider"):SetValue(icon.iconScale)
-			self.configForm:FindChild("AuraSpriteScaleText"):SetText(string.format("%.1f", icon.iconScale))
-			self.configForm:FindChild("AuraSpellNameFilter"):SetText(icon.iconName)
-			self:SetAuraSpellNameFilter(icon.iconName)
-			self.configForm:FindChild("AuraSpellName_FilterOption"):SetCheck(true)
-			self.configForm:FindChild("AuraSpellNameList"):SetData(self.configForm:FindChild("AuraSpellName_FilterOption"))
-			self.configForm:FindChild("AuraSprite_Default"):FindChild("SpriteItemIcon"):SetSprite(self:GetSpellIconByName(icon.iconName))
-			local spellList = self.configForm:FindChild("AuraSpellNameList")
-			for _, spell in pairs(spellList:GetChildren()) do
-				if spell:GetName() == "AuraSpellName_FilterOption" then
-					spell:SetCheck(true)
-				else
-					spell:SetCheck(false)
-				end
-			end
+    			local simpleTab = self.configForm:FindChild("SimpleTab")
+    			for _, auraType in pairs(simpleTab:FindChild("AuraType"):GetChildren()) do
+    				auraType:SetCheck(false)
+    			end
 
-			local simpleTab = self.configForm:FindChild("SimpleTab")
-			for _, auraType in pairs(simpleTab:FindChild("AuraType"):GetChildren()) do
-				auraType:SetCheck(false)
-			end
+    			if #icon.Triggers == 0 then
+    				simpleTab:FindChild("AuraType_Cooldown"):SetCheck(true)
+    				self.configForm:FindChild("AuraBuffDetails"):Show(false)
+    				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_Cooldown"))
+    			else
+    				simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type):SetCheck(true)
+    				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type))
+    				if icon.Triggers[1].Type == "Buff" or icon.Triggers[1].Type == "Debuff" then
+    					self.configForm:FindChild("AuraBuffDetails"):Show(true)
+    					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(icon.Triggers[1].TriggerDetails.Target.Player)
+    					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(icon.Triggers[1].TriggerDetails.Target.Target)
+    				else
+    					self.configForm:FindChild("AuraBuffDetails"):Show(false)
+    					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(false)
+    					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(false)
+    				end
+    			end
 
-			if #icon.Triggers == 0 then
-				simpleTab:FindChild("AuraType_Cooldown"):SetCheck(true)
-				self.configForm:FindChild("AuraBuffDetails"):Show(false)
-				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_Cooldown"))
-			else
-				simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type):SetCheck(true)
-				simpleTab:FindChild("AuraType"):SetData(simpleTab:FindChild("AuraType_" .. icon.Triggers[1].Type))
-				if icon.Triggers[1].Type == "Buff" or icon.Triggers[1].Type == "Debuff" then
-					self.configForm:FindChild("AuraBuffDetails"):Show(true)
-					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(icon.Triggers[1].TriggerDetails.Target.Player)
-					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(icon.Triggers[1].TriggerDetails.Target.Target)
-				else
-					self.configForm:FindChild("AuraBuffDetails"):Show(false)
-					self.configForm:FindChild("AuraBuffUnit_Player"):SetCheck(false)
-					self.configForm:FindChild("AuraBuffUnit_Target"):SetCheck(false)
-				end
-			end
+    			local soundSelect = self.configForm:FindChild("AuraSoundSelect")
+    			if soundSelect:GetData() ~= nil then
+    				soundSelect:GetData():SetCheck(false)
+    			end
 
-			local soundSelect = self.configForm:FindChild("AuraSoundSelect")
-			if soundSelect:GetData() ~= nil then
-				soundSelect:GetData():SetCheck(false)
-			end
-
-			for _, sound in pairs(self.configForm:FindChild("AuraSoundSelect"):GetChildren()) do
-				if tonumber(sound:GetData()) == icon.iconSound then
-					sound:SetCheck(true)
-					soundSelect:SetData(sound)
-
-					local left, top, right, bottom = sound:GetAnchorOffsets()
-					soundSelect:SetVScrollPos(top)
-					break
-				end
-			end
-
-			local spriteSelect = self.configForm:FindChild("AuraIconSelect")
-			if spriteSelect:GetData() ~= nil then
-				spriteSelect:GetData():SetCheck(false)
-			end
-
-			if icon.iconSprite == "" then
-				self.configForm:FindChild("AuraSprite_Default"):SetCheck(true)
-				self.configForm:FindChild("AuraIconSelect"):SetData(self.configForm:FindChild("AuraSprite_Default"))
-			else
-				for _, sprite in pairs(self.configForm:FindChild("AuraIconSelect"):GetChildren()) do
-					if sprite:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
-						sprite:SetCheck(true)
-						spriteSelect:SetData(sprite)
-
-						local left, top, right, bottom = sprite:GetAnchorOffsets()
-						spriteSelect:SetVScrollPos(top)
-						break
-					end
-				end
-			end
-		else
-			if self.currentTab == "Simple" then
-				self:SelectTab("General")
-			end
-			self.configForm:FindChild("GeneralTabButton"):Show(true)
-			self.configForm:FindChild("AppearanceTabButton"):Show(true)
-			self.configForm:FindChild("TextTabButton"):Show(true)
-			self.configForm:FindChild("SimpleTabButton"):Show(false)
-
-			self.configForm:FindChild("BuffName"):SetText(icon.iconName)
-			self:SetAuraNameFilter(icon.iconName)
-			self.configForm:FindChild("BuffShowWhen"):SelectItemByText(icon.showWhen)
-			self:SetShownDescription(self.configForm:FindChild("BuffShowWhen"):GetSelectedIndex() + 1)
-			self.configForm:FindChild("BuffPlaySoundWhen"):SelectItemByText(icon.playSoundWhen)
-			self:SetPlayWhenDescription(self.configForm:FindChild("BuffPlaySoundWhen"):GetSelectedIndex() + 1)
-            self.configForm:FindChild("SelectedSprite"):SetText(icon.iconSprite)
-            self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
-            self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
-			self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
-            self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
-            local x, y = icon:GetPosition()
-            self.configForm:FindChild("BuffPositionX"):SetText(x)
-			self.configForm:FindChild("BuffPositionY"):SetText(y)
-
-			self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
-			self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
-            self.configForm:FindChild("BuffShowInCombat"):SetCheck(icon.active.inCombat)
-            self.configForm:FindChild("BuffShowNotInCombat"):SetCheck(icon.active.notInCombat)
-            self.configForm:FindChild("BuffShowSolo"):SetCheck(icon.active.solo)
-            self.configForm:FindChild("BuffShowInGroup"):SetCheck(icon.active.inGroup)
-            self.configForm:FindChild("BuffShowInRaid"):SetCheck(icon.active.inRaid)
-            self.configForm:FindChild("BuffShowPvpFlagged"):SetCheck(icon.active.pvpFlagged)
-            self.configForm:FindChild("BuffShowNotPvpFlagged"):SetCheck(icon.active.notPvpFlagged)
-			self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
-			self.selectedColor = icon.iconColor
-			self.selectedOverlayColor = icon.iconOverlay.overlayColor
-
-			self.configForm:FindChild("BuffActionSet1"):SetCheck(icon.actionSets[1])
-			self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
-			self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
-			self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
-
-			self:OnColorUpdate()
-
-            local soundSelect = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList")
-            local selectedSound = soundSelect:GetData()
-			if selectedSound ~= nil then
-				selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
-			end
-
-            self.configForm:FindChild("CustomSoundEnabled"):SetCheck(icon.customSound)
-
-            if icon.customSound then
-                self.configForm:FindChild("CustomSoundName"):SetText(icon.iconSound)
-                local sound = soundSelect:GetChildren()[1]
-                soundSelect:SetData(sound)
-                sound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
-                local left, top, right, bottom = sound:GetAnchorOffsets()
-                soundSelect:SetVScrollPos(top)
-            else
-                self.configForm:FindChild("CustomSoundName"):SetText("")
-    			for _, sound in pairs(soundSelect:GetChildren()) do
-    				if tonumber(sound:GetData()) == icon.iconSound or sound:GetData() == icon.iconSound then
-                        soundSelect:SetData(sound)
-    					sound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+    			for _, sound in pairs(self.configForm:FindChild("AuraSoundSelect"):GetChildren()) do
+    				if tonumber(sound:GetData()) == icon.iconSound then
+    					sound:SetCheck(true)
+    					soundSelect:SetData(sound)
 
     					local left, top, right, bottom = sound:GetAnchorOffsets()
     					soundSelect:SetVScrollPos(top)
     					break
     				end
     			end
-            end
+
+    			local spriteSelect = self.configForm:FindChild("AuraIconSelect")
+    			if spriteSelect:GetData() ~= nil then
+    				spriteSelect:GetData():SetCheck(false)
+    			end
+
+    			if icon.iconSprite == "" then
+    				self.configForm:FindChild("AuraSprite_Default"):SetCheck(true)
+    				self.configForm:FindChild("AuraIconSelect"):SetData(self.configForm:FindChild("AuraSprite_Default"))
+    			else
+    				for _, sprite in pairs(self.configForm:FindChild("AuraIconSelect"):GetChildren()) do
+    					if sprite:FindChild("SpriteItemIcon"):GetSprite() == icon.iconSprite then
+    						sprite:SetCheck(true)
+    						spriteSelect:SetData(sprite)
+
+    						local left, top, right, bottom = sprite:GetAnchorOffsets()
+    						spriteSelect:SetVScrollPos(top)
+    						break
+    					end
+    				end
+    			end
+    		else
+    			if self.currentTab == "Simple" then
+    				self:SelectTab("General")
+    			end
+    			self.configForm:FindChild("GeneralTabButton"):Show(true)
+    			self.configForm:FindChild("AppearanceTabButton"):Show(true)
+    			self.configForm:FindChild("TextTabButton"):Show(true)
+    			self.configForm:FindChild("SimpleTabButton"):Show(false)
+
+                self.configForm:FindChild("BuffName"):SetText(icon.iconName)
+                local descriptionField = self.configForm:FindChild("Description")
+    			descriptionField:SetText(icon.description)
+                self:OnPlaceholderEditorChanged(descriptionField, descriptionField, icon.description)
+    			self:SetAuraNameFilter(icon.iconName)
+    			self.configForm:FindChild("BuffShowWhen"):SelectItemByText(icon.showWhen)
+    			self:SetShownDescription(self.configForm:FindChild("BuffShowWhen"):GetSelectedIndex() + 1)
+    			self.configForm:FindChild("BuffPlaySoundWhen"):SelectItemByText(icon.playSoundWhen)
+    			self:SetPlayWhenDescription(self.configForm:FindChild("BuffPlaySoundWhen"):GetSelectedIndex() + 1)
+                self.configForm:FindChild("SelectedSprite"):SetText(icon.iconSprite)
+                self.configForm:FindChild("IconSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
+                self.configForm:FindChild("IconGeneralSample"):FindChild("IconSprite"):SetSprite(icon:GetSprite())
+    			self.configForm:FindChild("BuffScale"):SetValue(icon.iconScale)
+                self.configForm:FindChild("BuffScaleValue"):SetText(string.format("%.1f", icon.iconScale))
+                local x, y = icon:GetPosition()
+                self.configForm:FindChild("BuffPositionX"):SetText(x)
+    			self.configForm:FindChild("BuffPositionY"):SetText(y)
+
+    			self.configForm:FindChild("BuffBackgroundShown"):SetCheck(icon.iconBackground)
+    			self.configForm:FindChild("BuffBorderShown"):SetCheck(icon.iconBorder)
+                self.configForm:FindChild("BuffShowInCombat"):SetCheck(icon.active.inCombat)
+                self.configForm:FindChild("BuffShowNotInCombat"):SetCheck(icon.active.notInCombat)
+                self.configForm:FindChild("BuffShowSolo"):SetCheck(icon.active.solo)
+                self.configForm:FindChild("BuffShowInGroup"):SetCheck(icon.active.inGroup)
+                self.configForm:FindChild("BuffShowInRaid"):SetCheck(icon.active.inRaid)
+                self.configForm:FindChild("BuffShowPvpFlagged"):SetCheck(icon.active.pvpFlagged)
+                self.configForm:FindChild("BuffShowNotPvpFlagged"):SetCheck(icon.active.notPvpFlagged)
+    			self.configForm:FindChild("BuffEnabled"):SetCheck(icon.enabled)
+    			self.selectedColor = icon.iconColor
+    			self.selectedOverlayColor = icon.iconOverlay.overlayColor
+
+    			self.configForm:FindChild("BuffActionSet1"):SetCheck(icon.actionSets[1])
+    			self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
+    			self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
+    			self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
+
+    			self:OnColorUpdate()
+
+                local soundSelect = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList")
+                local selectedSound = soundSelect:GetData()
+    			if selectedSound ~= nil then
+    				selectedSound:SetBGColor(ApolloColor.new(1, 1, 1, 1))
+    			end
+
+                self.configForm:FindChild("CustomSoundEnabled"):SetCheck(icon.customSound)
+
+                if icon.customSound then
+                    self.configForm:FindChild("CustomSoundName"):SetText(icon.iconSound)
+                    local sound = soundSelect:GetChildren()[1]
+                    soundSelect:SetData(sound)
+                    sound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+                    local left, top, right, bottom = sound:GetAnchorOffsets()
+                    soundSelect:SetVScrollPos(top)
+                else
+                    self.configForm:FindChild("CustomSoundName"):SetText("")
+        			for _, sound in pairs(soundSelect:GetChildren()) do
+        				if tonumber(sound:GetData()) == icon.iconSound or sound:GetData() == icon.iconSound then
+                            soundSelect:SetData(sound)
+        					sound:SetBGColor(ApolloColor.new(1, 0, 1, 1))
+
+        					local left, top, right, bottom = sound:GetAnchorOffsets()
+        					soundSelect:SetVScrollPos(top)
+        					break
+        				end
+        			end
+                end
 
 
-			for textEditorId, textEditor in pairs(self.iconTextEditor) do
-				textEditor:Destroy()
-				self.iconTextEditor[textEditorId] = nil
-			end
+    			for textEditorId, textEditor in pairs(self.iconTextEditor) do
+    				textEditor:Destroy()
+    				self.iconTextEditor[textEditorId] = nil
+    			end
 
-			for iconTextId, iconText in pairs(icon.iconText) do
-				self:AddIconTextEditor()
+    			for iconTextId, iconText in pairs(icon.iconText) do
+    				self:AddIconTextEditor()
 
-				local textEditor = self.configForm:FindChild("TextList"):GetChildren()[iconTextId]
+    				local textEditor = self.configForm:FindChild("TextList"):GetChildren()[iconTextId]
 
-				for _, anchor in pairs(textEditor:FindChild("AnchorSelector"):GetChildren()) do
-					anchor:SetCheck(false)
-				end
-				local selectedTextAnchor = textEditor:FindChild("AnchorPosition_" .. icon.iconText[iconTextId].textAnchor)
-				if selectedTextAnchor ~= nil then
-					selectedTextAnchor:SetCheck(true)
-				end
+    				for _, anchor in pairs(textEditor:FindChild("AnchorSelector"):GetChildren()) do
+    					anchor:SetCheck(false)
+    				end
+    				local selectedTextAnchor = textEditor:FindChild("AnchorPosition_" .. icon.iconText[iconTextId].textAnchor)
+    				if selectedTextAnchor ~= nil then
+    					selectedTextAnchor:SetCheck(true)
+    				end
 
-				for _, font in pairs(textEditor:FindChild("FontSelector"):GetChildren()) do
-					if font:GetText() == icon.iconText[iconTextId].textFont then
-						self:SelectFont(font)
-						local left, top, right, bottom = font:GetAnchorOffsets()
-						textEditor:FindChild("FontSelector"):SetVScrollPos(top)
-						break
-					end
-				end
-				textEditor:FindChild("FontColorSample"):SetBGColor(icon.iconText[iconTextId].textFontColor)
-				textEditor:FindChild("FontSample"):SetTextColor(icon.iconText[iconTextId].textFontColor)
-				textEditor:FindChild("TextString"):SetText(icon.iconText[iconTextId].textString)
-			end
+    				for _, font in pairs(textEditor:FindChild("FontSelector"):GetChildren()) do
+    					if font:GetText() == icon.iconText[iconTextId].textFont then
+    						self:SelectFont(font)
+    						local left, top, right, bottom = font:GetAnchorOffsets()
+    						textEditor:FindChild("FontSelector"):SetVScrollPos(top)
+    						break
+    					end
+    				end
+    				textEditor:FindChild("FontColorSample"):SetBGColor(icon.iconText[iconTextId].textFontColor)
+    				textEditor:FindChild("FontSample"):SetTextColor(icon.iconText[iconTextId].textFontColor)
+    				textEditor:FindChild("TextString"):SetText(icon.iconText[iconTextId].textString)
+    			end
 
-			self.configForm:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
-			if icon.iconOverlay.overlayShape == "Icon" then
-				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-			else
-				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-			end
+    			self.configForm:FindChild("OverlayColorSample"):SetBGColor(icon.iconOverlay.overlayColor)
+    			if icon.iconOverlay.overlayShape == "Icon" then
+    				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+    				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+    			else
+    				self.configForm:FindChild("SolidOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+    				self.configForm:FindChild("IconOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+    			end
 
-			if icon.iconOverlay.overlayStyle == "Radial" then
-				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-			else
-				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
-				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
-			end
+    			if icon.iconOverlay.overlayStyle == "Radial" then
+    				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+    				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+    			else
+    				self.configForm:FindChild("LinearOverlay"):SetSprite("kitBase_HoloOrange_TinyNoGlow");
+    				self.configForm:FindChild("RadialOverlay"):SetSprite("kitBase_HoloBlue_TinyLitNoGlow");
+    			end
 
-            if icon.trackLine ~= nil then
-                self.configForm:FindChild("TrackLineEnabled"):SetCheck(icon.trackLine.Enabled)
-                self.configForm:FindChild("TrackLineNumberOfLines"):SetText(icon.trackLine:NumberOfLines())
-            end
+                if icon.trackLine ~= nil then
+                    self.configForm:FindChild("TrackLineEnabled"):SetCheck(icon.trackLine.Enabled)
+                    self.configForm:FindChild("TrackLineNumberOfLines"):SetText(icon.trackLine:NumberOfLines())
+                end
 
-			self:PopulateTriggers(icon)
-		end
-	end
-    self:OnOK()
+    			self:PopulateTriggers(icon)
+    		end
+    	end
+        self:OnOK()
+    end)
 end
 
 function AuraMasteryConfig:SelectFont(fontElement)
@@ -1370,7 +1375,7 @@ function AuraMasteryConfig:OnAddTrigger( wndHandler, wndControl, eMouseButton )
 	if icon ~= nil then
 		GeminiPackages:Require('AuraMastery:IconTrigger', function(iconTrigger)
 			local trigger = iconTrigger.new(icon, icon.buffWatch)
-			trigger.Name = "Trigger " .. tostring(#icon.Triggers + 1)
+			trigger.Name = ""
 			--trigger.TriggerDetails = { SpellName = "" }
 			table.insert(icon.Triggers, trigger)
 
@@ -1579,21 +1584,28 @@ function AuraMasteryConfig:OnImportIcon( wndHandler, wndControl, eMouseButton )
             Print("[AuraMastery] You must select a group before importing an Aura")
             return
         end
-        self:ImportIconText(iconData, groupItem)
+        self:ImportIcon(iconData, groupItem)
     end)
 end
 
-function AuraMasteryConfig:ImportIconText(iconData, groupItem)
+function AuraMasteryConfig:ImportIcon(iconData, groupItem)
+    local result = self:ImportIconText(iconData)
+    if result ~= nil then
+        local newIcon = self.auraMastery:AddIcon()
+        newIcon:Load(result)
+        newIcon.group = groupItem:GetData().id
+        self:CreateIconItem(newIcon.iconId, newIcon, groupItem:FindChild("Icons"))
+        self:UpdateControls()
+    end
+end
+
+function AuraMasteryConfig:ImportIconText(iconData)
     local iconScript, loadStringError = loadstring("return " .. iconData)
     if iconScript then
         local status, result = pcall(iconScript)
         if status then
             if result ~= nil and result.iconName ~= nil then
-                local newIcon = self.auraMastery:AddIcon()
-                newIcon:Load(result)
-                newIcon.group = groupItem:GetData().id
-                self:CreateIconItem(newIcon.iconId, newIcon, groupItem:FindChild("Icons"))
-                self:UpdateControls()
+                return result
             else
                 Print("Failed to import icon. Data deserialized but was invalid.")
             end
@@ -2520,11 +2532,14 @@ function AuraMasteryConfig:OnCatalogLoaded()
             local auraList = self.catalog:FindChild("AuraList")
             auraList:DestroyChildren()
             for _, aura in ipairs(self.catalogDoc:ToTable()[1]) do
-                local item = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryCatalog.AuraList.AuraListItem", auraList, self)
-                item:FindChild("AuraName"):SetText(aura.Name)
-                item:FindChild("AuraDescription"):SetText(aura.Description)
-                item:FindChild("AuraIcon"):SetSprite(aura.Icon)
-                item:SetData(aura[1].__XmlText)
+                local icon = self:ImportIconText(aura[1].__XmlText)
+                if icon ~= nil then
+                    local item = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryCatalog.AuraList.AuraListItem", auraList, self)
+                    item:FindChild("AuraName"):SetText(icon.iconName)
+                    item:FindChild("AuraDescription"):SetText(icon.description)
+                    item:FindChild("AuraIcon"):SetSprite(icon.iconSprite)
+                    item:SetData(aura[1].__XmlText)
+                end
             end
             auraList:ArrangeChildrenVert()
     	end
@@ -2540,7 +2555,7 @@ function AuraMasteryConfig:OnCatalogImport( wndHandler, wndControl, eMouseButton
                 Print("[AuraMastery] You must select a group before importing an Aura")
                 return
             end
-            self:ImportIconText(auraData, self.catalogImportGroup)
+            self:ImportIcon(auraData, self.catalogImportGroup)
             item:FindChild("Background"):SetCheck(false)
         end
     end
