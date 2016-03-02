@@ -378,6 +378,7 @@ function IconTrigger:AddToBuffWatch()
 		self.currentSpell = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName
 		self:AddCooldownToBuffWatch(self.currentSpell)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
+        Print("Add: " .. self.Icon.iconName)
 		self.buffName = self.Type == "Buff" and self.TriggerDetails.BuffName or self.TriggerDetails.DebuffName
 		if self.buffName == "" then
 			self.buffName = self.Icon.iconName
@@ -506,12 +507,14 @@ function IconTrigger:AddBuffToBuffWatch(target, option)
 		self.buffWatch[triggerType][target][option] = {}
 	end
 	self.buffWatch[triggerType][target][option][tostring(self)] = function(spell) self:ProcessBuff(spell) end
+    table.insert(self.buffWatch.Refresh, { Type = triggerType, Target = target })
 end
 
 function IconTrigger:RemoveFromBuffWatch()
 	if self.Type == "Cooldown" or self.Type == "Limited Action Set Checker" then
 		self:RemoveCooldownFromBuffWatch(self.currentSpell)
 	elseif self.Type == "Buff" or self.Type == "Debuff" then
+        Print("Remove: " .. self.Icon.iconName)
 		if self.TriggerDetails.Target.Player then
 			self:RemoveBuffFromBuffWatch("Player", self.buffName)
 		end

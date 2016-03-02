@@ -80,6 +80,248 @@ local ExtraSounds = {
     RunAway = "runaway.wav"
 }
 
+local Zones = {
+	["Arenas"] = {
+		["All Arenas"] = "Arenas",
+		["The Slaughterdome"] = {
+			continentId = 39,
+			parentZoneId = 0,
+			id = 66,
+		},
+		["The Cryoplex"] = {
+			continentId = 94,
+			parentZoneId = 0,
+			id = 478,
+		},
+	},
+	["Battlegrounds"] = {
+		["All Battlegrounds"] = { catchall = true },
+		["Walatiki Temple"] = {
+			continentId = 40,
+			parentZoneId = 0,
+			id = 69,
+		},
+		["Halls of the Bloodsworn"] = {
+			continentId = 53,
+			parentZoneId = 0,
+			id = 99,
+		},
+		["Daggerstone Pass"] = {
+			continentId = 57,
+			parentZoneId = 0,
+			id = 103,
+		},
+	},
+	["Expeditions"] = {
+		["All Expeditions"] = { catchall = true },
+		["Fragment Zero"] = {
+			continentId = 83,
+			parentZoneId = 0,
+			id = 277,
+		},
+		["Outpost M-13"] = {
+			continentId = 38,
+			parentZoneId = 63,
+			id = 0,
+		},
+		["Infestation"] = {
+			continentId = 18,
+			parentZoneId = 0,
+			id = 25,
+		},
+		["Rage Logic"] = {
+			continentId = 51,
+			parentZoneId = 93,
+			id = 0,
+		},
+		["Space Madness"] = {
+			continentId = 58,
+			parentZoneId = 0,
+			id = 121,
+		},
+		["Deepd Space Exploration"] = {
+			continentId = 60,
+			parentZoneId = 140,
+			id = 0,
+		},
+		["Gauntlet"] = {
+			continentId = 62,
+			parentZoneId = 132,
+			id = 0,
+		},
+	},
+	["Adventures"] = {
+		["All Adventures"] = { catchall = true },
+		["War of the Wilds"] = {
+			continentId = 23,
+			parentZoneId = 0,
+			id = 32,
+		},
+		["The Siege of Tempest Refuge"] = {
+			continentId = 16,
+			parentZoneId = 0,
+			id = 23,
+		},
+		["Crimelords of Whitevale"] = {
+			continentId = 26,
+			parentZoneId = 0,
+			id = 35,
+		},
+		["The Malgrave Trail"] = {
+			continentId = 17,
+			parentZoneId = 0,
+			id = 24,
+		},
+		["Bay of Betrayal"] = {
+			continentId = 84,
+			parentZoneId = 0,
+			id = 307,
+		},
+	},
+	["Dungeons"] = {
+		["All Dungeons"] = { catchall = true },
+		["Protogames Academy"] = {
+			continentId = 90,
+			parentZoneId = 469,
+			id = 0,
+		},
+		["Stormtalon's Lair"] = {
+			continentId = 13,
+			parentZoneId = 0,
+			id = 19,
+		},
+		["Ruins of Kel Voreth"] = {
+			continentId = 15,
+			parentZoneId = 0,
+			id = 21,
+		},
+		["Skullcano"] = {
+			continentId = 14,
+			parentZoneId = 0,
+			id = 20,
+		},
+		["Sanctuary of the Swordmaiden"] = {
+			continentId = 48,
+			parentZoneId = 0,
+			id = 85,
+		},
+		["Ultimate Protogames"] = {
+			continentId = 69,
+			parentZoneId = 154,
+			id = 0,
+		},
+	},
+	["Genetic Archives"] = {
+		["All Subzones"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 0
+        },
+		["Experiment X-89"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 148
+        },
+		["Kuralak the Defiler"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 148
+        },
+		["Phagetech Prototypes"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 149
+        },
+		["Phagemaw"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 149
+        },
+		["Phageborn Convergence"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 149
+        },
+		["Dreadphage Ohmna"] = {
+    		continentId = 67,
+    		parentZoneId = 147,
+            id = 149
+        }
+	},
+	["Datascape"] = {
+		["All Subzones"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 0
+        },
+		["System Daemons"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 105
+        },
+		["Limbo Infomatrix"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 114
+        },
+		["Volatillity Lattice"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 116
+        },
+		["Maelstrom Authority"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 120
+        },
+		["Gloomclaw"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 115
+        },
+		["Logic Wing"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 111
+        },
+		["Fire Wing"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 110
+        },
+		["Frost Wing"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 109
+        },
+		["Earth Wing"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 108
+        },
+		["Elemental Pairs"] = {117,118,119},
+		["Avatus"] = {
+    		continentId = 52,
+    		parentZoneId = 98,
+            id = 104
+        },
+	},
+	["Initialization Core Y-83"] = {
+		["All Subzones"] = {
+    		continentId = 91,
+    		parentZoneId = 0,
+            id = 0
+        },
+	},
+	["House"] = {
+		["Home"] = {
+			continentId = 36,
+			parentZoneId = 0,
+			id = 60
+		}
+	}
+}
+
 local function IndexOf(table, item)
     for idx, val in pairs(table) do
         if item == val then
@@ -107,15 +349,19 @@ local function uuid()
 end
 
 function AuraMasteryConfig.new(auraMastery, xmlDoc)
+    Print("Creating")
 	local self = setmetatable({}, AuraMasteryConfig)
 	self.auraMastery = auraMastery
+    self.xmlDoc = xmlDoc
 	self.configForm = Apollo.LoadForm(xmlDoc, "AuraMasteryForm", nil, self)
 	self.colorPicker = Apollo.LoadForm(xmlDoc, "ColorPicker", nil, self)
 	self.colorPicker:Show(false, true)
 	Apollo.LoadSprites("Sprites.xml")
 	self.colorPicker:FindChild("Color"):SetSprite("ColorPicker_Colors")
 	self.colorPicker:FindChild("Gradient"):SetSprite("ColorPicker_Gradient")
+    Print("Created")
 	self:Init()
+    Print("Inited")
 	return self
 end
 
@@ -139,6 +385,16 @@ function AuraMasteryConfig:Init()
 	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("All", "", 1)
 	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("Any", "", 2)
 	self.configForm:FindChild("BuffPlaySoundWhen"):AddItem("None", "", 3)
+
+    local zoneDropdown = self.configForm:FindChild("ZoneDropdown"):FindChild("DropdownListItems")
+    zoneDropdown:DestroyChildren()
+    self.configForm:FindChild("SubZoneDropdown"):FindChild("DropdownListItems"):DestroyChildren()
+    for key, zone in pairs(Zones) do
+        local dropdownItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.GeneralTab.Options.Regions.ZoneDropdown.DropdownList.DropdownListItems.DropdownOption", zoneDropdown, self)
+        dropdownItem:SetName("Dropdown" .. key)
+        dropdownItem:SetText(key)
+    end
+    zoneDropdown:ArrangeChildrenVert()
 
 	local soundList = self.configForm:FindChild("SoundSelect"):FindChild("SoundSelectList")
 	local nextItem = 0
@@ -360,6 +616,10 @@ function AuraMasteryConfig:OnToggleIconGroup( wndHandler, wndControl, eMouseButt
             local groupList = groupItem:GetParent()
             local previousGroupItem = groupList:GetData()
             if previousGroupItem ~= nil then
+                local previousGroup = previousGroupItem:GetData()
+                if previousGroup.anchor ~= nil then
+                    previousGroup.anchor:Show(false, false)
+                end
                 previousGroupItem:FindChild("StatusLabel"):SetText("+")
                 previousGroupItem:FindChild("Icons"):Show(false, true)
                 if previousGroupItem == groupItem then
@@ -494,16 +754,18 @@ end
 
 function AuraMasteryConfig:OnLockIcon( wndHandler, wndControl, eMouseButton )
 	local iconId = tonumber(wndHandler:GetParent():FindChild("Id"):GetText())
-	if self.auraMastery.Icons[iconId] ~= nil then
-		self.auraMastery.Icons[iconId]:Lock()
+    local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		icon:Lock()
 	end
 end
 
 function AuraMasteryConfig:OnUnlockIcon( wndHandler, wndControl, eMouseButton )
 	self.BarLocked = false
 	local iconId = tonumber(wndHandler:GetParent():FindChild("Id"):GetText())
-	if self.auraMastery.Icons[iconId] ~= nil then
-		self.auraMastery.Icons[iconId]:Unlock()
+    local icon = self.auraMastery.Icons[iconId]
+	if icon ~= nil then
+		icon:Unlock()
 	end
 end
 
@@ -945,6 +1207,12 @@ function AuraMasteryConfig:SelectIcon(iconItem)
     			self.configForm:FindChild("BuffActionSet2"):SetCheck(icon.actionSets[2])
     			self.configForm:FindChild("BuffActionSet3"):SetCheck(icon.actionSets[3])
     			self.configForm:FindChild("BuffActionSet4"):SetCheck(icon.actionSets[4])
+
+                local regionList = self.configForm:FindChild("RegionList")
+                regionList:DestroyChildren()
+                for _, region in pairs(icon.Regions) do
+                    self:AddRegionItem(region)
+                end
 
     			self:OnColorUpdate()
 
@@ -2573,6 +2841,158 @@ function AuraMasteryConfig:OnCatalogSelectAll( wndHandler, wndControl, eMouseBut
     for _, item in pairs(auraList:GetChildren()) do
         item:FindChild("Background"):SetCheck(true)
     end
+end
+
+function AuraMasteryConfig:OnToggleLockGroup( wndHandler, wndControl, eMouseButton )
+    if wndHandler == wndControl then
+        CatchError(function()
+            local groupTab = wndHandler:GetParent()
+            local group = groupTab:GetData()
+            if group.anchor == nil then
+                group.anchor = Apollo.LoadForm(self.xmlDoc, "IconGroup", nil, self)
+                group.anchor:SetData(group)
+            else
+                group.anchor:Show(not group.anchor:IsShown())
+            end
+
+            local unlocked = group.anchor:IsShown()
+            for _, icon in pairs(self.auraMastery.Icons) do
+                if icon.group == group.id then
+                    if unlocked then
+                        icon:Unlock(false)
+                    else
+                        icon:Lock()
+                    end
+                end
+            end
+
+
+            local maxLeft, maxTop, maxRight, maxBottom = 99999, 99999, -99999, -99999
+            for _, icon in pairs(self.auraMastery.Icons) do
+                if icon.group == group.id then
+                    local iconLeft, iconTop, iconRight, iconBottom = icon.icon:GetAnchorOffsets()
+                    if iconLeft < maxLeft then maxLeft = iconLeft end
+                    if iconTop < maxTop then maxTop = iconTop end
+                    if iconRight > maxRight then maxRight = iconRight end
+                    if iconBottom > maxBottom then maxBottom = iconBottom end
+                end
+            end
+
+            group.anchor:SetAnchorOffsets(maxLeft - 2, maxTop - 2, maxRight + 2, maxBottom + 2)
+            local left, top, right, bottom = group.anchor:GetAnchorOffsets()
+            self.groupPosition = {
+                left = left,
+                top = top,
+                right = right,
+                bottom = bottom
+            }
+        end)
+    end
+end
+
+function AuraMasteryConfig:OnIconGroupMove( wndHandler, wndControl, nOldLeft, nOldTop, nOldRight, nOldBottom, nX )
+    if wndHandler == wndControl then
+        CatchError(function()
+            local group = wndHandler:GetData()
+            local left, top, right, bottom = wndHandler:GetAnchorOffsets()
+            local deltaLeft, deltaTop, deltaRight, deltaBottom = left - self.groupPosition.left, top - self.groupPosition.top, right - self.groupPosition.right, bottom - self.groupPosition.bottom
+
+            for _, icon in pairs(self.auraMastery.Icons) do
+                if icon.group == group.id then
+                    local iconLeft, iconTop, iconRight, iconBottom = icon.icon:GetAnchorOffsets()
+                    icon.icon:SetAnchorOffsets(iconLeft + deltaLeft, iconTop + deltaTop, iconRight + deltaRight, iconBottom + deltaBottom)
+                end
+            end
+
+            self.groupPosition = {
+                left = left,
+                top = top,
+                right = right,
+                bottom = bottom
+            }
+        end)
+    end
+end
+
+function AuraMasteryConfig:OnRegionZoneChanged( wndHandler, wndControl )
+    CatchError(function()
+        local zoneDropdown = wndHandler:GetParent()
+        if zoneDropdown:GetData() == nil then return end
+
+        local subZoneDropdown = zoneDropdown:GetParent():FindChild("SubZoneDropdown")
+
+        local subZoneDropdownItems = subZoneDropdown:FindChild("DropdownListItems")
+        subZoneDropdownItems:DestroyChildren()
+        for key, subZone in pairs(Zones[zoneDropdown:GetData()]) do
+            local dropdownItem = Apollo.LoadForm("AuraMastery.xml", "AuraMasteryForm.BuffEditor.GeneralTab.Options.Regions.SubZoneDropdown.DropdownList.DropdownListItems.DropdownOption", subZoneDropdownItems, self)
+            dropdownItem:SetName("Dropdown" .. key)
+            dropdownItem:SetText(key)
+        end
+        subZoneDropdownItems:ArrangeChildrenVert()
+    end)
+end
+
+function AuraMasteryConfig:OnRegionSubZoneChanged( wndHandler, wndControl )
+    CatchError(function()
+        local subZoneDropdown = wndHandler:GetParent()
+        if subZoneDropdown:GetData() == nil then return end
+
+        local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    	local icon = self.auraMastery.Icons[iconId]
+
+        local zoneDropdown = subZoneDropdown:GetParent():FindChild("ZoneDropdown")
+
+        local zone, subZone = zoneDropdown:GetData(), subZoneDropdown:GetData()
+        local zoneInfo = Zones[zone][subZone]
+        if zoneInfo.catchall then
+            for subZone, zoneInfo in pairs(Zones[zone]) do
+                if not zoneInfo.catchall then
+                    local region = {
+                        zone = zone,
+                        subZone = subZone,
+                        id = zoneInfo.id,
+                        continentId = zoneInfo.continentId,
+                        parentZoneId = zoneInfo.parentZoneId,
+                    }
+                    icon:AddRegion(region)
+                    self:AddRegionItem(region)
+                end
+            end
+        else
+            local region = {
+                zone = zone,
+                subZone = subZone,
+                id = zoneInfo.id,
+                continentId = zoneInfo.continentId,
+                parentZoneId = zoneInfo.parentZoneId,
+            }
+            icon:AddRegion(region)
+            self:AddRegionItem(region)
+        end
+    end)
+end
+
+function AuraMasteryConfig:RemoveRegion( wndHandler, wndControl, eMouseButton )
+    if wndHandler == wndControl then
+        CatchError(function()
+            local regionItem = wndHandler:GetParent()
+            local region = regionItem:GetData()
+            local regionList = regionItem:GetParent()
+            local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+        	local icon = self.auraMastery.Icons[iconId]
+            icon:RemoveRegion(region)
+            regionItem:Destroy()
+            regionList:ArrangeChildrenVert()
+        end)
+    end
+end
+
+function AuraMasteryConfig:AddRegionItem(region)
+    local regionList = self.configForm:FindChild("RegionList")
+    local regionItem = Apollo.LoadForm(self.xmlDoc, "AuraMasteryForm.BuffEditor.GeneralTab.Options.Regions.RegionList.RegionItem", regionList, self)
+    regionItem:FindChild("RegionLabel"):SetText(region.zone .. ": " .. region.subZone)
+    regionItem:SetData(region)
+    regionList:ArrangeChildrenVert()
 end
 
 local GeminiPackages = _G["GeminiPackages"]

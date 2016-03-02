@@ -16,6 +16,14 @@ setmetatable(Icon, {
   end,
 })
 
+local function IndexOf(table, item)
+    for idx, val in pairs(table) do
+        if item == val then
+            return idx
+        end
+    end
+end
+
 local EmptyBuffIcon = "CRB_ActionBarFrameSprites:sprActionBarFrame_VehicleIconBG"
 local IconText
 
@@ -44,6 +52,10 @@ function Icon.new(buffWatch, configForm)
 	self.defaultIcon = ""
 
 	self.Triggers = {}
+    self.Regions = {}
+
+    self.actionSets = true
+    self.region = true
 
 	self.buff = nil
 	self.spell = nil
@@ -164,6 +176,8 @@ function Icon:Load(saveData)
 			self.SimpleMode = saveData.SimpleMode
 		end
 
+        self.Regions = saveData.Regions or {}
+
 
 		GeminiPackages:Require("AuraMastery:IconTrigger", function(iconTrigger)
 			if saveData.Triggers ~= nil then
@@ -233,11 +247,16 @@ function Icon:UpdateDefaultIcon()
 end
 
 function Icon:ChangeActionSet(newActionSet)
-	if self.enabled and self.actionSets[newActionSet] then
-		self:Enable()
-	else
-		self:Disable()
-	end
+	self.actionSet = self.actionSets[newActionSet]
+    self:UpdateEnabled()
+end
+
+function Icon:UpdateEnabled()
+    if self.unlocked or self:VisibilityCheck() then
+        self:Enable()
+    else
+        self:Disable()
+    end
 end
 
 function Icon:GetSaveData()
@@ -256,6 +275,7 @@ function Icon:GetSaveData()
 	saveData.actionSets = self.actionSets
 	saveData.SimpleMode = self.SimpleMode
     saveData.group = self.group
+    saveData.Regions = self.Regions
 
 	saveData.iconText = {}
 	for iconTextId, iconText in pairs(self.iconText) do
@@ -287,15 +307,26 @@ function Icon:GetSaveData()
 end
 
 function Icon:Enable()
-	self.isEnabled = true
-	self.icon:Show(true)
-	self.isActive = false
-	self.isSet = false
+    if not self.isEnabled then
+        for _, trigger in pairs(self.Triggers) do
+            trigger:AddToBuffWatch()
+        end
+        self.isEnabled = true
+    end
+    self.icon:Show(true)
+
+	--self.isActive = false
+	--self.isSet = false
 end
 
 function Icon:Disable()
-	self.isEnabled = false
-	self.icon:Show(false)
+    if self.isEnabled then
+        for _, trigger in pairs(self.Triggers) do
+            trigger:RemoveFromBuffWatch()
+        end
+        self.isEnabled = false
+        self.icon:Show(false, true)
+    end
 end
 
 function Icon:Delete()
@@ -404,11 +435,35 @@ function Icon:GetName()
 	return self.iconName
 end
 
+function Icon:ChangeZone(zone)
+    if #self.Regions == 0 then
+        self.region = true
+        self:UpdateEnabled()
+        return
+    end
+
+    self.region = false
+    for _, region in pairs(self.Regions) do
+        if region.continentId == zone.continentId and region.parentZoneId == zone.parentZoneId and (region.id == 0 or region.id == zone.id) then
+            self.region = true
+            break
+        end
+    end
+
+    self:UpdateEnabled()
+end
+
 function Icon:PreUpdate(deltaTime)
-	self.isSet = false
-	for _, trigger in pairs(self.Triggers) do
-		trigger:ResetTrigger(deltaTime)
-	end
+    if not self:VisibilityCheck() then
+        self:Disable()
+    else
+        self.isSet = false
+        self:Enable()
+
+    	for _, trigger in pairs(self.Triggers) do
+    		trigger:ResetTrigger(deltaTime)
+    	end
+    end
 end
 
 function Icon:PostUpdate()
@@ -491,10 +546,9 @@ function Icon:PostUpdate()
 		end
 	end
 
-	local showIcon = self:VisibilityCheck() and (showIcon or self.showWhen == "Always")
+	showIcon = showIcon or self.showWhen == "Always"
 
-	local isMoveable = self.icon:IsStyleOn("Moveable")
-	if showIcon or isMoveable then
+	if self.unlocked or showIcon then
 		self.icon:Show(true, true)
 		self:SetSprite(self:GetSprite())
 		self.icon:SetBGColor(self.iconColor)
@@ -556,9 +610,13 @@ function Icon:GetSprite()
 end
 
 function Icon:VisibilityCheck()
-    return self:InCombatCheck()
+    return self.unlocked or
+    (self.enabled
+    and self.actionSet
+    and self.region
+    and self:InCombatCheck()
     and self:GroupCheck()
-    and self:PvpFlagCheck()
+    and self:PvpFlagCheck())
 end
 
 function Icon:InCombatCheck()
@@ -608,14 +666,19 @@ function Icon:GetSpellIconByName(spellName)
 	return ""
 end
 
-function Icon:Unlock()
-	self.icon:SetStyle("Moveable", true)
-	self.icon:FindChild("UnlockedIcon"):Show(true)
+function Icon:Unlock(noMoveable)
+    self.unlocked = true
+    if noMoveable == nil then noMoveable = true end
+	self.icon:SetStyle("Moveable", noMoveable)
+	self.icon:FindChild("UnlockedIcon"):Show(noMoveable)
+    self:UpdateEnabled()
 end
 
 function Icon:Lock()
-	self.icon:SetStyle("Moveable", false)
-	self.icon:FindChild("UnlockedIcon"):Show(false)
+    self.unlocked = false
+    self.icon:SetStyle("Moveable", false)
+    self.icon:FindChild("UnlockedIcon"):Show(false)
+    self:UpdateEnabled()
 end
 
 function Icon:SetScale(scale)
@@ -643,6 +706,17 @@ function Icon:GetTargets()
         if targets ~= nil then
             return targets
         end
+    end
+end
+
+function Icon:AddRegion(region)
+    table.insert(self.Regions, region)
+end
+
+function Icon:RemoveRegion(region)
+    local index = IndexOf(self.Regions, region)
+    if index ~= nil then
+        table.remove(self.Regions, index)
     end
 end
 

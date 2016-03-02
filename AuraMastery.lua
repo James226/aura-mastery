@@ -294,7 +294,8 @@ function AuraMastery:new(o)
 		},
 		Keybind = {},
 		LimitedActionSetChecker = {},
-		Gadget = {}
+		Gadget = {},
+		Refresh = {}
 	}
 	self.BarLocked = true
 	self.nextIconId = 1
@@ -363,6 +364,7 @@ function AuraMastery:OnLoadIcons(tData)
 			newIcon:Load(icon)
 		end
 		self:OnSpecChanged(AbilityBook.GetCurrentSpec())
+		self:OnSubZoneChanged()
 	end)
 end
 
@@ -633,6 +635,8 @@ function AuraMastery:OnLoad()
 	Apollo.RegisterEventHandler("Group_Disbanded", "OnGroupChange", self)
 	Apollo.RegisterEventHandler("Group_FlagsChanged", "OnGroupChange", self)
 	Apollo.RegisterEventHandler("UnitPvpFlagsChanged", "OnUnitPvpFlagsChanged", self)
+	Apollo.RegisterEventHandler("WorldChanged", "OnSubZoneChanged", self)
+	Apollo.RegisterEventHandler("SubZoneChanged", "OnSubZoneChanged", self)
 
 	Apollo.RegisterEventHandler("BuffAdded", "OnBuffAdded", self)
 	Apollo.RegisterEventHandler("BuffUpdated", "OnBuffAdded", self)
@@ -773,9 +777,7 @@ function AuraMastery:OnUpdate()
 	local targetPlayer = GameLib.GetTargetUnit()
 
 	for _, icon in pairs(self.Icons) do
-		if icon.isEnabled then
-			icon:PreUpdate(deltaTime)
-		end
+		icon:PreUpdate(deltaTime)
 	end
 
 	if unitPlayer ~= nil then
@@ -798,6 +800,36 @@ function AuraMastery:OnUpdate()
 	self:ProcessGadget()
 
 	self:ProcessInnate()
+
+	for _, refresh in pairs(self.buffWatch.Refresh) do
+		if refresh.Type == "Buff" or refresh.Type == "Debuff" then
+			local target;
+			if refresh.Target == "Player" then
+				target = GameLib.GetPlayerUnit()
+			elseif refresh.Target == "Target" then
+				target = GameLib.GetTargetUnit()
+			end
+			if target ~= nil then
+				local buffs = refresh.Type == "Buff" and target:GetBuffs().arBeneficial or target:GetBuffs().arHarmful
+
+				for _, data in pairs(buffs) do
+					local spellId = tostring(data.splEffect:GetId())
+					local spellName = data.splEffect:GetName()
+					self:ProcessBuff(refresh.Target, refresh.Type, spellId, spellName, {
+						unit = target,
+						action = "Add",
+						data = data
+					})
+				end
+			end
+		end
+
+		for idx, ref in pairs(self.buffWatch.Refresh) do
+			if refresh.Type == ref.Type and refresh.Target == ref.Target then
+				table.remove(self.buffWatch.Refresh, idx)
+			end
+		end
+	end
 
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
@@ -1007,6 +1039,14 @@ function AuraMastery:OnGroupChange()
 			icon.isInGroup = isInGroup
 			icon.isInRaid = isInRaid
 		end
+	end
+end
+
+function AuraMastery:OnSubZoneChanged()
+	local currentZone = GameLib.GetCurrentZoneMap()
+
+	for _, icon in pairs(self.Icons) do
+		icon:ChangeZone(currentZone)
 	end
 end
 
