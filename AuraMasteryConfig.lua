@@ -1263,6 +1263,14 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
             editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
         elseif trigger.Type == "Scriptable" then
             editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
+            editor:FindChild("InitScript"):SetText(trigger.TriggerDetails.InitScript)
+            editor:FindChild("CleanupScript"):SetText(trigger.TriggerDetails.CleanupScript)
+            local formsList = editor:FindChild("FormsList")
+            formsList:DestroyChildren()
+            for _, form in pairs(trigger.TriggerDetails.Forms) do
+                self:AddScriptableForm(formsList, form)
+            end
+            formsList:ArrangeChildrenVert()
         elseif trigger.Type == "Keybind" then
             self:SetKeybindInput(trigger.TriggerDetails.Input)
             editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
@@ -1301,6 +1309,12 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
             self.configForm:FindChild("TriggerEffectContainer"):Show(false)
         end
     end)
+end
+
+function AuraMasteryConfig:AddScriptableForm(formsList, form)
+    local formItem = Apollo.LoadForm(self.xmlDoc, "TriggerDetails.Scriptable.FormsList.Form", formsList, self)
+    formItem:FindChild("FormLabel"):SetText(form.Name)
+    formItem:SetData(form)
 end
 
 function AuraMasteryConfig:PopulateTriggerItemTargets(trigger, editor)

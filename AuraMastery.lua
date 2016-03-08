@@ -252,6 +252,15 @@ local function GetAbilitiesList()
 	return abilitiesList
 end
 
+local function CatchError(func)
+    local status, error = pcall(func)
+
+    if not status then
+        Print("[AuraMastery] An error has occured")
+        Print(error)
+    end
+end
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
@@ -359,8 +368,10 @@ function AuraMastery:OnLoadIcons(tData)
 		end
 
 		for idx, icon in pairs(tData["Icons"]) do
-			local newIcon = self:AddIcon()
-			newIcon:Load(icon)
+			CatchError(function()
+				local newIcon = self:AddIcon()
+				newIcon:Load(icon)
+			end)
 		end
 		self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 	end)

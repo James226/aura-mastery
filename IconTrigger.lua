@@ -17,12 +17,15 @@ local function IndexOf(table, item)
     end
 end
 
-local function CatchError(func)
-    local status, error = pcall(func)
+local function CatchError(func, val)
+    if not func then return end
+    local status, result = pcall(func, val)
 
     if not status then
         Print("[AuraMastery] An error has occured")
-        Print(error)
+        Print(result)
+    else
+        return result
     end
 end
 
@@ -51,6 +54,7 @@ function IconTrigger.new(icon, buffWatch)
     self.Time = 0
     self.Stacks = 0
     self.LastEvent = 0
+    self.cachedScripts = {}
 
     self.Units = {}
 
@@ -90,6 +94,19 @@ function IconTrigger:Load(saveData)
 				}
 				self.TriggerDetails.Key = nil
 			end
+        elseif self.Type == "Scriptable" then
+            if not self.TriggerDetails.InitScript then
+                self.TriggerDetails.InitScript = ""
+            end
+            if not self.TriggerDetails.CleanupScript then
+                self.TriggerDetails.CleanupScript = ""
+            end
+            if not self.TriggerDetails.Forms then
+                self.TriggerDetails.Forms = {}
+            end
+            if not self.TriggerDetails.Events then
+                self.TriggerDetails.Events = {}
+            end
 		end
 
 		if saveData.TriggerEffects ~= nil then
@@ -298,18 +315,14 @@ function IconTrigger:SetConfig(editor)
 			}
 		elseif self.Type == "Scriptable" then
 			self.TriggerDetails = {
+                InitScript = editor:FindChild("InitScript"):GetText(),
+                CleanupScript = editor:FindChild("CleanupScript"):GetText(),
 				Script = editor:FindChild("Script"):GetText()
 			}
-			editor:FindChild("ScriptErrors"):SetText("")
-			local script, loadScriptError = loadstring("local trigger = ...\n" .. self.TriggerDetails.Script)
-			if script ~= nil then
-				local status, result = pcall(script, self)
-				if not status then
-					editor:FindChild("ScriptErrors"):SetText(tostring(result))
-				end
-			else
-				editor:FindChild("ScriptErrors"):SetText("Unable to load script due to a syntax error: " .. tostring(loadScriptError))
-			end
+
+            self:EnsureScriptValid("", self.TriggerDetails.Script, editor)
+            self:EnsureScriptValid("Init", self.TriggerDetails.InitScript, editor)
+            self:EnsureScriptValid("Cleanup", self.TriggerDetails.CleanupScript, editor)
 		elseif self.Type == "Keybind" then
 			self.TriggerDetails = {
 				Input = editor:FindChild("KeybindTracker_KeySelect"):GetData(),
@@ -349,6 +362,21 @@ function IconTrigger:SetConfig(editor)
 		end
 	end
 	self:AddToBuffWatch()
+end
+
+function IconTrigger:ParseScript(scriptText)
+    if not scriptText then return end
+    local script, error = loadstring("local trigger = ...\n" .. scriptText)
+
+    return script, error
+end
+
+function IconTrigger:EnsureScriptValid(key, script, editor)
+    editor:FindChild(key .. "ScriptErrors"):SetText("")
+    local script, error = self:ParseScript(script)
+    if not script then
+        editor:FindChild(key .. "ScriptErrors"):SetText(error)
+    end
 end
 
 function IconTrigger:RemoveEffect(effect)
@@ -441,6 +469,13 @@ function IconTrigger:AddToBuffWatch()
         elseif self.TriggerDetails.EventType == "ResourceGain" then
             Apollo.RegisterEventHandler("CombatLogVitalModifier", "OnICDResourceGain", self)
         end
+    elseif self.Type == "Scriptable" then
+        self.cachedScripts = {
+            Init = self:ParseScript(self.TriggerDetails.InitScript),
+            Cleanup = self:ParseScript(self.TriggerDetails.CleanupScript),
+            Update = self:ParseScript(self.TriggerDetails.Script)
+        }
+        CatchError(self.cachedScripts.Init, self)
     end
 end
 
@@ -530,6 +565,8 @@ function IconTrigger:RemoveFromBuffWatch()
 		end
 	elseif self.Type == "Keybind" then
 		self:RemoveCooldownFromBuffWatch(self.TriggerDetails.Input.Key)
+    elseif self.Type == "Scriptable" then
+        CatchError(self.cachedScripts.Cleanup, self)
     end
     Apollo.RemoveEventHandler("TargetUnitChanged", self)
     Apollo.RemoveEventHandler("AlternateTargetUnitChanged", self)
