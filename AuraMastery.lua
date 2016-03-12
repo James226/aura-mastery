@@ -607,7 +607,7 @@ function AuraMastery:OnCharacterCreated()
 end
 
 function AuraMastery:AddIcon()
-	local newIcon = Icon.new(self.buffWatch, self.configForm)
+	local newIcon = Icon.new(self.buffWatch, self.configForm, self.xmlDoc)
 	newIcon:SetScale(1)
 
 	newIcon.iconId = self.nextIconId

@@ -19,7 +19,7 @@ setmetatable(Icon, {
 local EmptyBuffIcon = "CRB_ActionBarFrameSprites:sprActionBarFrame_VehicleIconBG"
 local IconText
 
-function Icon.new(buffWatch, configForm)
+function Icon.new(buffWatch, configForm, xmlDoc)
 	local self = setmetatable({}, Icon)
 
 	self.iconForm = iconForm
@@ -88,6 +88,10 @@ function Icon.new(buffWatch, configForm)
 
 	GeminiPackages:Require("AuraMastery:TrackLineGroup", function(trackLineGroup)
 		self.trackLine = trackLineGroup.new(self)
+	end)
+
+	GeminiPackages:Require("AuraMastery:InWorldIcon", function(inWorldIcon)
+		self.inWorldIcon = inWorldIcon.new(self, xmlDoc)
 	end)
 
 	return self
@@ -192,6 +196,9 @@ function Icon:Load(saveData)
             self.trackLine:Load(saveData.trackLine)
         end
 
+        if self.inWorldIcon ~= nil then
+            self.inWorldIcon:Load(saveData.inWorldIcon)
+        end
 	end
 
 	self:ChangeActionSet(AbilityBook.GetCurrentSpec())
@@ -281,6 +288,10 @@ function Icon:GetSaveData()
 
     if self.trackLine ~= nil then
         saveData.trackLine = self.trackLine:Save()
+    end
+
+    if self.inWorldIcon ~= nil then
+        saveData.inWorldIcon = self.inWorldIcon:Save()
     end
 
 	return saveData
@@ -377,6 +388,10 @@ function Icon:SetIcon(configWnd)
 
         if self.trackLine ~= nil then
             self.trackLine:SetConfig(configWnd:FindChild("TrackLine"))
+        end
+
+        if self.inWorldIcon ~= nil then
+            self.inWorldIcon:SetConfig(configWnd:FindChild("TrackLine"))
         end
 
 		self.enabled = configWnd:FindChild("BuffEnabled"):IsChecked()
@@ -521,6 +536,10 @@ function Icon:PostUpdate()
 
     if self.trackLine ~= nil then
         self.trackLine:Update()
+    end
+
+    if self.inWorldIcon ~= nil then
+        self.inWorldIcon:Update()
     end
 
 	if showIcon then

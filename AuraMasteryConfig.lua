@@ -108,6 +108,7 @@ end
 
 function AuraMasteryConfig.new(auraMastery, xmlDoc)
 	local self = setmetatable({}, AuraMasteryConfig)
+    self.xmlDoc = xmlDoc
 	self.auraMastery = auraMastery
 	self.configForm = Apollo.LoadForm(xmlDoc, "AuraMasteryForm", nil, self)
 	self.colorPicker = Apollo.LoadForm(xmlDoc, "ColorPicker", nil, self)
@@ -551,7 +552,7 @@ function AuraMasteryConfig:OnRemoveIcon( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMasteryConfig:AddIcon()
-	local newIcon = Icon.new(self.buffWatch, self.configForm)
+	local newIcon = Icon.new(self.buffWatch, self.configForm, self.xmlDoc)
 	newIcon:SetScale(1)
 
 	local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
@@ -1029,6 +1030,10 @@ function AuraMasteryConfig:SelectIcon(iconItem)
                 if icon.trackLine ~= nil then
                     self.configForm:FindChild("TrackLineEnabled"):SetCheck(icon.trackLine.Enabled)
                     self.configForm:FindChild("TrackLineNumberOfLines"):SetText(icon.trackLine:NumberOfLines())
+                end
+
+                if icon.inWorldIcon ~= nil then
+                    self.configForm:FindChild("InWorldIconEnabled"):SetCheck(icon.inWorldIcon.Enabled)
                 end
 
     			self:PopulateTriggers(icon)
