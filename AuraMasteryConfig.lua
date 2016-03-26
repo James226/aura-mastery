@@ -349,8 +349,8 @@ local function uuid()
 end
 
 function AuraMasteryConfig.new(auraMastery, xmlDoc)
-    Print("Creating")
 	local self = setmetatable({}, AuraMasteryConfig)
+    self.xmlDoc = xmlDoc
 	self.auraMastery = auraMastery
     self.xmlDoc = xmlDoc
 	self.configForm = Apollo.LoadForm(xmlDoc, "AuraMasteryForm", nil, self)
@@ -359,9 +359,7 @@ function AuraMasteryConfig.new(auraMastery, xmlDoc)
 	Apollo.LoadSprites("Sprites.xml")
 	self.colorPicker:FindChild("Color"):SetSprite("ColorPicker_Colors")
 	self.colorPicker:FindChild("Gradient"):SetSprite("ColorPicker_Gradient")
-    Print("Created")
 	self:Init()
-    Print("Inited")
 	return self
 end
 
@@ -813,7 +811,7 @@ function AuraMasteryConfig:OnRemoveIcon( wndHandler, wndControl, eMouseButton )
 end
 
 function AuraMasteryConfig:AddIcon()
-	local newIcon = Icon.new(self.buffWatch, self.configForm)
+	local newIcon = Icon.new(self.buffWatch, self.configForm, self.xmlDoc)
 	newIcon:SetScale(1)
 
 	local iconList = self.configForm:FindChild("IconListHolder"):FindChild("IconList")
@@ -1299,6 +1297,10 @@ function AuraMasteryConfig:SelectIcon(iconItem)
                     self.configForm:FindChild("TrackLineNumberOfLines"):SetText(icon.trackLine:NumberOfLines())
                 end
 
+                if icon.inWorldIcon ~= nil then
+                    self.configForm:FindChild("InWorldIconEnabled"):SetCheck(icon.inWorldIcon.Enabled)
+                end
+
     			self:PopulateTriggers(icon)
     		end
     	end
@@ -1531,6 +1533,14 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
             editor:FindChild("TargetTarget"):SetCheck(trigger.TriggerDetails.Target.Target)
         elseif trigger.Type == "Scriptable" then
             editor:FindChild("Script"):SetText(trigger.TriggerDetails.Script)
+            editor:FindChild("InitScript"):SetText(trigger.TriggerDetails.InitScript)
+            editor:FindChild("CleanupScript"):SetText(trigger.TriggerDetails.CleanupScript)
+            local formsList = editor:FindChild("FormsList")
+            formsList:DestroyChildren()
+            for _, form in pairs(trigger.TriggerDetails.Forms) do
+                self:AddScriptableForm(formsList, form)
+            end
+            formsList:ArrangeChildrenVert()
         elseif trigger.Type == "Keybind" then
             self:SetKeybindInput(trigger.TriggerDetails.Input)
             editor:FindChild("KeybindTracker_Duration"):SetText(trigger.TriggerDetails.Duration)
@@ -1569,6 +1579,13 @@ function AuraMasteryConfig:PopulateTriggerItem(trigger)
             self.configForm:FindChild("TriggerEffectContainer"):Show(false)
         end
     end)
+end
+
+function AuraMasteryConfig:AddScriptableForm(formsList, form)
+    local formItem = Apollo.LoadForm(self.xmlDoc, "TriggerDetails.Scriptable.FormsList.Form", formsList, self)
+    formItem:FindChild("FormLabel"):SetText(form.Name)
+    formItem:SetData(form)
+    formsList:ArrangeChildrenVert()
 end
 
 function AuraMasteryConfig:PopulateTriggerItemTargets(trigger, editor)
@@ -2993,6 +3010,65 @@ function AuraMasteryConfig:AddRegionItem(region)
     regionItem:FindChild("RegionLabel"):SetText(region.zone .. ": " .. region.subZone)
     regionItem:SetData(region)
     regionList:ArrangeChildrenVert()
+end
+
+function AuraMasteryConfig:GetIcon()
+    local iconId = tonumber(self.configForm:FindChild("BuffId"):GetText())
+    return self.auraMastery.Icons[iconId]
+end
+
+function AuraMasteryConfig:OnScriptableFormAdd( wndHandler, wndControl, strText )
+    CatchError(function()
+        if wndHandler == wndControl then
+            local icon = self:GetIcon()
+            local trigger = wndHandler:GetParent():GetParent():GetParent():GetData()
+            local formList = wndHandler:GetParent():FindChild("FormsList")
+            local form = {
+                Name = strText,
+                Text = ""
+            }
+            table.insert(trigger.TriggerDetails.Forms, form)
+            self:AddScriptableForm(formList, form)
+            wndHandler:SetText("")
+            self:OnPlaceholderEditorChanged(wndHandler, wndHandler, "")
+        end
+    end)
+end
+
+function AuraMasteryConfig:OnScriptableFormRemove(wndHandler, wndControl, strText)
+    CatchError(function()
+        if wndHandler == wndControl then
+            local trigger = wndHandler:GetParent():GetParent():GetParent():GetParent():GetParent():GetData()
+            local form = wndHandler:GetParent():GetData()
+            local formIndex = IndexOf(trigger.TriggerDetails.Forms, form)
+            if formIndex ~= nil then
+                table.remove(trigger.TriggerDetails.Forms, formIndex)
+            end
+            local formsList = wndHandler:GetParent():GetParent()
+            wndHandler:GetParent():Destroy()
+            formsList:ArrangeChildrenVert()
+        end
+    end)
+end
+
+function AuraMasteryConfig:OnScriptableFormSelect(wndHandler, wndControl)
+    CatchError(function()
+        --if wndHandler == wndControl then
+            local trigger = wndHandler:GetParent():GetParent():GetParent():GetParent():GetData()
+            local formEditorWindow = wndHandler:GetParent():GetParent():GetParent():FindChild("FormsScript")
+            formEditorWindow:SetText(wndHandler:GetData().Text)
+            formEditorWindow:SetData(wndHandler:GetData())
+        --end
+    end)
+end
+
+function AuraMasteryConfig:OnScriptableFormChanged( wndHandler, wndControl, strText )
+    CatchError(function()
+        if wndHandler == wndControl then
+            local form = wndHandler:GetData()
+            form.Text = strText
+        end
+    end)
 end
 
 local GeminiPackages = _G["GeminiPackages"]

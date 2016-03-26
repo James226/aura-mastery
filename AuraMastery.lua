@@ -252,6 +252,15 @@ local function GetAbilitiesList()
 	return abilitiesList
 end
 
+local function CatchError(func)
+    local status, error = pcall(func)
+
+    if not status then
+        Print("[AuraMastery] An error has occured")
+        Print(error)
+    end
+end
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
@@ -360,8 +369,10 @@ function AuraMastery:OnLoadIcons(tData)
 		end
 
 		for idx, icon in pairs(tData["Icons"]) do
-			local newIcon = self:AddIcon()
-			newIcon:Load(icon)
+			CatchError(function()
+				local newIcon = self:AddIcon()
+				newIcon:Load(icon)
+			end)
 		end
 		self:OnSpecChanged(AbilityBook.GetCurrentSpec())
 		self:OnSubZoneChanged()
@@ -598,7 +609,7 @@ function AuraMastery:OnCharacterCreated()
 end
 
 function AuraMastery:AddIcon()
-	local newIcon = Icon.new(self.buffWatch, self.configForm)
+	local newIcon = Icon.new(self.buffWatch, self.configForm, self.xmlDoc)
 	newIcon:SetScale(1)
 
 	newIcon.iconId = self.nextIconId
@@ -736,7 +747,7 @@ end
 -----------------------------------------------------------------------------------------------
 -- AuraMastery Functions
 -----------------------------------------------------------------------------------------------
-function AuraMastery:OnOpenConfig()
+function AuraMastery:OnOpenConfig(_, test)
 	if self.config == nil then
 		self.config = self.auraMasteryConfig.new(self, self.xmlDoc)
 	end
@@ -777,7 +788,9 @@ function AuraMastery:OnUpdate()
 	local targetPlayer = GameLib.GetTargetUnit()
 
 	for _, icon in pairs(self.Icons) do
-		icon:PreUpdate(deltaTime)
+		if icon.isEnabled then
+			icon:PreUpdate(deltaTime)
+		end
 	end
 
 	if unitPlayer ~= nil then
@@ -800,36 +813,6 @@ function AuraMastery:OnUpdate()
 	self:ProcessGadget()
 
 	self:ProcessInnate()
-
-	for _, refresh in pairs(self.buffWatch.Refresh) do
-		if refresh.Type == "Buff" or refresh.Type == "Debuff" then
-			local target;
-			if refresh.Target == "Player" then
-				target = GameLib.GetPlayerUnit()
-			elseif refresh.Target == "Target" then
-				target = GameLib.GetTargetUnit()
-			end
-			if target ~= nil then
-				local buffs = refresh.Type == "Buff" and target:GetBuffs().arBeneficial or target:GetBuffs().arHarmful
-
-				for _, data in pairs(buffs) do
-					local spellId = tostring(data.splEffect:GetId())
-					local spellName = data.splEffect:GetName()
-					self:ProcessBuff(refresh.Target, refresh.Type, spellId, spellName, {
-						unit = target,
-						action = "Add",
-						data = data
-					})
-				end
-			end
-		end
-
-		for idx, ref in pairs(self.buffWatch.Refresh) do
-			if refresh.Type == ref.Type and refresh.Target == ref.Target then
-				table.remove(self.buffWatch.Refresh, idx)
-			end
-		end
-	end
 
 	for _, icon in pairs(self.Icons) do
 		if icon.isEnabled then
