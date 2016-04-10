@@ -488,7 +488,6 @@ function IconTrigger:AddToBuffWatch()
             formString = formString .. form.Text
         end
         formString = formString .. "</Forms>"
-        SendVarToRover("Form", formString)
         local xmlDoc = XmlDoc.new()
 		xmlDoc:AddLine(formString)
 		self.xmlDoc = XmlDoc.CreateFromTable(xmlDoc:ToTable()[1][1][1])
@@ -523,7 +522,6 @@ end
 
 function IconTrigger:OnICDResourceGain(data)
     CatchError(function()
-        SendVarToRover("Resource", data)
         if data.unitCaster:IsThePlayer() then
             local spell = data.splCallingSpell
             local spellName = self.TriggerDetails.SpellName == "" and self.Icon.iconName or self.TriggerDetails.SpellName

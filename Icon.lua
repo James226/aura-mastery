@@ -260,9 +260,9 @@ end
 
 function Icon:UpdateEnabled()
     if self.unlocked or self:VisibilityCheck() then
-        self:Enable()
+        self.icon:Show(true)
     else
-        self:Disable()
+        self.icon:Show(false, false)
     end
 end
 

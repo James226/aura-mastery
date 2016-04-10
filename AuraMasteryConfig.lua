@@ -1611,7 +1611,6 @@ function AuraMasteryConfig:OnBuffTargetChanged(wndHandler)
     for _, group in pairs(wndHandler:GetParent():GetParent():GetChildren()) do
         if group ~= currentGroup then
             for _, target in pairs(group:GetChildren()) do
-                SendVarToRover(target:GetName(), target)
                 if target.SetCheck ~= nil then
                     target:SetCheck(false)
                 else
@@ -1621,7 +1620,6 @@ function AuraMasteryConfig:OnBuffTargetChanged(wndHandler)
             end
         else
             for _, target in pairs(group:GetChildren()) do
-                SendVarToRover(target:GetName(), target)
                 if target.SetCheck == nil then
                     target:Enable(true)
                 end

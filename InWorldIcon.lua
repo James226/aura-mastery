@@ -54,7 +54,6 @@ function InWorldIcon:UpdateTarget()
     local i = 1
     for _, target in pairs(targets) do
         if self.Icons[i] == nil then
-            SendVarToRover("Doc", self.xmlDoc)
             self.Icons[i] = Apollo.LoadForm(self.xmlDoc, "InWorldIcon", "InWorldHudStratum", self)
             self.Icons[i]:FindChild("IconOverlay"):SetMax(100)
         end
